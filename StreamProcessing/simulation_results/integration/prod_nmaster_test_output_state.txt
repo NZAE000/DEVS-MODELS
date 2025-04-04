@@ -1,0 +1,399 @@
+00:00:00:000:000:000:000:000
+State for model productor is 1
+State for model node_master is processing: 1
+00:00:00:000:003:000:000:000
+State for model productor is 1
+State for model node_master is processing: 1
+00:00:00:000:019:000:000:000
+State for model productor is 2
+State for model node_master is processing: 1
+00:00:00:000:023:000:000:000
+State for model productor is 3
+State for model node_master is processing: 1
+00:00:00:000:048:000:000:000
+State for model productor is 4
+State for model node_master is processing: 1
+00:00:00:000:051:000:000:000
+State for model productor is 4
+State for model node_master is processing: 1
+00:00:00:000:054:000:000:000
+State for model productor is 4
+State for model node_master is processing: 1
+00:00:00:000:077:000:000:000
+State for model productor is 5
+State for model node_master is processing: 1
+00:00:00:000:080:000:000:000
+State for model productor is 6
+State for model node_master is processing: 1
+00:00:00:000:083:000:000:000
+State for model productor is 7
+State for model node_master is processing: 1
+00:00:00:000:087:000:000:000
+State for model productor is 8
+State for model node_master is processing: 1
+00:00:00:000:103:000:000:000
+State for model productor is 9
+State for model node_master is processing: 1
+00:00:00:000:109:000:000:000
+State for model productor is 9
+State for model node_master is processing: 1
+00:00:00:000:112:000:000:000
+State for model productor is 9
+State for model node_master is processing: 1
+00:00:00:000:116:000:000:000
+State for model productor is 10
+State for model node_master is processing: 1
+00:00:00:000:116:000:000:000
+State for model productor is 11
+State for model node_master is processing: 1
+00:00:00:000:117:000:000:000
+State for model productor is 12
+State for model node_master is processing: 1
+00:00:00:000:123:000:000:000
+State for model productor is 13
+State for model node_master is processing: 1
+00:00:00:000:128:000:000:000
+State for model productor is 14
+State for model node_master is processing: 1
+00:00:00:000:132:000:000:000
+State for model productor is 15
+State for model node_master is processing: 1
+00:00:00:000:134:000:000:000
+State for model productor is 16
+State for model node_master is processing: 1
+00:00:00:000:136:000:000:000
+State for model productor is 17
+State for model node_master is processing: 1
+00:00:00:000:139:000:000:000
+State for model productor is 18
+State for model node_master is processing: 1
+00:00:00:000:159:000:000:000
+State for model productor is 19
+State for model node_master is processing: 1
+00:00:00:000:159:000:000:000
+State for model productor is 20
+State for model node_master is processing: 1
+00:00:00:000:165:000:000:000
+State for model productor is 21
+State for model node_master is processing: 1
+00:00:00:000:166:000:000:000
+State for model productor is 22
+State for model node_master is processing: 1
+00:00:00:000:168:000:000:000
+State for model productor is 23
+State for model node_master is processing: 1
+00:00:00:000:169:000:000:000
+State for model productor is 24
+State for model node_master is processing: 1
+00:00:00:000:179:000:000:000
+State for model productor is 25
+State for model node_master is processing: 1
+00:00:00:000:187:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:202:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:208:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:211:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:214:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:217:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:220:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:223:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:223:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:270:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:273:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:276:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:279:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:282:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:285:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:288:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:291:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:294:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:297:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:300:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:303:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:306:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:314:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:317:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:320:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:323:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:326:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:329:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:332:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:355:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:402:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:461:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:515:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:574:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:624:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:667:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:708:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:762:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:820:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:871:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:922:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:000:977:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:022:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:071:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:113:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:160:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:211:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:267:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:267:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:322:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:375:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:421:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:481:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:533:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:575:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:575:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:590:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:594:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:625:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:630:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:668:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:668:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:739:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:763:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:792:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:810:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:869:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:885:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:902:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:919:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:961:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:981:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:001:981:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:030:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:060:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:064:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:152:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:172:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:216:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 1
+00:00:00:002:228:000:000:000
+State for model productor is 26
+State for model node_master is processing: 0

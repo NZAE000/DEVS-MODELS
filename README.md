@@ -1,0 +1,1 @@
+Repository with models implemented using Discrete Event Specification (DEVS) formalism, through the CADMIUM tool, whose installation can be found in the user guide: https://cell-devs.sce.carleton.ca/index.php/cadmium/.
