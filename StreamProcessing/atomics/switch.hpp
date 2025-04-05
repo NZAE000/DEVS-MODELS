@@ -29,7 +29,7 @@ using namespace std;
 
 //Port definition
 struct Switch_defs {
-    struct in_master : public in_port<Message_t> {};
+    struct in_master : public in_port<Message_t> {}; // for now
     struct out_0     : public out_port<OperatorLocation_t> {};
     struct out_1     : public out_port<OperatorLocation_t> {};
     struct out_2     : public out_port<OperatorLocation_t> {};

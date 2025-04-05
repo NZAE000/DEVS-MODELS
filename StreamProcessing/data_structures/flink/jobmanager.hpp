@@ -38,8 +38,8 @@ private:
     ClusterConfig_t const& cluster_cfg_;
 
 // Two principal components
-    JobMaster_t jobMaster_;
-    ResourceManager_t resourceMan_;
+    JobMaster_t         jobMaster_;
+    ResourceManager_t   resourceMan_;
 };
 
 } // namespace FLINK

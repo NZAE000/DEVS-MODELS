@@ -7,10 +7,13 @@ namespace FLINK {
 void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& nodes) noexcept
 {
     uint32_t nNodes { cluster_cfg_.n_nodes_ };
+    std::vector<Node_t<TIME>*> subclase_nodes;
+    subclase_nodes.reserve(nNodes); 
     nodes.reserve(nNodes);
 
     // Create always first node (master)
     nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, JobManager_t&>("node_master", *this));
+    subclase_nodes.push_back(dynamic_cast<Node_t<TIME>*>(nodes.begin()->get()));
 
     // Create slave nodes
     std::string name_base{"node"}, fullname{};
@@ -18,13 +21,14 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     for (uint32_t i=1; i<nNodes; ++i){
         fullname = name_base + std::to_string(id);
         nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<Node_t, TIME, JobManager_t&>(fullname, *this));
+        subclase_nodes.push_back(dynamic_cast<Node_t<TIME>*>((nodes.begin() + i)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
         ++id;
     }
 
     uint32_t replica{};
     slotId_t slot_id{};
-    auto node_iter     = nodes.begin();
-    Node_t<TIME>* node = dynamic_cast<Node_t<TIME>*>(node_iter->get());
+    auto node_iter     = subclase_nodes.begin();
+    Node_t<TIME>* node = *node_iter.base();
 
     // Assign resource to all operators
     for (auto& [oper_id, properties] : cluster_cfg_.operProps_)
@@ -35,15 +39,14 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
             slot_id = resourceMan_.assignResource(oper_id, node->getTaskManager()); // Assign resource to operator
             jobMaster_.addLocation(oper_id, node->id(), slot_id);  // Store location (node_id, slot_id) of this suboperator.
 
-            if (++node_iter == end(nodes)) node_iter = nodes.begin(); // Next node
-            node = dynamic_cast<Node_t<TIME>*>(node_iter->get());
+            if (++node_iter == end(subclase_nodes)) node_iter = subclase_nodes.begin();   // Next node
+            node = *node_iter.base();       
         }
     }
 
     // Store all references to taskmanagers
-    std::for_each(nodes.begin(), nodes.end(), [&](auto& node_){
-        node = dynamic_cast<Node_t<TIME>*>(node_.get());
-        resourceMan_.addRefResource(node->id(), node->getTaskManager());
+    std::for_each(subclase_nodes.begin(), subclase_nodes.end(), [&](auto& node_){
+        resourceMan_.addRefResource(node_->id(), node_->getTaskManager());
     });
 
     //for (auto& [oper_id, properties] : cluster_cfg_.operProps_)

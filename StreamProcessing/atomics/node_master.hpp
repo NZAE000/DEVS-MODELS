@@ -26,17 +26,17 @@ public:
     void external_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
     {
         //std::cout<<"node master\n";
-        check_external_transition_from_producer(mbs);      // Check some message of producer
-        this->check_external_transition_from_switch(mbs);  // Check some location message of switch
+        check_external_transition_from_producer(mbs);      // Check some message of producer.
+        this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
 
         if (there_external_locations()){ // Do you have to send messages to other locations immediately?
-            this->lapse_time_ = {0};  // Imminent for the output to the switch
+            this->lapse_time_ = {0};     // Imminent for the output to the switch
         }
         else {
             FLINK::Subtask_t& exec_prior { this->taskman_.getPriorityExecution() };
             if (this->state.processing) 
-                exec_prior.lapse_ -= e; // Time left
-            this->lapse_time_ = exec_prior.lapse_;
+                exec_prior.lapse_ -= e;             // Minus time left (e = elapsed time value since last transition).
+            this->lapse_time_ = exec_prior.lapse_;  // Update lapse.
             std::cout<<"lapse: "<< this->lapse_time_ <<"\n";
         }
         this->state.processing = true;
@@ -90,7 +90,7 @@ private:
 
             if (loc.node_id == this->state.id){ // Chosen location on this node?
                 //std::cout<<"este nodo\n";
-                this->taskman_.scheduleExec(loc.slot_id, this->jobman_);
+                this->taskman_.scheduleExec(loc.slot_id, this->jobman_); // SHCEDULE ON SPECIFIC SLOT.
             }
             else {
                 externLocations.emplace_back(loc); // Location messages for elsewhere

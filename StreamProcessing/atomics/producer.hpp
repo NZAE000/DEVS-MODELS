@@ -56,7 +56,7 @@ public:
     Producer_t(std::map<TIME, double>& ar)
     : basic_models::pdevs::generator<Message_t, TIME>{}, gen_{rd_()}, uni_distr_{0, 1}, arrivalRates_{ar}
     {
-        current_rate_ = begin(arrivalRates_);
+        current_rate_ = begin(arrivalRates_); // Init current rate.
         std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
 
     }
