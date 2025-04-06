@@ -63,11 +63,13 @@ public:
     Node_t(FLINK::JobManager_t& jman) noexcept
     : jobman_{jman} {}
 
-    // Internal transition: model sets the state variable processing to false.
+    // Internal transition
     void internal_transition() 
     {
-        FLINK::slotId_t slot_used = taskman_.dropPriorityExecution();
-        taskman_.checkNextExecution(slot_used, jobman_);
+        FLINK::slotId_t slot_id_used = taskman_.terminatePriorityExecution();   // Terminate what was executed.
+        taskman_.checkQueuedExecution(slot_id_used, jobman_);                   // Know if there are queued executions of the slot to execute.
+        
+        // Is there some pending execution? get his execution time and set processing to active.
         if (taskman_.executionPending())
         {
             FLINK::Subtask_t& exec_prior { taskman_.getPriorityExecution() };
@@ -85,7 +87,7 @@ public:
         check_external_transition_from_switch(mbs); // Check some location message of switch
 
         FLINK::Subtask_t& exec_prior { taskman_.getPriorityExecution() };
-        if (state.processing) exec_prior.lapse_ -= e;   // Time left
+        if (state.processing) exec_prior.lapse_ -= e;   // Minus time left (e = elapsed time value since last transition).
         else state.processing = true;
 
         lapse_time_ = exec_prior.lapse_;
@@ -104,7 +106,7 @@ public:
     {
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
         vector<OperatorLocation_t> bag_port_out;             // To build the message bag for the output port 'out'.
-        search_new_operator_destinations(bag_port_out);
+        search_next_operator_destinations(bag_port_out);
 
         // get_messages uses a template parameter for the port we want to access, in this case, the port 'out'.
         // The function parameter is the bag of messages we want to access, in this case bags.
@@ -133,7 +135,7 @@ public:
     }
 
 
-protected: // Son access
+protected: // Son access (node_master).
 
     void check_external_transition_from_switch(typename make_message_bags<input_ports>::type& mbs)
     {   
@@ -143,32 +145,35 @@ protected: // Son access
         if (size_bag > 1) assert(false && "One message at a time");
         
         if (size_bag) {
-            auto const [node_id, slot_id] = *bag_port_in.begin();
-            this->taskman_.scheduleExec(slot_id, this->jobman_);
+            auto const [_, slot_id] = *bag_port_in.begin();
+            this->taskman_.scheduleExec(slot_id, this->jobman_); // SHCEDULE ON SPECIFIC SLOT.
         }
+        //else{ std::cout<<"\nno switch\n"; }
     }
 
-    void search_new_operator_destinations(vector<OperatorLocation_t>& bag_port_out) const
+    void search_next_operator_destinations(vector<OperatorLocation_t>& bag_port_out) const
     {
         // Get the operator that was running for get their next destinations
         FLINK::Subtask_t const& exec_prior = taskman_.getPriorityExecution();
-        FLINK::operId_t const& oper_id     = taskman_.getOperator(exec_prior.slot_id);
+        FLINK::operId_t  const& oper_id    = taskman_.getOperator(exec_prior.slot_id);
 
-        if (oper_id != jobman_.lastOperator())
+        if (oper_id != jobman_.lastOperator()) // Haven't reached the last operator?
         {
             vector<FLINK::operId_t> const& operDestinations = jobman_.getOperatorDestinations(oper_id);
 
-            // Get balanced destiny locations for each opeartor
+            // Get balanced destiny locations for each destiny opeartor.
             bag_port_out.reserve(operDestinations.size());
             for (auto const& oper_id : operDestinations) 
             {
                 OperatorLocation_t const& location = jobman_.getOperLocation_balanced(oper_id);
-                if (location.node_id == state.id){ // Location on this node?
+
+                // Location in this node? schedule execution now.
+                if (location.node_id == state.id){
                     taskman_.scheduleExec(location.slot_id, jobman_);
                 }
-                else { 
-                    //std::cout<<"acaca\n";
-                    bag_port_out.push_back(location);     
+                else { // The operator is in other node.
+                    bag_port_out.push_back(location);
+                    //std::cout<<"acaca\n";   
                 }
             }
         }

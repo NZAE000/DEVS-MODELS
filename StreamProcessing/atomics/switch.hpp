@@ -27,9 +27,9 @@ using namespace std;
 
 /*Call order: external, time_avance, output, internal*/
 
-//Port definition
+//Port definition (for now)
 struct Switch_defs {
-    struct in_master : public in_port<Message_t> {}; // for now
+    struct in_0      : public in_port<Message_t> {}; 
     struct out_0     : public out_port<OperatorLocation_t> {};
     struct out_1     : public out_port<OperatorLocation_t> {};
     struct out_2     : public out_port<OperatorLocation_t> {};
@@ -49,7 +49,7 @@ public:
     // ports definition: tuple for distintes types of messages
     // NOTA: The 'typename' specifies that Switch_defs::in and Switch_defs::out aredatatypesthatwilloverwritethetemplateclassinthesimulator
     //"typename" indicates that the expression that follows is a "data type" (not a specific object).
-    using input_ports  = tuple<typename Switch_defs::in_master>;
+    using input_ports  = tuple<typename Switch_defs::in_0>;
     using output_ports = tuple<typename Switch_defs::out_0, typename Switch_defs::out_1, typename Switch_defs::out_2>;
     using nodeId_t     = uint32_t;
 
@@ -60,9 +60,8 @@ public:
     state_type state;
 
     mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_; // node_id, buffer
-    TIME prox_time_{};  // Time left until next departure
-    TIME send_time_{};  // Send time
-    int mean_ {30};
+    TIME send_time_{};  // Time left until next departure
+    int mean_ {5};
 
     // Default constructor
     Switch_t() noexcept
@@ -76,15 +75,15 @@ public:
     // internal transition: model sets the state variable transmitting_ to false.
     void internal_transition() 
     {
-        uint8_t buffers_queued{0};
+        uint8_t pending_sends{0};
 
         for (auto & [_, buffer] : port_buffers_) { // Are there any pending messages in any of the output port buffers?
             if (!buffer.messages.empty()) { 
                 buffer.active = true;
-                ++buffers_queued;
+                ++pending_sends;
             }
         }
-        if (!buffers_queued) state.transmitting_ = false;
+        if (!pending_sends) state.transmitting_ = false; // Are not there pending sends?
         else send();
     }
 
@@ -96,27 +95,23 @@ public:
         vector<Message_t> bag_port_in;
         // get_messages<>: to get the message bag from the port (in this case input port).
         // Uses a template parameter for the port we want to access, in this case, the 'in' port, defined by typename Switch_defs::in.
-        bag_port_in = get_messages<typename Switch_defs::in_master>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
+        bag_port_in = get_messages<typename Switch_defs::in_0>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
         //std::cout<<"size: "<<bag_port_in.size()<<"\n";
         
         uint32_t slot_id{0}; // for now
-        for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer   
+        for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
             MessageBuffer_t& buffer = port_buffers_[mess.id_];
             buffer.messages.emplace_back(mess.id_, slot_id);
         }
 
-        if (!state.transmitting_) {                 // Activate newly queued buffers            
+        if (!state.transmitting_) {                 // Activate newly queued buffers.    
             for (auto const& mess : bag_port_in)                
                 port_buffers_[mess.id_].active = true;
             send();
         } 
-        else {
-            if (e <= prox_time_) {  
-                prox_time_ -= e;    // Time left
-            }
-        }
+        else send_time_ -= e;  // Minus time left (e = elapsed time value since last transition).
 
-        //std::cout<<"Prox time: "<<prox_time_<<"\n";
+        //std::cout<<"Prox time: "<<send_time_<<"\n";
     }
 
     // cconfluence transition
@@ -137,10 +132,10 @@ public:
         for (auto& [id_node, buffer] : port_buffers_)
         {
             if (buffer.active){
-                switch (id_node)
+                switch (id_node) // For now
                 {
                 case 0:
-                    get_messages<typename Switch_defs::out_0>(bags).push_back(*buffer.messages.begin());
+                    get_messages<typename Switch_defs::out_0>(bags).push_back(*buffer.messages.begin()); // Get the first in line queue.
                     buffer.messages.erase(buffer.messages.begin());
                     break;
                 case 1:
@@ -154,7 +149,7 @@ public:
                 default:
                     break;
                 }
-                buffer.active = false; // Set to inactive
+                buffer.active = false; // Set to inactive.
             }
         }
 
@@ -168,7 +163,7 @@ public:
     // time_advance function:  if we are transmitting_, the time advance is 3 seconds. If we do not transmit, the model passivates.
     TIME time_advance() const 
     {
-        if (state.transmitting_) return prox_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        if (state.transmitting_) return send_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
         else                     return numeric_limits<TIME>::infinity();
     }
 
@@ -185,9 +180,9 @@ private:
 
     void send() noexcept 
     {
-        int lapse { static_cast<int>(Random_t::poisson(mean_)) };
-        send_time_ = TIME{0,0,0,0,1};
-        prox_time_ = send_time_;
+        int lapse { static_cast<int>(Random_t::poisson(mean_)) }; // Poisson distribution send time.
+        //std::cout<<"\nlapse:" << lapse;
+        send_time_ = TIME{0,0,0,0,lapse}; // hrs::mins:secs:mills:micrs::nns:pcs::fms
         state.transmitting_ = true;
     }
 };

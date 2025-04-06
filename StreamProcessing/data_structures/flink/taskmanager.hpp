@@ -38,18 +38,18 @@ struct TaskManager_t {
     operId_t const& getOperator(slotId_t)                 const noexcept;
 
     void scheduleExec(slotId_t, JobManager_t&)                  noexcept; 
-    void checkNextExecution(slotId_t, JobManager_t&)            noexcept;
+    void checkQueuedExecution(slotId_t, JobManager_t&)          noexcept;
 
     Subtask_t&       getPriorityExecution()                     noexcept;
     Subtask_t const& getPriorityExecution()               const noexcept;
-    slotId_t         dropPriorityExecution()                    noexcept;
+    slotId_t         terminatePriorityExecution()               noexcept;
     bool             executionPending()                   const noexcept;
 
 private:
-    void createExecution(TaskSlot_t, slotId_t, int lapse)       noexcept;
+    void createSubTask(TaskSlot_t&, slotId_t, int lapse)      noexcept;
 
     std::map<slotId_t, TaskSlot_t>  taskSlots_;
-    std::vector<Subtask_t> bufferExec_;
+    std::vector<Subtask_t>          bufferExec_;
 
     inline static slotId_t nextID {0};
 };

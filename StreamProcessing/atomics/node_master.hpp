@@ -21,6 +21,28 @@ public:
 
     NodeMaster_t(FLINK::JobManager_t& jman) noexcept
     : Node_t<TIME>{jman} {}
+
+
+    // Internal transition
+    void internal_transition()
+    {
+        if (there_external_locations()){
+            //std::cout<<"ACA1\n";
+            externLocations.clear();
+            if (this->taskman_.executionPending())
+            {
+                FLINK::Subtask_t& exec_prior { this->taskman_.getPriorityExecution() };
+                this->lapse_time_      = exec_prior.lapse_;  // Update lapse.
+                this->state.processing = true;
+                std::cout<<"[internal] lapse: "<< this->lapse_time_ <<"\n";
+
+            } else this->state.processing = false;
+        }
+        else { 
+            //std::cout<<"ACA2\n";
+            static_cast<Node_t<TIME>*>(this)->internal_transition(); // Cast to super to call Node_t's internal transition algorithm.
+        }
+    }
     
     // External transition
     void external_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
@@ -30,14 +52,16 @@ public:
         this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
 
         if (there_external_locations()){ // Do you have to send messages to other locations immediately?
-            this->lapse_time_ = {0};     // Imminent for the output to the switch
+            this->lapse_time_ = {0};     // Imminent for the output to the switch.
         }
-        else {
+        else if (this->taskman_.executionPending())
+        {
             FLINK::Subtask_t& exec_prior { this->taskman_.getPriorityExecution() };
             if (this->state.processing) 
                 exec_prior.lapse_ -= e;             // Minus time left (e = elapsed time value since last transition).
             this->lapse_time_ = exec_prior.lapse_;  // Update lapse.
-            std::cout<<"lapse: "<< this->lapse_time_ <<"\n";
+            
+            std::cout<<"[external] lapse: "<< this->lapse_time_ <<"\n";
         }
         this->state.processing = true;
 
@@ -48,7 +72,7 @@ public:
     void confluence_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs) { // mbs = std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
         // Default definition
         //std::cout<<"ACA son: "<<*get_messages<typename Node_defs::in_source>(mbs).begin()<<"\n";
-        this->internal_transition();
+        internal_transition();
         external_transition(TIME(), std::move(mbs)); // move(std::tuple<message_bag<Ps>...> / Ps = ports 'in').
     }
 
@@ -60,9 +84,8 @@ public:
 
         if (there_external_locations()){        // Do you have to send messages to other locations immediately?
             bag_port_out = externLocations;
-            externLocations.clear();
         }
-        else this->search_new_operator_destinations(bag_port_out); // Normal output: send new destinations for next operation
+        else this->search_next_operator_destinations(bag_port_out); // Normal output: send new destinations for next operation.
 
         get_messages<typename Node_defs::out>(bags) = bag_port_out; // vector<OperatorLocation_t> = bag_port_out
         return bags;
@@ -84,16 +107,16 @@ private:
 
         if (size_bag) // Are there a message from the producer?
         {
-            // Find less congested location of first operator
+            // Find less congested location of first operator.
             FLINK::operId_t first_op_id   = this->jobman_.firstOperator();
             OperatorLocation_t const& loc = this->jobman_.getOperLocation_balanced(first_op_id);
 
             if (loc.node_id == this->state.id){ // Chosen location on this node?
                 //std::cout<<"este nodo\n";
-                this->taskman_.scheduleExec(loc.slot_id, this->jobman_); // SHCEDULE ON SPECIFIC SLOT.
+                this->taskman_.scheduleExec(loc.slot_id, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
             }
             else {
-                externLocations.emplace_back(loc); // Location messages for elsewhere
+                externLocations.emplace_back(loc); // Location messages for elsewhere.
                 //std::cout<<"otro nodo\n";
             }
         }
