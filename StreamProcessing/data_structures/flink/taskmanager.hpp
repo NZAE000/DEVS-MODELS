@@ -34,8 +34,9 @@ struct TaskManager_t {
 
 // Methods
     [[nodiscard]] slotId_t reserveSlot(operId_t const&)         noexcept;
-    uint32_t        getNTuples(slotId_t)                  const noexcept;
-    operId_t const& getOperator(slotId_t)                 const noexcept;
+    TaskSlot_t const& getSlot(slotId_t)                   const noexcept;
+    TaskSlot_t&       getSlot(slotId_t)                         noexcept;
+    std::map<slotId_t, TaskSlot_t> const& getSlots()      const noexcept;
 
     void scheduleExec(slotId_t, JobManager_t&)                  noexcept; 
     void checkQueuedExecution(slotId_t, JobManager_t&)          noexcept;
@@ -43,7 +44,7 @@ struct TaskManager_t {
     Subtask_t&       getPriorityExecution()                     noexcept;
     Subtask_t const& getPriorityExecution()               const noexcept;
     slotId_t         terminatePriorityExecution()               noexcept;
-    bool             executionPending()                   const noexcept;
+    std::size_t      executionPending()                   const noexcept;
 
 private:
     void createSubTask(TaskSlot_t&, slotId_t, int lapse)      noexcept;
@@ -51,7 +52,7 @@ private:
     std::map<slotId_t, TaskSlot_t>  taskSlots_;
     std::vector<Subtask_t>          bufferExec_;
 
-    inline static slotId_t nextID {0};
+    slotId_t nextID {0};
 };
 
 } // namespace FLINK

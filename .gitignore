@@ -1,5 +1,6 @@
 StreamProcessing/bin/*
 StreamProcessing/build/*
-StreamProcessing/simulation_results/integration/*
 StreamProcessing/simulation_results/unitary/*
+StreamProcessing/simulation_results/integration/*
+StreamProcessing/simulation_results/system/*
 .vscode

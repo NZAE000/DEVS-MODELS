@@ -19,12 +19,18 @@ void ResourceManager_t::addRefResource(nodeId_t node_id, TaskManager_t& taskMan)
     refResources_[node_id] = &taskMan;
 }
 
-uint32_t ResourceManager_t::nTupleQueue(OperatorLocation_t const& operatorLocation) const noexcept
+TaskSlot_t const& ResourceManager_t::slotFrom(OperatorLocation_t const& operatorLocation) const noexcept
 {
     auto const [node_id, slot_id] = operatorLocation;
     auto iter = refResources_.find(node_id);
+    
+    return iter->second->getSlot(slot_id);
+}
 
-    return iter->second->getNTuples(slot_id);
+TaskSlot_t& ResourceManager_t::slotFrom(OperatorLocation_t const& operatorLocation) noexcept
+{
+    auto& slot = const_cast<ResourceManager_t const*>(this)->slotFrom(operatorLocation);
+    return *const_cast<TaskSlot_t*>(&slot);
 }
 
 } // namespace FLINK

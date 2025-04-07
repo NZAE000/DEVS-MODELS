@@ -17,18 +17,23 @@ TaskManager_t::reserveSlot(operId_t const& oper_id) noexcept
     return pair.first->first;
 }
 
-uint32_t 
-TaskManager_t::getNTuples(slotId_t slot_id) const noexcept
+TaskSlot_t const& 
+TaskManager_t::getSlot(slotId_t id) const noexcept
 {
-    auto const taskSlot_iter = taskSlots_.find(slot_id);
-    return taskSlot_iter->second.nTuples();
+    auto taskSlot_iter = taskSlots_.find(id);
+    return taskSlot_iter->second;
+}
+TaskSlot_t&       
+TaskManager_t::getSlot(slotId_t id) noexcept
+{
+    auto& slot = const_cast<TaskManager_t const*>(this)->getSlot(id);
+    return *const_cast<TaskSlot_t*>(&slot);
 }
 
-operId_t const& 
-TaskManager_t::getOperator(slotId_t slot_id) const noexcept
+std::map<slotId_t, TaskSlot_t> const&
+TaskManager_t::getSlots() const noexcept
 {
-    auto taskSlot_iter = taskSlots_.find(slot_id);
-    return taskSlot_iter->second.getOperator();
+    return taskSlots_;
 }
 
 void 
@@ -63,7 +68,7 @@ TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noex
 void 
 TaskManager_t::createSubTask(TaskSlot_t& slot, slotId_t slot_id, int lapse) noexcept 
 {
-    TIME timeExec = {0,0,0,0,lapse};                        // Create time execution.
+    TIME timeExec = {0,0,0,0,/*lapse*/10};                        // Create time execution.
     this->bufferExec_.emplace_back(slot_id, timeExec);      // Add to execution buffer.
     slot.setExecution(true);                                // State to execute.
 }
@@ -90,7 +95,7 @@ TaskManager_t::terminatePriorityExecution() noexcept
     return slot_id_used;
 }
 
-bool  
+std::size_t  
 TaskManager_t::executionPending() const noexcept
 {
     return bufferExec_.size();

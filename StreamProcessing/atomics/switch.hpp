@@ -29,7 +29,9 @@ using namespace std;
 
 //Port definition (for now)
 struct Switch_defs {
-    struct in_0      : public in_port<Message_t> {}; 
+    struct in_0      : public in_port<OperatorLocation_t> {}; 
+    struct in_1      : public in_port<OperatorLocation_t> {}; 
+    struct in_2      : public in_port<OperatorLocation_t> {}; 
     struct out_0     : public out_port<OperatorLocation_t> {};
     struct out_1     : public out_port<OperatorLocation_t> {};
     struct out_2     : public out_port<OperatorLocation_t> {};
@@ -49,7 +51,7 @@ public:
     // ports definition: tuple for distintes types of messages
     // NOTA: The 'typename' specifies that Switch_defs::in and Switch_defs::out aredatatypesthatwilloverwritethetemplateclassinthesimulator
     //"typename" indicates that the expression that follows is a "data type" (not a specific object).
-    using input_ports  = tuple<typename Switch_defs::in_0>;
+    using input_ports  = tuple<typename Switch_defs::in_0,  typename Switch_defs::in_1,  typename Switch_defs::in_2>;
     using output_ports = tuple<typename Switch_defs::out_0, typename Switch_defs::out_1, typename Switch_defs::out_2>;
     using nodeId_t     = uint32_t;
 
@@ -75,6 +77,7 @@ public:
     // internal transition: model sets the state variable transmitting_ to false.
     void internal_transition() 
     {
+        std::cout<<"[switch internal]\n";
         uint8_t pending_sends{0};
 
         for (auto & [_, buffer] : port_buffers_) { // Are there any pending messages in any of the output port buffers?
@@ -92,26 +95,35 @@ public:
     // (Here (in this model), mbs is a tuple of one bag: the message bag in port in. The messages inside the set of messages in the bag are stored in a C++ vector.)
     void external_transition(TIME e, typename make_message_bags<input_ports>::type mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
     {
-        vector<Message_t> bag_port_in;
         // get_messages<>: to get the message bag from the port (in this case input port).
         // Uses a template parameter for the port we want to access, in this case, the 'in' port, defined by typename Switch_defs::in.
-        bag_port_in = get_messages<typename Switch_defs::in_0>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
+        //vector<OperatorLocation_t> bag_port_in;
+        //bag_port_in = get_messages<typename Switch_defs::in_0>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
         //std::cout<<"size: "<<bag_port_in.size()<<"\n";
-        
-        uint32_t slot_id{0}; // for now
-        for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
-            MessageBuffer_t& buffer = port_buffers_[mess.id_];
-            buffer.messages.emplace_back(mess.id_, slot_id);
-        }
+        vector<vector<OperatorLocation_t>> bags_port_in {
+            get_messages<typename Switch_defs::in_0>(mbs),
+            get_messages<typename Switch_defs::in_1>(mbs),
+            get_messages<typename Switch_defs::in_2>(mbs)
+        };
 
-        if (!state.transmitting_) {                 // Activate newly queued buffers.    
-            for (auto const& mess : bag_port_in)                
-                port_buffers_[mess.id_].active = true;
+        for (auto const& bag_port_in :  bags_port_in) { // Get each bag port int.
+            for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
+                MessageBuffer_t& buffer = port_buffers_[mess.node_id];
+                buffer.messages.emplace_back(mess.node_id, mess.slot_id);
+            }
+        }
+        if (!state.transmitting_) {  // Activate newly queued buffers.
+            for (auto const& bag_port_in : bags_port_in) {
+                for (auto const& mess : bag_port_in) {
+                    MessageBuffer_t& buffer = port_buffers_[mess.node_id];
+                    if (!buffer.active) buffer.active = true;
+                } 
+            }              
             send();
         } 
         else send_time_ -= e;  // Minus time left (e = elapsed time value since last transition).
 
-        //std::cout<<"Prox time: "<<send_time_<<"\n";
+        std::cout<<"\n[switch external]: send time: "<<send_time_<<"\n";
     }
 
     // cconfluence transition
@@ -152,6 +164,8 @@ public:
                 buffer.active = false; // Set to inactive.
             }
         }
+
+        std::cout<<"[switch output]\n";
 
         //get_messages<typename Switch_defs::out_0>(bags) = bag_port_out0;
         //get_messages<typename Switch_defs::out_1>(bags) = bag_port_out1;

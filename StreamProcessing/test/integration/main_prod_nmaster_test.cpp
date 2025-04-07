@@ -69,7 +69,7 @@ int main(void){
     dynamic::modeling::Models submodels_Cluster = nodes;
 // eics, eocs, ics
     dynamic::modeling::EICs eics_Cluster = {
-        dynamic::translate::make_EIC<Cluster_defs::in, Node_defs::in_source>("node_master"),    // eic to node_master   ->[->(node_master)]
+        dynamic::translate::make_EIC<Cluster_defs::in, Node_defs::in_source>("node_0"),    // eic to node_master   ->[->(node_master)]
     };
     dynamic::modeling::EOCs eocs_Cluster = {};
     dynamic::modeling::ICs ics_Cluster   = {};    // Nothing to ic of Cluster

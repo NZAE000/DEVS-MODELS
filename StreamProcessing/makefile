@@ -1,4 +1,4 @@
-SIMULATOR := streamProc
+SIMULATOR := STREAM_PROCESSING
 CC=clang++
 CFLAGS=-std=c++20 -g # -Wall -Wextra -Wpedantic -Wconvertions
 
@@ -8,7 +8,7 @@ INCLUDEDESTIMES=-I ../../Cadmium-Simulation-Environment/DESTimes/include/
 #CREATE BIN AND BUILD FOLDERS TO SAVE THE COMPILED FILES DURING RUNTIME
 bin_folder := $(shell mkdir -p bin)
 build_folder := $(shell mkdir -p build)
-results_folder := $(shell mkdir -p simulation_results)
+results_folder := $(shell mkdir -p simulation_results simulation_results/unitary simulation_results/integration simulation_results/system)
 
 #TARGET TO COMPILE ALL THE TESTS TOGETHER (NOT SIMULATOR)
 
@@ -35,7 +35,7 @@ jobmaster.o : data_structures/flink/jobmaster.cpp
 taskmanager.o : data_structures/flink/taskmanager.cpp
 	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/flink/taskmanager.cpp -o build/taskmanager.o
 
-flink: jobmanager.o resourcemanager.o jobmaster.o taskmanager.o
+flinklib: jobmanager.o resourcemanager.o jobmaster.o taskmanager.o
 	ar -crs build/libflink.a  build/jobmanager.o build/resourcemanager.o build/jobmaster.o build/taskmanager.o
 	ranlib build/libflink.a
 
@@ -60,18 +60,26 @@ main_prod_nmaster_test.o: test/integration/main_prod_nmaster_test.cpp
 main_top.o: top_model/main.cpp
 	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) top_model/main.cpp -o build/main_top.o
 
-
-unitary_tests: main_producer_test.o main_nodemaster_test.o main_switch_test.o operator_location.o message.o random.o flink
+unitary_producer: main_producer_test.o operator_location.o message.o random.o flinklib
 	$(CC) -o bin/PRODUCTOR_TEST build/libflink.a build/main_producer_test.o build/random.o build/operator_location.o build/message.o
+
+unitary_nodemaster: main_nodemaster_test.o operator_location.o message.o random.o flinklib
 	$(CC) -o bin/NODEMASTER_TEST build/libflink.a build/main_nodemaster_test.o build/random.o build/operator_location.o build/message.o
+
+unitary_switch: main_switch_test.o operator_location.o message.o random.o flinklib
 	$(CC) -o bin/SWITCH_TEST build/libflink.a build/main_switch_test.o build/random.o build/operator_location.o build/message.o
 
-integration_tests: main_prod_nmaster_test.o random.o operator_location.o message.o flink
+unitary_tests: main_producer_test.o main_nodemaster_test.o main_switch_test.o operator_location.o message.o random.o flinklib
+	$(unitary_producer)
+	$(unitary_nodemaster)
+	$(unitary_switch)
+
+integration_tests: main_prod_nmaster_test.o random.o operator_location.o message.o flinklib
 	$(CC) -o bin/PRODUCTOR_NMASTER_TEST build/libflink.a build/main_prod_nmaster_test.o build/random.o build/operator_location.o build/message.o
 
-#TARGET TO COMPILE ONLY ABP SIMULATOR
-$(SIMULATOR): main_top.o random.o operator_location.o message.o
-	$(CC) -o bin/$(SIMULATOR) build/main_top.o build/random.o
+#TARGET TO COMPILE ONLY STREAN PROCESSING SIMULATOR
+$(SIMULATOR): main_top.o random.o operator_location.o message.o flinklib
+	$(CC) -o bin/$(SIMULATOR) build/libflink.a build/main_top.o build/random.o build/operator_location.o build/message.o
 	
 #TARGET TO COMPILE EVERYTHING (ABP SIMULATOR + TESTS TOGETHER)
 all: $(SIMULATOR) unitary_tests integration_tests

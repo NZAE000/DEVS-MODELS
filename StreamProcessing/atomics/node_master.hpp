@@ -26,20 +26,20 @@ public:
     // Internal transition
     void internal_transition()
     {
-        if (there_external_locations()){
-            //std::cout<<"ACA1\n";
+        if (send_inmediatly_to_switch()){
+            std::cout<<"[master internal]: send inmediatly to switch\n";
             externLocations.clear();
-            if (this->taskman_.executionPending())
+            if (this->state.taskman_.executionPending())
             {
-                FLINK::Subtask_t& exec_prior { this->taskman_.getPriorityExecution() };
+                FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
                 this->lapse_time_      = exec_prior.lapse_;  // Update lapse.
                 this->state.processing = true;
-                std::cout<<"[internal] lapse: "<< this->lapse_time_ <<"\n";
+                std::cout<<"\t[master] pending exec: "<< this->lapse_time_ <<"\n";
 
             } else this->state.processing = false;
         }
-        else { 
-            //std::cout<<"ACA2\n";
+        else {
+            std::cout<<"[call slave internal]\n";
             static_cast<Node_t<TIME>*>(this)->internal_transition(); // Cast to super to call Node_t's internal transition algorithm.
         }
     }
@@ -51,17 +51,22 @@ public:
         check_external_transition_from_producer(mbs);      // Check some message of producer.
         this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
 
-        if (there_external_locations()){ // Do you have to send messages to other locations immediately?
+        vector<Message_t>& prod_bag = get_messages<typename Node_defs::in_source>(mbs);
+        if (prod_bag.size())
+            std::cout<<"\n[master external]: message "<<prod_bag.begin()->id_<<" recivied\n";
+        
+        if (send_inmediatly_to_switch()){ // Do you have to send messages to other locations immediately?
             this->lapse_time_ = {0};     // Imminent for the output to the switch.
+            std::cout<<"[master external]: send inmediatly to switch"<<"\n";
         }
-        else if (this->taskman_.executionPending())
+        else if (this->state.taskman_.executionPending())
         {
-            FLINK::Subtask_t& exec_prior { this->taskman_.getPriorityExecution() };
+            FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
             if (this->state.processing) 
                 exec_prior.lapse_ -= e;             // Minus time left (e = elapsed time value since last transition).
             this->lapse_time_ = exec_prior.lapse_;  // Update lapse.
             
-            std::cout<<"[external] lapse: "<< this->lapse_time_ <<"\n";
+            std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
         }
         this->state.processing = true;
 
@@ -82,10 +87,15 @@ public:
         typename make_message_bags<typename Node_t<TIME>::output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
         vector<OperatorLocation_t> bag_port_out;                                    // To build the message bag for the output port 'out'.
 
-        if (there_external_locations()){        // Do you have to send messages to other locations immediately?
+        if (send_inmediatly_to_switch()){        // Do you have to send messages to other locations immediately?
             bag_port_out = externLocations;
+            auto loc = bag_port_out.at(0);
+            std::cout<<"[master output]: send inmediatly to switch: loc "<< loc.node_id <<", "<<loc.slot_id <<"\n";
         }
-        else this->search_next_operator_destinations(bag_port_out); // Normal output: send new destinations for next operation.
+        else {
+            std::cout<<"[master output]: search_next_operator_destinations\n";
+            this->search_next_operator_destinations(bag_port_out); // Normal output: send new destinations for next operation.
+        }
 
         get_messages<typename Node_defs::out>(bags) = bag_port_out; // vector<OperatorLocation_t> = bag_port_out
         return bags;
@@ -94,7 +104,7 @@ public:
 private:
     mutable vector<OperatorLocation_t> externLocations{}; 
 
-    bool there_external_locations() const noexcept { return externLocations.size(); }
+    bool send_inmediatly_to_switch() const noexcept { return externLocations.size(); }
 
     void check_external_transition_from_producer(typename make_message_bags<typename Node_t<TIME>::input_ports>::type& mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
     {
@@ -112,12 +122,10 @@ private:
             OperatorLocation_t const& loc = this->jobman_.getOperLocation_balanced(first_op_id);
 
             if (loc.node_id == this->state.id){ // Chosen location on this node?
-                //std::cout<<"este nodo\n";
-                this->taskman_.scheduleExec(loc.slot_id, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
+                this->state.taskman_.scheduleExec(loc.slot_id, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
             }
             else {
                 externLocations.emplace_back(loc); // Location messages for elsewhere.
-                //std::cout<<"otro nodo\n";
             }
         }
     }

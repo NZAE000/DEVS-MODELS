@@ -54,7 +54,7 @@ int main(void){
     shared_ptr<dynamic::modeling::model> productor;
     productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME, std::map<TIME, double>&>("productor", cluster_cfg.arrivalRates_);
 
-/****** Node master atomic model instantiation *******************/
+/****** Switch atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> sswitch;
     sswitch = dynamic::translate::make_dynamic_atomic_model<Switch_t, TIME>("switch");
 
@@ -91,7 +91,7 @@ int main(void){
     dynamic::modeling::ICs ics_TOP;
     ics_TOP = {
         // It uses the type of the output port of the submodel “from” and the type of the input port of the submodel “to”, in this specific order. 
-        dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Switch_defs::in_master>("productor", "switch") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
+        dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Switch_defs::in_0>("productor", "switch") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
     };
 
 

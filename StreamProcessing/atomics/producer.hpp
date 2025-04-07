@@ -69,11 +69,11 @@ public:
 
     Message_t output_message() const override // message to be output
     {   
-        static uint32_t id_node {0};
-        ++id_node;
-        if (id_node == 3) id_node = 0;
+        //static uint32_t id_node {0};
+        //++id_node;
+        //if (id_node == 3) id_node = 0;
 
-        return {id_node};
+        return {this->state};
     }
 
     void internal_transition()

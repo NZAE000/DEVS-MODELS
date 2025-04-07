@@ -13,6 +13,7 @@
 #include<fstream>
 #include<iostream>
 #include<functional>
+#include<cassert>
 
 // Util
 #include "../util/random.hpp"
@@ -117,6 +118,7 @@ private:
     {
         std::ifstream file(path.data());
         file>>n_nodes_;
+        assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes" );
     }
 
     void initRates(std::string_view path) noexcept

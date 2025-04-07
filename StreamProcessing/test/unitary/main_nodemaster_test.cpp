@@ -92,7 +92,7 @@ int main(void){
     dynamic::modeling::ICs ics_TOP;
     ics_TOP = {
         // It uses the type of the output port of the submodel “from” and the type of the input port of the submodel “to”, in this specific order. 
-        dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Node_defs::in_source>("productor", "node_master") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
+        dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Node_defs::in_source>("productor", "node_0") // FROM output port of productor submodel (Prod->) TO input port node submodel (-> Node) =  ( [Prod(out) -> (int)node] ).
     };
 
 
