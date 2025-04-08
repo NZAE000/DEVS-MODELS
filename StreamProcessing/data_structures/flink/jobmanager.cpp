@@ -30,14 +30,13 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     Node_t<TIME>* node = *node_iter.base();
 
     // Assign resource to all operators.
-    for (auto& [oper_id, properties] : cluster_cfg_.operProps_)
+    for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
     {   
         replica = properties.replication; // Operator parallelism (suboperators)
         for (auto i=0; i<replica; i++)
         {
             slot_id = resourceMan_.assignResource(oper_id, node->getTaskManager()); // Assign resource to operator
             jobMaster_.addLocation(oper_id, node->id(), slot_id);  // Store location (node_id, slot_id) of this suboperator.
-
             if (++node_iter == end(nodes)) node_iter = nodes.begin();   // Next node (if is end, then go back to begin node)
             node = *node_iter.base();
         }
@@ -48,21 +47,22 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
         resourceMan_.addRefResource(node_->id(), node_->getTaskManager());
     });
 
-    for (auto& [oper_id, properties] : cluster_cfg_.operProps_)
+    // Show distribution.
+    for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
     {
         auto locations = jobMaster_.locations(oper_id);
         std::cout<<"locaciones de "<<oper_id<<":\n";
         for (auto const& loc : locations){
-            std::cout<<"\t node_i: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
+            std::cout<<"\tnode: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
         }
     }
 }
 
 OperatorLocation_t const& 
-JobManager_t::getOperLocation_balanced(operId_t const& oper_id) const noexcept
+JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
 {
     std::vector<OperatorLocation_t> const& 
-    locations = jobMaster_.locations(oper_id);
+    locations = jobMaster_.locations(oper_id); // Get all operator's locations ( (node_id, slot_id)...).
 
     // Find less congested location.
     uint32_t less { std::numeric_limits<uint32_t>::max() }, nTuple{};
@@ -76,10 +76,10 @@ JobManager_t::getOperLocation_balanced(operId_t const& oper_id) const noexcept
         }
     }
 
-   //std::cout<<"locs of "<<oper_id<<": \n";
-   //for (auto const& loc : locations){
-   //    std::cout<<"\t"<<loc.node_id<<" "<<loc.slot_id<<"\n";
-   //}
+    //std::cout<<"locs of "<<oper_id<<": \n";
+    //for (auto const& loc : locations){
+    //    std::cout<<"\t"<<loc.node_id<<" "<<loc.slot_id<<"\n";
+    //}
     return *loc_less_congested;
 }
 

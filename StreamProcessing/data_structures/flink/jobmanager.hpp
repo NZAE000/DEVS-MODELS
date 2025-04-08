@@ -25,8 +25,8 @@ struct JobManager_t {
     {}
 
 // Methods
-    void deployJob(std::vector<shared_ptr<dynamic::modeling::model>>&)                         noexcept;
-    [[nodiscard]] OperatorLocation_t    const& getOperLocation_balanced(operId_t const&) const noexcept;
+    void deployJob(std::vector<shared_ptr<dynamic::modeling::model>>&)                        noexcept;
+    [[nodiscard]] OperatorLocation_t    const& getOperLocationLessload(operId_t const&) const noexcept;
     [[nodiscard]] std::vector<operId_t> const& getOperatorDestinations(operId_t const&)  const noexcept;
     [[nodiscard]] double getAvgExecution(operId_t const&)                                const noexcept;
 

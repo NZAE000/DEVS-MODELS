@@ -135,10 +135,10 @@ public:
     // We need to declare the operator using the keyword 'friend's to specify that the function can access the private members of the structure state_type.
     friend ostringstream& operator<<(ostringstream& os, const typename Node_t<TIME>::state_type& i) { // State log
         //os <<"node_"<<i.id<<": buff: "<<i.buffer<<" & sent loc: " << i.index << " & processing: " << i.processing; 
-        os <<"processing: " << i.processing << ", buffer executions: " << i.taskman_.executionPending()<<", slots states:";
+        os <<"processing: " << i.processing << ", buffer executions: " << i.taskman_.executionPending()<<",";
         for (auto const& [id, slot] : i.taskman_.getSlots())
         {
-            os << " [slot "<<id<<": tuples: "<<slot.nTuples() << ", active: "<<slot.isRunnig()<<"]";
+            os << " [slot_"<<id<<"->"<<slot.getOperator()<<": active: "<<slot.isRunnig()<<", tuples: "<<slot.nTuples() <<"]";
         }
         return os;
     }
@@ -169,12 +169,12 @@ protected: // Son access (node_master).
         if (oper_id != jobman_.lastOperator()) // Haven't reached the last operator?
         {
             vector<FLINK::operId_t> const& operDestinations = jobman_.getOperatorDestinations(oper_id);
-
+            
             // Get balanced destiny locations for each destiny opeartor.
             bag_port_out.reserve(operDestinations.size());
             for (auto const& oper_id_des : operDestinations) 
             {
-                OperatorLocation_t const& location = jobman_.getOperLocation_balanced(oper_id_des);
+                OperatorLocation_t const& location = jobman_.getOperLocationLessload(oper_id_des);
 
                 // Location in this node? schedule execution now.
                 if (location.node_id == state.id){

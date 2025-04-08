@@ -51,14 +51,14 @@ int main(void){
     //shared_ptr<dynamic::modeling::model> node_master;
     //node_master = dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME>("node_master");
 
-    Node_t<TIME>& node_m = dynamic_cast<Node_t<TIME>&>(*nodes.begin()->get());
-    FLINK::operId_t oper1 = node_m.getTaskManager().getOperator(0);
-    FLINK::operId_t oper2 = node_m.getTaskManager().getOperator(1);
-    FLINK::operId_t oper3 = node_m.getTaskManager().getOperator(2);
-    FLINK::operId_t oper4 = node_m.getTaskManager().getOperator(3);
-    FLINK::operId_t oper5 = node_m.getTaskManager().getOperator(4);
-
-    std::cout<<oper1<<" "<<oper2<<" "<<oper3<<" "<<oper4<<" "<<oper5<<"\n";
+    //Node_t<TIME>& node_m = dynamic_cast<Node_t<TIME>&>(*nodes.begin()->get());
+    //FLINK::operId_t oper1 = node_m.getTaskManager().getOperator(0);
+    //FLINK::operId_t oper2 = node_m.getTaskManager().getOperator(1);
+    //FLINK::operId_t oper3 = node_m.getTaskManager().getOperator(2);
+    //FLINK::operId_t oper4 = node_m.getTaskManager().getOperator(3);
+    //FLINK::operId_t oper5 = node_m.getTaskManager().getOperator(4);
+//
+    //std::cout<<oper1<<" "<<oper2<<" "<<oper3<<" "<<oper4<<" "<<oper5<<"\n";
 
 /******* CLUSTER COUPLED MODEL ********/
 

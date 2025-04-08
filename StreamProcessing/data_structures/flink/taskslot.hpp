@@ -14,7 +14,7 @@ namespace FLINK {
 
 struct TaskSlot_t {
 
-    explicit TaskSlot_t() noexcept = default;
+    //explicit TaskSlot_t() noexcept = default;
     explicit TaskSlot_t(operId_t const& oper_id) noexcept
     : operator_id{oper_id} {} 
 
@@ -28,7 +28,7 @@ struct TaskSlot_t {
     bool pendingTuples()              const noexcept { return nTuples(); }
 
 private:
-    operId_t operator_id{};
+    operId_t const& operator_id;
     bool busy{false};
     uint32_t buffer{};
 };

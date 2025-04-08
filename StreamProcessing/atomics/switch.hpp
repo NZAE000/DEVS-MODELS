@@ -58,10 +58,10 @@ public:
     // State definition (state variables of the Switch_t model)
     struct state_type {
         bool transmitting_{false};   // Used to define that the model has something to output
+        mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_; // node_id, buffer.
     };
     state_type state;
 
-    mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_; // node_id, buffer
     TIME send_time_{};  // Time left until next departure
     int mean_ {5};
 
@@ -69,9 +69,9 @@ public:
     Switch_t() noexcept
     {   
         // Init port buffers
-        port_buffers_[0] = {};
-        port_buffers_[1] = {};
-        port_buffers_[2] = {};
+        state.port_buffers_[0] = {};
+        state.port_buffers_[1] = {};
+        state.port_buffers_[2] = {};
     }
 
     // internal transition: model sets the state variable transmitting_ to false.
@@ -80,7 +80,7 @@ public:
         std::cout<<"[switch internal]\n";
         uint8_t pending_sends{0};
 
-        for (auto & [_, buffer] : port_buffers_) { // Are there any pending messages in any of the output port buffers?
+        for (auto & [_, buffer] : state.port_buffers_) { // Are there any pending messages in any of the output port buffers?
             if (!buffer.messages.empty()) { 
                 buffer.active = true;
                 ++pending_sends;
@@ -108,14 +108,14 @@ public:
 
         for (auto const& bag_port_in :  bags_port_in) { // Get each bag port int.
             for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
-                MessageBuffer_t& buffer = port_buffers_[mess.node_id];
+                MessageBuffer_t& buffer = state.port_buffers_[mess.node_id];
                 buffer.messages.emplace_back(mess.node_id, mess.slot_id);
             }
         }
         if (!state.transmitting_) {  // Activate newly queued buffers.
             for (auto const& bag_port_in : bags_port_in) {
                 for (auto const& mess : bag_port_in) {
-                    MessageBuffer_t& buffer = port_buffers_[mess.node_id];
+                    MessageBuffer_t& buffer = state.port_buffers_[mess.node_id];
                     if (!buffer.active) buffer.active = true;
                 } 
             }              
@@ -141,7 +141,7 @@ public:
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
         //vector<OperatorLocation_t> bag_port_out0, bag_port_out1, bag_port_out2;
 
-        for (auto& [id_node, buffer] : port_buffers_)
+        for (auto& [id_node, buffer] : state.port_buffers_)
         {
             if (buffer.active){
                 switch (id_node) // For now
@@ -186,7 +186,17 @@ public:
     // That sentence typename Switch_t<TIME>::state_typ means that we are accessing the structure state_type inside the template class Switch_t<TIME>.
     // We need to declare the operator using the keyword 'friend's to specify that the function can access the private members of the structure state_type.
     friend ostringstream& operator<<(ostringstream& os, const typename Switch_t<TIME>::state_type& i) { // State log
-        os << "transmitting: " << i.transmitting_; 
+        os << "transmitting: " << i.transmitting_;
+        if (i.transmitting_)
+        {
+            os << " [ ";
+            for (auto const& [node_id, buffer] : i.port_buffers_) {
+                if (buffer.active){
+                    os << "{"<<buffer.messages.at(0)<<"} ";
+                }
+            }
+            os << "]";
+        } 
         return os;
     }
 

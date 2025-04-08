@@ -13,7 +13,7 @@ namespace FLINK {
 [[nodiscard]] slotId_t 
 TaskManager_t::reserveSlot(operId_t const& oper_id) noexcept
 {
-    auto pair = taskSlots_.insert(std::pair<slotId_t, operId_t>(nextID++, oper_id));
+    auto pair = taskSlots_.insert(std::pair<slotId_t, operId_t const&>(nextID++, oper_id));
     return pair.first->first;
 }
 
@@ -39,7 +39,7 @@ TaskManager_t::getSlots() const noexcept
 void 
 TaskManager_t::scheduleExec(slotId_t slot_id, JobManager_t& jobMan) noexcept
 {
-    TaskSlot_t& slot = taskSlots_[slot_id]; // Get task slot.
+    TaskSlot_t& slot = getSlot(slot_id); // Get task slot.
 
     if (slot.isRunnig()) slot.pushTuple(); // Queuing on buffer.
     else 
@@ -53,7 +53,7 @@ TaskManager_t::scheduleExec(slotId_t slot_id, JobManager_t& jobMan) noexcept
 void 
 TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noexcept
 {
-    TaskSlot_t& slot = taskSlots_[slot_id]; // Get task slot.
+    TaskSlot_t& slot = getSlot(slot_id); // Get task slot.
 
     if (slot.pendingTuples()) // Has pending tuples to execute? 
     {
@@ -68,7 +68,7 @@ TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noex
 void 
 TaskManager_t::createSubTask(TaskSlot_t& slot, slotId_t slot_id, int lapse) noexcept 
 {
-    TIME timeExec = {0,0,0,0,/*lapse*/10};                        // Create time execution.
+    TIME timeExec = {0,0,0,0,lapse};                        // Create time execution (hrs::mins:secs:mills:micrs::nns:pcs::fms).
     this->bufferExec_.emplace_back(slot_id, timeExec);      // Add to execution buffer.
     slot.setExecution(true);                                // State to execute.
 }

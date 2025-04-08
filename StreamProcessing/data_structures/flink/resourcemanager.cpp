@@ -23,7 +23,7 @@ TaskSlot_t const& ResourceManager_t::slotFrom(OperatorLocation_t const& operator
 {
     auto const [node_id, slot_id] = operatorLocation;
     auto iter = refResources_.find(node_id);
-    
+
     return iter->second->getSlot(slot_id);
 }
 

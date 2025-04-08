@@ -44,12 +44,12 @@ int main(void){
 
 /****** Productor atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> productor;
-    productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME, std::map<TIME, double>&>("productor", cluster_cfg.arrivalRates_);
+    productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME, std::map<TIME, double>&>("productor", cluster_cfg.arrivalRates_, "simulation_results/system/rate_change.txt");
 
 /****** Node master atomic model instantiations *******************/
     std::vector<shared_ptr<dynamic::modeling::model>> nodes{};
     JobManager.deployJob(nodes);
-
+    
 /****** Switch atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> sswitch;
     sswitch = dynamic::translate::make_dynamic_atomic_model<Switch_t, TIME>("switch");
@@ -85,9 +85,9 @@ int main(void){
 
         dynamic::translate::make_IC<Node_defs::out, Switch_defs::in_1>("node_1", "switch"),
         dynamic::translate::make_IC<Switch_defs::out_1, Node_defs::in>("switch", "node_1"),
-//
-        //dynamic::translate::make_IC<Node_defs::out, Switch_defs::in_2>("node_2", "switch"),
-        //dynamic::translate::make_IC<Switch_defs::out_2, Node_defs::in>("switch", "node_2"),
+
+        dynamic::translate::make_IC<Node_defs::out, Switch_defs::in_2>("node_2", "switch"),
+        dynamic::translate::make_IC<Switch_defs::out_2, Node_defs::in>("switch", "node_2"),
     };
     //ics_Cluster.reserve(nodes.size() * 2); // For each existent node, there are two ports (in, out)
     //for (auto const& node : nodes)

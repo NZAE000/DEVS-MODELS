@@ -19,6 +19,8 @@
 
 #include "../data_structures/message.hpp"
 #include <cadmium/basic_model/pdevs/generator.hpp>
+#include<fstream>
+#include<string_view>
 
 using namespace cadmium;
 using namespace std;
@@ -45,6 +47,8 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     typename std::map<TIME, double>::iterator next_rate_;
     bool generating_ {true};
 
+    std::ofstream log_rate;
+
     // Exponential distribution
     [[nodiscard]] double expo_distr(double rd, double lambda) const noexcept {   
         return -(1/lambda)*std::log(1-rd);
@@ -53,12 +57,12 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
 public:
 
     Producer_t() {};
-    Producer_t(std::map<TIME, double>& ar)
-    : basic_models::pdevs::generator<Message_t, TIME>{}, gen_{rd_()}, uni_distr_{0, 1}, arrivalRates_{ar}
+    Producer_t(std::map<TIME, double>& ar, std::string_view path_to_log)
+    : basic_models::pdevs::generator<Message_t, TIME>{}, gen_{rd_()}, uni_distr_{0, 1}, arrivalRates_{ar}, log_rate(path_to_log.data())
     {
         current_rate_ = begin(arrivalRates_); // Init current rate.
+        log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
         std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
-
     }
 
     TIME period() const override // time between consecutive messages
@@ -86,9 +90,11 @@ public:
         {   
             if (next_rate_->second == 0) { // Is the final rate?
                 generating_ = false;
+                log_rate<<current_time_<<" "<<0<<"\n";
                 return;
             }
             current_rate_ = next_rate_; // Pass to next rate
+            log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
             std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
         }
 

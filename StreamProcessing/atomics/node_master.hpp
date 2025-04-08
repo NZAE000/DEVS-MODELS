@@ -47,10 +47,9 @@ public:
     // External transition
     void external_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
     {
-        //std::cout<<"node master\n";
         check_external_transition_from_producer(mbs);      // Check some message of producer.
         this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
-
+        
         vector<Message_t>& prod_bag = get_messages<typename Node_defs::in_source>(mbs);
         if (prod_bag.size())
             std::cout<<"\n[master external]: message "<<prod_bag.begin()->id_<<" recivied\n";
@@ -69,8 +68,6 @@ public:
             std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
         }
         this->state.processing = true;
-
-        //++this->state.buffer; // get this out already!
     }
 
     // Confluence transition
@@ -118,8 +115,8 @@ private:
         if (size_bag) // Are there a message from the producer?
         {
             // Find less congested location of first operator.
-            FLINK::operId_t first_op_id   = this->jobman_.firstOperator();
-            OperatorLocation_t const& loc = this->jobman_.getOperLocation_balanced(first_op_id);
+            FLINK::operId_t const& first_op_id = this->jobman_.firstOperator();
+            OperatorLocation_t const& loc      = this->jobman_.getOperLocationLessload(first_op_id);
 
             if (loc.node_id == this->state.id){ // Chosen location on this node?
                 this->state.taskman_.scheduleExec(loc.slot_id, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
