@@ -67,14 +67,76 @@ JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
     // Find less congested location.
     uint32_t less { std::numeric_limits<uint32_t>::max() }, nTuple{};
     OperatorLocation_t const* loc_less_congested {nullptr};
+
+    //std::size_t numServices  { this->numServices() };
+    //ENG::Vec_t<Service_t::ID> serviceIDs, free_serviceIDs;
+    //ENG::Vec_t<std::size_t>   rowSizes;
+    //free_serviceIDs.reserve(numServices);
+    //serviceIDs.reserve(numServices);
+    //rowSizes.reserve(numServices);
+
+    std::vector<OperatorLocation_t const*> free_locs{};
+    free_locs.reserve(locations.size());
+
+    // Detect free slots.
     for (auto const& loc : locations)
     {
-        nTuple = resourceMan_.slotFrom(loc).nTuples(); // Know n tuples from slot´s queue of node.
-        if (nTuple < less) {
-            less = nTuple;
-            loc_less_congested = &loc;
+        auto const& slot = resourceMan_.slotFrom(loc);
+        if (!slot.isRunnig()) free_locs.push_back(&loc);
+    }
+
+    // Are there free slots? Choose random.
+    auto num_loc_fre = free_locs.size();
+    if (num_loc_fre > 0){
+        loc_less_congested = free_locs.at(std::rand() / ((RAND_MAX + 1u) / num_loc_fre));
+    }
+    else {
+        for (auto const& loc : locations)
+        {
+            nTuple = resourceMan_.slotFrom(loc).nTuples(); // Know n tuples from slot´s queue of node.
+            if (nTuple < less) {
+                less = nTuple;
+                loc_less_congested = &loc;
+            }
         }
     }
+    /*
+    // Record idle service types (id), general service types and respective row sizes
+		for (auto const& [server_id, service] : _services)
+		{
+			if (service->_status == Service_t::STATUS_t::FREE) free_serviceIDs.emplace_back(server_id);
+			serviceIDs.emplace_back(server_id);
+			rowSizes.emplace_back(service->rowSize());
+		}
+
+		auto numServicesFree { free_serviceIDs.size() };
+		if (numServicesFree > 0){		// If at least one service is free, choose randomly.
+			indicated_idService = free_serviceIDs.at(std::rand() / ((RAND_MAX + 1u) / numServicesFree));
+		}
+		else {	// If no service is unoccupied, look for a smaller queue size (LOAD BALANCING).
+			auto size { rowSizes.size() };
+			std::size_t findMinSize = [&]() {
+				std::size_t minSize { INT_MAX };
+				for (std::size_t i=0; i<size; ++i){
+					if (rowSizes[i] < minSize) minSize = rowSizes[i];
+				}
+				return minSize;
+			}(); // auto invoke lambda
+
+			// Discard larger row sizes
+			for (std::size_t i=0; i<size; ++i){
+				if (rowSizes[i] > findMinSize) {
+					rowSizes.erase(rowSizes.begin() + i);
+					serviceIDs.erase(serviceIDs.begin() + i);
+					size = rowSizes.size();
+					--i;
+				}
+			}
+			// Randomly select the smallest services in a row
+			indicated_idService = serviceIDs.at(std::rand() / ((RAND_MAX + 1u) / serviceIDs.size()));
+		}
+    
+    */
 
     //std::cout<<"locs of "<<oper_id<<": \n";
     //for (auto const& loc : locations){
