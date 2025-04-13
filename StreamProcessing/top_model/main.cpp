@@ -4,6 +4,9 @@
 #include <cadmium/modeling/dynamic_model_translator.hpp>
 #include <cadmium/engine/pdevs_dynamic_runner.hpp>
 #include <cadmium/logger/common_loggers.hpp>
+#include <boost/preprocessor/repetition/repeat.hpp>
+#include <boost/preprocessor/cat.hpp>
+#include <boost/preprocessor/stringize.hpp> // To convert type names to strings.
 
 //Time class header
 #include <NDTime.hpp> // NDTime is a C++ class that implements time operations and allows defining the time as in digital clock format (“hh:mm:ss:mss”) or as a list of integer elements ({ hh, mm, ss, mss})
@@ -79,19 +82,31 @@ int main(void){
         dynamic::translate::make_EIC<Cluster_defs::in, Node_defs::in_source>("node_0")    // eic to node_0 = node_master   ->[->(node_0)]
     };
 
+    #define GENERATE_IC(z, n, data) \
+    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::BOOST_PP_CAT(in_, n)>(BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n)), "switch"), \
+    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::BOOST_PP_CAT(out_, n), Node_defs::in>("switch", BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n))),
+
     dynamic::modeling::ICs ics_Cluster = {
-        dynamic::translate::make_IC<Node_defs::out, Switch_defs::in_0>("node_0", "switch"),
-        dynamic::translate::make_IC<Switch_defs::out_0, Node_defs::in>("switch", "node_0"),
-
-        dynamic::translate::make_IC<Node_defs::out, Switch_defs::in_1>("node_1", "switch"),
-        dynamic::translate::make_IC<Switch_defs::out_1, Node_defs::in>("switch", "node_1"),
-
-        dynamic::translate::make_IC<Node_defs::out, Switch_defs::in_2>("node_2", "switch"),
-        dynamic::translate::make_IC<Switch_defs::out_2, Node_defs::in>("switch", "node_2"),
+        BOOST_PP_REPEAT(N_NODES, GENERATE_IC, _)
     };
+
+    //dynamic::modeling::ICs ics_Cluster = {
+    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_0>("node_0", "switch"),
+    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_1>("node_1", "switch"),
+    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_2>("node_2", "switch"),
+    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_3>("node_3", "switch"),
+    //    
+    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_0, Node_defs::in>("switch", "node_0"),
+    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_1, Node_defs::in>("switch", "node_1"),
+    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_2, Node_defs::in>("switch", "node_2"),
+    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_3, Node_defs::in>("switch", "node_3"),
+    //};
+    //dynamic::modeling::ICs ics_Cluster;
     //ics_Cluster.reserve(nodes.size() * 2); // For each existent node, there are two ports (in, out)
     //for (auto const& node : nodes)
     //{
+    //    ics_Cluster.push_back(dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_0>(node->get_id(), "switch"));
+    //    ics_Cluster.push_back(dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_0, Node_defs::in>("switch", node->get_id()));
     //    // dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Node_defs::in_source>("productor", "node_master") // FROM output port of productor submodel (Prod->) TO input port node submodel (-> Node) =  ( [Prod(out) -> (int)node] ).
     //}
     dynamic::modeling::EOCs eocs_Cluster = {};     // Nothing to EOC of Cluster

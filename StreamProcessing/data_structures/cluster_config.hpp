@@ -15,8 +15,9 @@
 #include<functional>
 #include<cassert>
 
-// Util
+
 #include "../util/random.hpp"
+#include "../input_data/hardware.hpp"
 
 
 //Time class header
@@ -116,9 +117,10 @@ private:
 
     void initHardware(std::string_view path) noexcept
     {
-        std::ifstream file(path.data());
-        file>>n_nodes_;
-        assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes" );
+        //std::ifstream file(path.data());
+        //file>>n_nodes_;
+        //assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes" );
+        n_nodes_ = N_NODES;
     }
 
     void initRates(std::string_view path) noexcept

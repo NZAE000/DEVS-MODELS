@@ -10,7 +10,9 @@
 
 #include <cadmium/modeling/ports.hpp>
 #include <cadmium/modeling/message_bag.hpp> // Used to declare a bag of messages for input or output port.
-
+#include <boost/preprocessor/repetition/repeat.hpp>
+#include <boost/preprocessor/repetition/enum.hpp>
+#include <boost/preprocessor/cat.hpp>
 #include <limits>
 #include <assert.h>
 #include <string>
@@ -18,6 +20,7 @@
 #include <iostream>
 #include <vector>
 
+#include "../input_data/hardware.hpp"
 #include "../data_structures/operator_location.hpp"
 #include "../data_structures/message.hpp"
 #include "../util/random.hpp"
@@ -27,20 +30,12 @@ using namespace std;
 
 /*Call order: external, time_avance, output, internal*/
 
-//Port definition (for now)
-struct Switch_defs {
-    struct in_0      : public in_port<OperatorLocation_t> {}; 
-    struct in_1      : public in_port<OperatorLocation_t> {}; 
-    struct in_2      : public in_port<OperatorLocation_t> {}; 
-    struct out_0     : public out_port<OperatorLocation_t> {};
-    struct out_1     : public out_port<OperatorLocation_t> {};
-    struct out_2     : public out_port<OperatorLocation_t> {};
-};
 
 struct MessageBuffer_t {
     std::vector<OperatorLocation_t> messages{};
     bool active {false};
 };
+
 
 // Atomic model definition
 template<typename TIME> 
@@ -48,11 +43,41 @@ class Switch_t {
 
 public:
 
+    //Port definition (for now)
+    //struct defs_inport {
+    //    struct in_0  : public in_port<OperatorLocation_t> {}; 
+    //    struct in_1  : public in_port<OperatorLocation_t> {}; 
+    //    struct in_2  : public in_port<OperatorLocation_t> {};
+    //    struct in_3  : public in_port<OperatorLocation_t> {};
+    //};
+
+    //struct defs_outport {
+    //    struct out_0 : public out_port<OperatorLocation_t> {};
+    //    struct out_1 : public out_port<OperatorLocation_t> {};
+    //    struct out_2 : public out_port<OperatorLocation_t> {};
+    //    struct out_3 : public out_port<OperatorLocation_t> {};
+    //};
+
     // ports definition: tuple for distintes types of messages
     // NOTA: The 'typename' specifies that Switch_defs::in and Switch_defs::out aredatatypesthatwilloverwritethetemplateclassinthesimulator
     //"typename" indicates that the expression that follows is a "data type" (not a specific object).
-    using input_ports  = tuple<typename Switch_defs::in_0,  typename Switch_defs::in_1,  typename Switch_defs::in_2>;
-    using output_ports = tuple<typename Switch_defs::out_0, typename Switch_defs::out_1, typename Switch_defs::out_2>;
+    //using input_ports  = tuple<typename defs_port::in_0,  typename defs_port::in_1,  typename defs_port::in_2,  typename defs_port::in_3>;
+    //using output_ports = tuple<typename defs_port::out_0, typename defs_port::out_1, typename defs_port::out_2, typename defs_port::out_3>;
+
+    // Metaprogramming at the preprocessing level with Boost Preprocessor.
+    #define INPORT(z, n, _)  struct in_##n  : public in_port<OperatorLocation_t> {};
+    #define OUTPORT(z, n, _) struct out_##n : public out_port<OperatorLocation_t> {};
+
+    struct defs_port {
+        BOOST_PP_REPEAT(N_NODES, INPORT, _)
+        BOOST_PP_REPEAT(N_NODES, OUTPORT, _)
+    };
+
+    #define INPORT_TYPENAME(z, n, _)  typename defs_port::in_##n
+    #define OUTPORT_TYPENAME(z, n, _) typename defs_port::out_##n
+
+    using input_ports  = tuple<BOOST_PP_ENUM(N_NODES, INPORT_TYPENAME, _)>;
+    using output_ports = tuple<BOOST_PP_ENUM(N_NODES, OUTPORT_TYPENAME, _)>;
     using nodeId_t     = uint32_t;
 
     // State definition (state variables of the Switch_t model)
@@ -100,10 +125,16 @@ public:
         //vector<OperatorLocation_t> bag_port_in;
         //bag_port_in = get_messages<typename Switch_defs::in_0>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
         //std::cout<<"size: "<<bag_port_in.size()<<"\n";
+        
+        //vector<vector<OperatorLocation_t>> bags_port_in {
+        //    get_messages<typename defs_port::in_0>(mbs),
+        //    get_messages<typename defs_port::in_1>(mbs),
+        //    get_messages<typename defs_port::in_2>(mbs),
+        //    get_messages<typename defs_port::in_3>(mbs)
+        //};
+        #define GET_MESSAGES_INPORT(z, n, _) get_messages<typename defs_port::in_##n>(mbs)
         vector<vector<OperatorLocation_t>> bags_port_in {
-            get_messages<typename Switch_defs::in_0>(mbs),
-            get_messages<typename Switch_defs::in_1>(mbs),
-            get_messages<typename Switch_defs::in_2>(mbs)
+            BOOST_PP_ENUM(N_NODES, GET_MESSAGES_INPORT, _)
         };
 
         for (auto const& bag_port_in :  bags_port_in) { // Get each bag port int.
@@ -141,25 +172,37 @@ public:
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
         //vector<OperatorLocation_t> bag_port_out0, bag_port_out1, bag_port_out2;
 
+        #define GENERATE_CASE(z, n, _) \
+            case n: \ 
+            get_messages<typename defs_port::BOOST_PP_CAT(out_, n)>(bags).push_back(*buffer.messages.begin()); \
+            buffer.messages.erase(buffer.messages.begin()); \
+            break;
+
         for (auto& [id_node, buffer] : state.port_buffers_)
         {
             if (buffer.active){
                 switch (id_node) // For now
                 {
-                case 0:
-                    get_messages<typename Switch_defs::out_0>(bags).push_back(*buffer.messages.begin()); // Get the first in line queue.
-                    buffer.messages.erase(buffer.messages.begin());
-                    break;
-                case 1:
-                    get_messages<typename Switch_defs::out_1>(bags).push_back(*buffer.messages.begin());
-                    buffer.messages.erase(buffer.messages.begin());
-                    break;
-                case 2:
-                    get_messages<typename Switch_defs::out_2>(bags).push_back(*buffer.messages.begin());
-                    buffer.messages.erase(buffer.messages.begin());
-                    break;
+                BOOST_PP_REPEAT(N_NODES, GENERATE_CASE, _)
                 default:
                     break;
+                //case 0:
+                //    get_messages<typename defs_port::out_0>(bags).push_back(*buffer.messages.begin()); // Get the first in line queue.
+                //    buffer.messages.erase(buffer.messages.begin());
+                //    break;
+                //case 1:
+                //    get_messages<typename defs_port::out_1>(bags).push_back(*buffer.messages.begin());
+                //    buffer.messages.erase(buffer.messages.begin());
+                //    break;
+                //case 2:
+                //    get_messages<typename defs_port::out_2>(bags).push_back(*buffer.messages.begin());
+                //    buffer.messages.erase(buffer.messages.begin());
+                //    break;
+                //case 3:
+                //    get_messages<typename defs_port::out_3>(bags).push_back(*buffer.messages.begin());
+                //    buffer.messages.erase(buffer.messages.begin());
+                //default:
+                //    break;
                 }
                 buffer.active = false; // Set to inactive.
             }
@@ -167,9 +210,9 @@ public:
 
         std::cout<<"[switch output]\n";
 
-        //get_messages<typename Switch_defs::out_0>(bags) = bag_port_out0;
-        //get_messages<typename Switch_defs::out_1>(bags) = bag_port_out1;
-        //get_messages<typename Switch_defs::out_2>(bags) = bag_port_out2;
+        //get_messages<typename defs_port::out_0>(bags) = bag_port_out0;
+        //get_messages<typename defs_port::out_1>(bags) = bag_port_out1;
+        //get_messages<typename defs_port::out_2>(bags) = bag_port_out2;
 
         return bags;
     }
