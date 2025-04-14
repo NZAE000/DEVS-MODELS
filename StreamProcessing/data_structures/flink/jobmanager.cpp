@@ -58,41 +58,50 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     }
 }
 
-// Load balancing with locations.
+// Load balancing: find less congested location.
 OperatorLocation_t const& 
 JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
 {
     std::vector<OperatorLocation_t> const& 
     locations = jobMaster_.getLocations(oper_id); // Get all operator's locations ( (node_id, slot_id)...).
-
-    // Find less congested location.
+    
     OperatorLocation_t const* loc_less_congested {nullptr};
     std::vector<OperatorLocation_t const*> free_locs{};
+    std::vector<OperatorLocation_t const*> locs_shorter_queue{};
     free_locs.reserve(locations.size());
+    locs_shorter_queue.reserve(locations.size());
 
-    // Detect free slots.
+    uint32_t shorter_queue { std::numeric_limits<uint32_t>::max() }, n_tuple{};
+
+    // Detect free slots or shorter tuples queue.
     for (auto const& loc : locations)
     {
         auto const& slot = resourceMan_.slotFrom(loc);
-        if (!slot.isRunnig()) free_locs.push_back(&loc);
+        if (!slot.isRunnig()) free_locs.push_back(&loc); // Detect free slot.
+        else 
+        {
+            n_tuple = slot.nTuples();    // Know n tuples from slot´s queue of node.
+            if (n_tuple < shorter_queue)
+                shorter_queue = n_tuple;
+        }
     }
 
     // Are there free slots? Choose random.
     auto num_loc_fre = free_locs.size();
     if (num_loc_fre > 0){
-        loc_less_congested = free_locs.at(std::rand() / ((RAND_MAX + 1u) / num_loc_fre));
+        loc_less_congested = free_locs.at(std::rand() % num_loc_fre);
+        //std::cout<<"num_loc_fre: "<<num_loc_fre<<"\n";
+        //std::cout<<"num_loc_fre: "<<num_loc_fre<<" Chosen node id: "<<loc_less_congested->node_id<<"\n";
     }
     else 
-    {
-        uint32_t less { std::numeric_limits<uint32_t>::max() }, nTuple{};
+    {   // Store locations with shorter tuple queue.
         for (auto const& loc : locations)
         {
-            nTuple = resourceMan_.slotFrom(loc).nTuples(); // Know n tuples from slot´s queue of node.
-            if (nTuple < less) {
-                less = nTuple;
-                loc_less_congested = &loc;
-            }
+            n_tuple = resourceMan_.slotFrom(loc).nTuples(); // Know n tuples from slot´s queue of node.
+            if (n_tuple == shorter_queue)
+                locs_shorter_queue.push_back(&loc); // Slot with shorter queque detected.
         }
+        loc_less_congested = locs_shorter_queue.at(std::rand() % locs_shorter_queue.size()); // Choose random.
     }
 
     //std::cout<<"locs of "<<oper_id<<": \n";

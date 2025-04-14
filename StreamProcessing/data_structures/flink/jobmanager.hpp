@@ -22,7 +22,9 @@ struct JobManager_t {
 
     explicit JobManager_t(ClusterConfig_t const& c_cgf)
     : cluster_cfg_{c_cgf} , jobMaster_{cluster_cfg_.topology_}, resourceMan_{}
-    {}
+    {
+        std::srand(std::time(nullptr)); // Set seed.
+    }
 
 // Methods
     void deployJob(std::vector<shared_ptr<dynamic::modeling::model>>&)                                noexcept;

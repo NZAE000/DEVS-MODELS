@@ -184,7 +184,7 @@ protected: // Son access (node_master).
                     bag_port_out.push_back(location);
                     //std::cout<<"acaca\n";   
                 }
-                std::cout<<"\toper priority exec: "<<oper_id<<", and next: "<<oper_id_des<<" in location node: "<<location.node_id<<" slot: "<<location.slot_id<<"\n";
+                std::cout<<"\toper priority exec: "<<oper_id<<", and next: "<<*oper_id_des<<" in location node: "<<location.node_id<<" slot: "<<location.slot_id<<"\n";
             }
         }
         else { std::cout<<"\tLast\n"; } // TODO !!
