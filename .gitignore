@@ -3,5 +3,6 @@ StreamProcessing/build/*
 StreamProcessing/simulation_results/unitary/*
 StreamProcessing/simulation_results/integration/*
 StreamProcessing/simulation_results/system/*
-StreamProcessing/arrive_test
+StreamProcessing/expo_test
+StreamProcessing/norm_test
 .vscode

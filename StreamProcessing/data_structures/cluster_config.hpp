@@ -43,36 +43,23 @@ struct ClusterConfig_t {
 
     explicit ClusterConfig_t()
     {
+        initOperators(ConfigPath_t::oper_path); // It must inizialize first.
         initTopology(ConfigPath_t::topo_path);
-        initOperators(ConfigPath_t::oper_path);
         initHardware(ConfigPath_t::hw_path);
         initRates(ConfigPath_t::arrival_path);
     }
 
 // Data config
-    std::map<operId_t, OperatorProperties_t> operProps_{};
-    std::map<operId_t, std::vector<operId_t>> topology_{};
-    std::map<TIME, double> arrivalRates_{};
+    std::map<operId_t, OperatorProperties_t>                operProps_{}; // Operator ids resource.
+    std::map<operId_t const*, std::vector<operId_t const*>> topology_{};
+    std::map<TIME, double>                                  arrivalRates_{};
     uint32_t n_nodes_{};
 
-    operId_t begin_op{}, end_op{};
+    operId_t const* begin_op{};
+    operId_t const* end_op{};
+    std::vector<operId_t const*> end_ops{};
 
 private:
-
-    void initTopology(std::string_view path) noexcept
-    {
-        std::ifstream file(path.data());
-        std::string from{}, to{};
-        while (!file.eof())
-        {
-            file>>from>>to;
-            topology_[from].emplace_back(to);
-        }
-        //std::for_each(begin(topology_), end(topology_), [&](auto const& link){
-        //    std::cout<<"from: "<<link.first<<" to: "<< link.second.size()<<"\n";
-        //    for (auto const& to : link.second) std::cout<<"\t"<<to<<"\n";
-        //});
-    }
 
     void initOperators(std::string_view path) noexcept
     {
@@ -84,8 +71,6 @@ private:
         while (!file.eof())
         {
             file>>name>>replica>>distr;
-            if (count == 0) { begin_op = name; ++count; } // Store first operator
-            
 
             if (distr == "fix"){
                 double param{};
@@ -110,17 +95,62 @@ private:
                     return Random_t::exponential(param);
                 }};
             }
+
+            // Store first operator.
+            if (count == 0) { 
+                begin_op = &operProps_.find(name)->first; ++count; 
+            }
         }
-        end_op = name; // Store last operator
+
+        end_op = &operProps_.find(name)->first; // Store last operator
         //std::cout<<"bop: "<<begin_op<< "endop: "<<end_op<<"\n";
+    }
+
+    void initTopology(std::string_view path) noexcept
+    {
+        std::ifstream file(path.data());
+        std::string from{}, to{};
+        while (!file.eof())
+        {
+            file>>from>>to;
+            auto& from_ref = operProps_.find(from)->first;
+            auto& to_ref   = operProps_.find(to)->first;
+
+            topology_[&from_ref].emplace_back(&to_ref);
+        }
+
+        // Store all end operators
+        for (auto const& [_, all_to] : topology_){
+            std::for_each(all_to.begin(), all_to.end(), [&](auto const* to)
+            {
+                uint8_t final {1};
+                for (auto const& [from, _] : topology_)
+                    if (to == from) { final = 0; break; } // Then isn't final operator.
+    
+                if (final) this->end_ops.push_back(to);
+            });
+        }
+
+        // Discard duplicated end operators.
+        std::sort(end_ops.begin(), end_ops.end()); 
+        auto last = std::unique(end_ops.begin(), end_ops.end()); 
+        end_ops.erase(last, end_ops.end()); 
+
+        //std::for_each(begin(topology_), end(topology_), [&](auto const& link){
+        //    std::cout<<"from: "<<*link.first<<" to: "<< link.second.size()<<"\n";
+        //    for (auto const to : link.second) std::cout<<"\t"<<*to<<"\n";
+        //});
+        //
+        //std::cout<<"finals: \n";
+        //for (auto const* final : end_ops) std::cout<<" \t"<<*final<<"\n";
     }
 
     void initHardware(std::string_view path) noexcept
     {
         //std::ifstream file(path.data());
         //file>>n_nodes_;
-        //assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes" );
         n_nodes_ = N_NODES;
+        assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes is 0" );
     }
 
     void initRates(std::string_view path) noexcept

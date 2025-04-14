@@ -166,15 +166,15 @@ protected: // Son access (node_master).
         FLINK::Subtask_t const& exec_prior = state.taskman_.getPriorityExecution();
         FLINK::operId_t  const& oper_id    = state.taskman_.getSlot(exec_prior.slot_id).getOperator(); //getOperator(exec_prior.slot_id);
 
-        if (oper_id != jobman_.lastOperator()) // Haven't reached the last operator?
+        if (!jobman_.lastOperator(oper_id)) // Haven't reached the last operator?
         {
-            vector<FLINK::operId_t> const& operDestinations = jobman_.getOperatorDestinations(oper_id);
+            vector<FLINK::operId_t const*> const& operDestinations = jobman_.getOperatorDestinations(oper_id);
             
             // Get balanced destiny locations for each destiny opeartor.
             bag_port_out.reserve(operDestinations.size());
-            for (auto const& oper_id_des : operDestinations) 
+            for (auto const* oper_id_des : operDestinations) 
             {
-                OperatorLocation_t const& location = jobman_.getOperLocationLessload(oper_id_des);
+                OperatorLocation_t const& location = jobman_.getOperLocationLessload(*oper_id_des);
 
                 // Location in this node? schedule execution now.
                 if (location.node_id == state.id){
@@ -187,7 +187,7 @@ protected: // Son access (node_master).
                 std::cout<<"\toper priority exec: "<<oper_id<<", and next: "<<oper_id_des<<" in location node: "<<location.node_id<<" slot: "<<location.slot_id<<"\n";
             }
         }
-        else { std::cout<<"\tlast\n"; } // TODO !!
+        else { std::cout<<"\tLast\n"; } // TODO !!
     }   
 
 

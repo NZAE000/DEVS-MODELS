@@ -82,6 +82,7 @@ int main(void){
         dynamic::translate::make_EIC<Cluster_defs::in, Node_defs::in_source>("node_0")    // eic to node_0 = node_master   ->[->(node_0)]
     };
 
+    // Metaprogramming at the preprocessing level with Boost Preprocessor.
     #define GENERATE_IC(z, n, data) \
     dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::BOOST_PP_CAT(in_, n)>(BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n)), "switch"), \
     dynamic::translate::make_IC<Switch_t<TIME>::defs_port::BOOST_PP_CAT(out_, n), Node_defs::in>("switch", BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n))),

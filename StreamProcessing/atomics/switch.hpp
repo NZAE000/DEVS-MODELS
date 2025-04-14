@@ -49,9 +49,6 @@ public:
     //    struct in_1  : public in_port<OperatorLocation_t> {}; 
     //    struct in_2  : public in_port<OperatorLocation_t> {};
     //    struct in_3  : public in_port<OperatorLocation_t> {};
-    //};
-
-    //struct defs_outport {
     //    struct out_0 : public out_port<OperatorLocation_t> {};
     //    struct out_1 : public out_port<OperatorLocation_t> {};
     //    struct out_2 : public out_port<OperatorLocation_t> {};
@@ -80,10 +77,11 @@ public:
     using output_ports = tuple<BOOST_PP_ENUM(N_NODES, OUTPORT_TYPENAME, _)>;
     using nodeId_t     = uint32_t;
 
+    
     // State definition (state variables of the Switch_t model)
     struct state_type {
         bool transmitting_{false};   // Used to define that the model has something to output
-        mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_; // node_id, buffer.
+        mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_{}; // node_id, buffer.
     };
     state_type state;
 
@@ -91,13 +89,7 @@ public:
     int mean_ {5};
 
     // Default constructor
-    Switch_t() noexcept
-    {   
-        // Init port buffers
-        state.port_buffers_[0] = {};
-        state.port_buffers_[1] = {};
-        state.port_buffers_[2] = {};
-    }
+    Switch_t() noexcept {}
 
     // internal transition: model sets the state variable transmitting_ to false.
     void internal_transition() 
@@ -132,6 +124,8 @@ public:
         //    get_messages<typename defs_port::in_2>(mbs),
         //    get_messages<typename defs_port::in_3>(mbs)
         //};
+
+        // Metaprogramming at the preprocessing level with Boost Preprocessor.
         #define GET_MESSAGES_INPORT(z, n, _) get_messages<typename defs_port::in_##n>(mbs)
         vector<vector<OperatorLocation_t>> bags_port_in {
             BOOST_PP_ENUM(N_NODES, GET_MESSAGES_INPORT, _)
@@ -172,6 +166,7 @@ public:
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
         //vector<OperatorLocation_t> bag_port_out0, bag_port_out1, bag_port_out2;
 
+        // Metaprogramming at the preprocessing level with Boost Preprocessor.
         #define GENERATE_CASE(z, n, _) \
             case n: \ 
             get_messages<typename defs_port::BOOST_PP_CAT(out_, n)>(bags).push_back(*buffer.messages.begin()); \

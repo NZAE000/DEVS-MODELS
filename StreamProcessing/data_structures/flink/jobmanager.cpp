@@ -11,11 +11,11 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     abstract_nodes.reserve(nNodes);
     nodes.reserve(nNodes); 
 
-    // Create always first node (master).
+    // Create always first node (master=node_0).
     abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, JobManager_t&>("node_0", *this));
     nodes.push_back(dynamic_cast<Node_t<TIME>*>(abstract_nodes.begin()->get()));
 
-    // Create slave nodes.
+    // Create slave nodes (node_1, node_2, ..., node_n).
     std::string name_base{"node_"}, fullname{};
     for (uint32_t id=1; id<nNodes; ++id)
     {
@@ -36,8 +36,8 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
         for (auto i=0; i<replica; i++)
         {
             slot_id = resourceMan_.assignResource(oper_id, node->getTaskManager()); // Assign resource to operator
-            jobMaster_.addLocation(oper_id, node->id(), slot_id);  // Store location (node_id, slot_id) of this suboperator.
-            if (++node_iter == end(nodes)) node_iter = nodes.begin();   // Next node (if is end, then go back to begin node)
+            jobMaster_.addLocation(oper_id, node->id(), slot_id);                   // Store location (node_id, slot_id) of this suboperator.
+            if (++node_iter == end(nodes)) node_iter = nodes.begin();               // Next node (if is end, then go back to begin node)
             node = *node_iter.base();
         }
     }
@@ -50,31 +50,23 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     // Show distribution.
     for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
     {
-        auto locations = jobMaster_.locations(oper_id);
-        std::cout<<"locaciones de "<<oper_id<<":\n";
+        auto locations = jobMaster_.getLocations(oper_id);
+        std::cout<<"Locations of "<<oper_id<<":\n";
         for (auto const& loc : locations){
             std::cout<<"\tnode: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
         }
     }
 }
 
+// Load balancing with locations.
 OperatorLocation_t const& 
 JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
 {
     std::vector<OperatorLocation_t> const& 
-    locations = jobMaster_.locations(oper_id); // Get all operator's locations ( (node_id, slot_id)...).
+    locations = jobMaster_.getLocations(oper_id); // Get all operator's locations ( (node_id, slot_id)...).
 
     // Find less congested location.
-    uint32_t less { std::numeric_limits<uint32_t>::max() }, nTuple{};
     OperatorLocation_t const* loc_less_congested {nullptr};
-
-    //std::size_t numServices  { this->numServices() };
-    //ENG::Vec_t<Service_t::ID> serviceIDs, free_serviceIDs;
-    //ENG::Vec_t<std::size_t>   rowSizes;
-    //free_serviceIDs.reserve(numServices);
-    //serviceIDs.reserve(numServices);
-    //rowSizes.reserve(numServices);
-
     std::vector<OperatorLocation_t const*> free_locs{};
     free_locs.reserve(locations.size());
 
@@ -90,7 +82,9 @@ JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
     if (num_loc_fre > 0){
         loc_less_congested = free_locs.at(std::rand() / ((RAND_MAX + 1u) / num_loc_fre));
     }
-    else {
+    else 
+    {
+        uint32_t less { std::numeric_limits<uint32_t>::max() }, nTuple{};
         for (auto const& loc : locations)
         {
             nTuple = resourceMan_.slotFrom(loc).nTuples(); // Know n tuples from slot´s queue of node.
@@ -100,43 +94,6 @@ JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
             }
         }
     }
-    /*
-    // Record idle service types (id), general service types and respective row sizes
-		for (auto const& [server_id, service] : _services)
-		{
-			if (service->_status == Service_t::STATUS_t::FREE) free_serviceIDs.emplace_back(server_id);
-			serviceIDs.emplace_back(server_id);
-			rowSizes.emplace_back(service->rowSize());
-		}
-
-		auto numServicesFree { free_serviceIDs.size() };
-		if (numServicesFree > 0){		// If at least one service is free, choose randomly.
-			indicated_idService = free_serviceIDs.at(std::rand() / ((RAND_MAX + 1u) / numServicesFree));
-		}
-		else {	// If no service is unoccupied, look for a smaller queue size (LOAD BALANCING).
-			auto size { rowSizes.size() };
-			std::size_t findMinSize = [&]() {
-				std::size_t minSize { INT_MAX };
-				for (std::size_t i=0; i<size; ++i){
-					if (rowSizes[i] < minSize) minSize = rowSizes[i];
-				}
-				return minSize;
-			}(); // auto invoke lambda
-
-			// Discard larger row sizes
-			for (std::size_t i=0; i<size; ++i){
-				if (rowSizes[i] > findMinSize) {
-					rowSizes.erase(rowSizes.begin() + i);
-					serviceIDs.erase(serviceIDs.begin() + i);
-					size = rowSizes.size();
-					--i;
-				}
-			}
-			// Randomly select the smallest services in a row
-			indicated_idService = serviceIDs.at(std::rand() / ((RAND_MAX + 1u) / serviceIDs.size()));
-		}
-    
-    */
 
     //std::cout<<"locs of "<<oper_id<<": \n";
     //for (auto const& loc : locations){
@@ -145,10 +102,10 @@ JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
     return *loc_less_congested;
 }
 
-std::vector<operId_t> const&
+std::vector<operId_t const*> const&
 JobManager_t::getOperatorDestinations(operId_t const& oper_id) const noexcept
 {
-    auto topo_iter = cluster_cfg_.topology_.find(oper_id);
+    auto topo_iter = cluster_cfg_.topology_.find(&oper_id);
     return topo_iter->second;
 }
 
@@ -157,5 +114,25 @@ double JobManager_t::getAvgExecution(operId_t const& oper_id) const noexcept
     auto oper_props_iter = cluster_cfg_.operProps_.find(oper_id);
     return oper_props_iter->second.distribution();
 }
+
+
+[[nodiscard]] 
+operId_t const& JobManager_t::
+firstOperator() const noexcept { return *cluster_cfg_.begin_op; }
+
+
+[[nodiscard]] bool JobManager_t::
+lastOperator(operId_t const& oper_id) const noexcept 
+{ 
+    bool last {false};
+    for (auto const* end_op : cluster_cfg_.end_ops){
+        if (oper_id == *end_op){ // Match with some last operator? Confirm.
+            last = true;
+            break;
+        }
+    }
+    return last;   
+}
+
 
 } // namespace FLINK
