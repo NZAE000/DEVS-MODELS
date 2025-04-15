@@ -45,7 +45,7 @@ TaskManager_t::scheduleExec(slotId_t slot_id, JobManager_t& jobMan) noexcept
     else 
     {
         // Get avg time excecution with some distribution and create execution.
-        int lapse { static_cast<int>(std::round(jobMan.getAvgExecution(slot.getOperator()))) };
+        int lapse { static_cast<int>(std::round(jobMan.getTimeExecution(slot.getOperator()))) };
         createSubTask(slot, slot_id, lapse);
     }
 }
@@ -59,7 +59,7 @@ TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noex
     {
         slot.popTuple();  // Remove tuple from slot buffer.
         // Get avg time excecution with some distribution and create execution.
-        int lapse { static_cast<int>(std::round(jobMan.getAvgExecution(slot.getOperator()))) };
+        int lapse { static_cast<int>(std::round(jobMan.getTimeExecution(slot.getOperator()))) };
         createSubTask(slot, slot_id, lapse);
 
     } else slot.setExecution(false);

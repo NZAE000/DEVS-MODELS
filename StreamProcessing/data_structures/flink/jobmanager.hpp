@@ -30,7 +30,7 @@ struct JobManager_t {
     void deployJob(std::vector<shared_ptr<dynamic::modeling::model>>&)                                noexcept;
     [[nodiscard]] OperatorLocation_t           const& getOperLocationLessload(operId_t const&)  const noexcept;
     [[nodiscard]] std::vector<operId_t const*> const& getOperatorDestinations(operId_t const&)  const noexcept;
-    [[nodiscard]] double getAvgExecution(operId_t const&)                                const noexcept;
+    [[nodiscard]] double getTimeExecution(operId_t const&)                                      const noexcept;
 
     //ClusterConfig_t const& getClusterCfg() const noexcept { return cluster_cfg_; }
     [[nodiscard]] operId_t const& firstOperator()                const noexcept;

@@ -118,7 +118,7 @@ JobManager_t::getOperatorDestinations(operId_t const& oper_id) const noexcept
     return topo_iter->second;
 }
 
-double JobManager_t::getAvgExecution(operId_t const& oper_id) const noexcept
+double JobManager_t::getTimeExecution(operId_t const& oper_id) const noexcept
 {   
     auto oper_props_iter = cluster_cfg_.operProps_.find(oper_id);
     return oper_props_iter->second.distribution();

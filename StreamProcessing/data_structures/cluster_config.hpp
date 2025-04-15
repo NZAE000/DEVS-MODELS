@@ -53,11 +53,9 @@ struct ClusterConfig_t {
     std::map<operId_t, OperatorProperties_t>                operProps_{}; // Operator ids resource.
     std::map<operId_t const*, std::vector<operId_t const*>> topology_{};
     std::map<TIME, double>                                  arrivalRates_{};
-    uint32_t n_nodes_{};
-
     operId_t const* begin_op{};
-    operId_t const* end_op{};
     std::vector<operId_t const*> end_ops{};
+    uint32_t n_nodes_{};
 
 private:
 
@@ -101,9 +99,6 @@ private:
                 begin_op = &operProps_.find(name)->first; ++count; 
             }
         }
-
-        end_op = &operProps_.find(name)->first; // Store last operator
-        //std::cout<<"bop: "<<begin_op<< "endop: "<<end_op<<"\n";
     }
 
     void initTopology(std::string_view path) noexcept
