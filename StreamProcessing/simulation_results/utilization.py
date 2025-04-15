@@ -6,10 +6,10 @@ import re
 def timestamp_to_microseconds(ts):
     h, m, s, ms, us, *_ = map(int, ts.split(":"))
     return (
-        h * 3600 * 10**6 +
-        m * 60 * 10**6 +
-        s * 10**6 +
-        ms * 1000 +
+        h * 3600 * 10**6 + # 1hr  = 3600seg, to micro = 3600 * 10**6
+        m * 60 * 10**6 +   # 1min = 60seg, to micro = 60 * 10**6
+        s * 10**6 +        # 1seg to micro = 1 * 10**6
+        ms * 1000 +        # 1mil to micro = 1 * 1000
         us
     )
 
