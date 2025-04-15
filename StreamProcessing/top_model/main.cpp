@@ -189,5 +189,9 @@ int main(void){
     dynamic::engine::runner<NDTime, logger_top> r(TOP, {0}); // runner class defined in <cadmium/engine/pdevs_dynamic_runner.hpp>. Init time to 0
     //r.run_until(NDTime("04:00:00:000"));
     r.run_until_passivate(); // Run the simulation until all models are passivated
+    //auto time1 = NDTime{0,0,0,0,200};
+    //auto time2 = time1 + NDTime("00:00:00:000:900");
+    //std::cout<<"time: "<<time2<<"\n";
+    
     return 0;
 }

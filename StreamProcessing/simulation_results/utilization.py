@@ -120,7 +120,7 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
 
             nodes = states_by_time[t_curr]['nodes']
             for node, info in nodes.items():
-                # Nodo en uso
+                # Node in use
                 if info['processing'] == 1:
                     node_usage_time[node] += delta
                 else:
