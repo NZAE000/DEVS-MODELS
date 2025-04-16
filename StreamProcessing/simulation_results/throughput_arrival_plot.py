@@ -43,14 +43,14 @@ def plot_throughput(records):
     throughputs = []
     tasas_llegada_real = []
 
-    prev_rates = None
-    for rates, _, finish_time, throughput, _, tasa_llegada_real in records:
-        if rates != prev_rates:
+    #prev_rates = None
+    for rates, _, _, throughput, _, arrival_rate in records:
+        #if rates != prev_rates:
             label = f"[{rates}]"
             x_labels.append(label)
             throughputs.append(throughput)
-            tasas_llegada_real.append(tasa_llegada_real)
-            prev_rates = rates
+            tasas_llegada_real.append(arrival_rate)
+            #prev_rates = rates
 
     x = range(len(x_labels))
 
