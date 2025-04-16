@@ -106,6 +106,10 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
         node_usage_time = defaultdict(int)
         operator_active_time = defaultdict(int)
 
+        # Set operators and order
+        for operator in operator_replicas.keys():
+            operator_active_time[operator] = 0
+
         # Iterate over pairs of times within the interval.
         relevant_times = [t for t in sorted_times if t_start <= t <= t_end]
         #print("rel_times: ", relevant_times)
@@ -150,6 +154,8 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
             dictio2[op] = (usage / ro) / interval_duration
         operator_util_by_rate.append((rate, dictio2))
 
+    #print("OPERTORS BY RATE: ", operator_util_by_rate)
+    #print("NODES BY RATE: ", node_util_by_rate)
     return node_util_by_rate, operator_util_by_rate
 
 
@@ -163,18 +169,18 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
 #    print("Rate\t" + "\t".join(sorted(next(iter(operator_util_by_rate.values())).keys()))) 
 #    for rate, operators in operator_util_by_rate.items():
 #        print(f"{rate}\t" + "\t".join([f"{operators[op]:.2f}" for op in sorted(operators)]))
-def display_results(node_util_by_rate, operator_util_by_rate):
-    print("Nivel de utilización de nodos:\n")
+def show_table(node_util_by_rate, operator_util_by_rate):
+    print("Node utilization level:\n")
     # Obtener el primer diccionario de la primera tasa de llegada
-    node_keys = sorted(node_util_by_rate[0][1].keys())
+    node_keys = node_util_by_rate[0][1].keys()
     print("Rate\t" + "\t".join(node_keys))
     
     for rate, nodes in node_util_by_rate:
         print(f"{rate}\t" + "\t".join([f"{nodes[node]:.2f}" for node in node_keys]))
 
-    print("\nNivel de utilización de operadores:\n")
+    print("\nOperator utilization level:\n")
     # Obtener las claves de los operadores de la primera tasa de llegada
-    operator_keys = sorted(operator_util_by_rate[0][1].keys())
+    operator_keys = operator_util_by_rate[0][1].keys()
     print("Rate\t" + "\t".join(operator_keys))
     
     for rate, operators in operator_util_by_rate:
@@ -219,10 +225,11 @@ def plot_utilization_by_entity(util_by_rate, arrival_periods, title, ylabel, ent
     x_rate_indices = list(range(len(arrival_periods)))
     x_rate_labels = [str(rate) for rate in rates]  # Tags for arrival rates (to categorize on X axis).
 
-    # Get all entities from all arrival rates
-    all_entities = set()
-    for rate, entities in util_by_rate:
-        all_entities.update(entities.keys())
+    # Get all entities from first arrival rates (all have the sames).
+    all_entities = [entity for entity in util_by_rate[0][1].keys()]
+    #all_entities.update(util_by_rate[0][1].keys())
+    #for rate, entities in util_by_rate:
+    #    all_entities.update(entities.keys())
 
     # For each entity, build the list of uses along the rates.
     for entity in all_entities:
@@ -258,7 +265,7 @@ node_util_by_rate, operator_util_by_rate = compute_utilization(states_by_time, a
 #print(node_util_by_rate)
 #print()
 #print(operator_util_by_rate)
-display_results(node_util_by_rate, operator_util_by_rate)
+show_table(node_util_by_rate, operator_util_by_rate)
 
 # Graph node utilization.
 plot_utilization_by_entity(

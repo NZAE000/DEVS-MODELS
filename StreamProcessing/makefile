@@ -1,5 +1,9 @@
 SIMULATOR := STREAM_PROCESSING
+N_NODES := 0
 CC=clang++
+ifneq ($(N_NODES),0)
+	CC += -DN_NODES=$(N_NODES)
+endif
 CFLAGS=-std=c++20 -g # -Wall -Wextra -Wpedantic -Wconvertions
 
 INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.87.0_1/include
