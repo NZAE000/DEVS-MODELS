@@ -16,8 +16,8 @@ using TIME = NDTime;
 
 struct ResourceManager_t {
 
-    slotId_t assignResource(operId_t const&, TaskManager_t&) const noexcept;
-    void addRefResource(nodeId_t, TaskManager_t&)                  noexcept;
+    void agregateResource(nodeId_t, TaskManager_t&)                noexcept;
+    slotId_t assignResource(operId_t const&, nodeId_t)             noexcept;
     TaskSlot_t const& slotFrom(OperatorLocation_t const&)    const noexcept;
     TaskSlot_t& slotFrom(OperatorLocation_t const&)                noexcept;
 

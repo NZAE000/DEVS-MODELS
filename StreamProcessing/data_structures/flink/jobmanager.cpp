@@ -29,23 +29,23 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     auto node_iter     = nodes.begin();
     Node_t<TIME>* node = *node_iter.base();
 
+    // Agregate all references to taskmanagers.
+    std::for_each(nodes.begin(), nodes.end(), [&](auto& node_){
+        resourceMan_.agregateResource(node_->id(), node_->getTaskManager());
+    });
+
     // Assign resource to all operators.
     for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
     {   
-        replica = properties.replication; // Operator parallelism (suboperators)
+        replica = properties.replication; // Operator parallelism (suboperators).
         for (auto i=0; i<replica; i++)
         {
-            slot_id = resourceMan_.assignResource(oper_id, node->getTaskManager()); // Assign resource to operator
+            slot_id = resourceMan_.assignResource(oper_id, node->id());             // Assign resource to operator.
             jobMaster_.addLocation(oper_id, node->id(), slot_id);                   // Store location (node_id, slot_id) of this suboperator.
-            if (++node_iter == end(nodes)) node_iter = nodes.begin();               // Next node (if is end, then go back to begin node)
+            if (++node_iter == end(nodes)) node_iter = nodes.begin();               // Next node (if is end, then go back to begin node).
             node = *node_iter.base();
         }
     }
-
-    // Store all references to taskmanagers
-    std::for_each(nodes.begin(), nodes.end(), [&](auto& node_){
-        resourceMan_.addRefResource(node_->id(), node_->getTaskManager());
-    });
 
     // Show distribution.
     for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
