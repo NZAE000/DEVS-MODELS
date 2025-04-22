@@ -24,15 +24,15 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
         nodes.push_back(dynamic_cast<Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
     }
 
-    uint32_t replica{};
-    slotId_t slot_id{};
-    auto node_iter     = nodes.begin();
-    Node_t<TIME>* node = *node_iter.base();
-
     // Agregate all references to taskmanagers.
     std::for_each(nodes.begin(), nodes.end(), [&](auto& node_){
         resourceMan_.agregateResource(node_->id(), node_->getTaskManager());
     });
+
+    uint32_t replica{};
+    slotId_t slot_id{};
+    auto node_iter     = nodes.begin();
+    Node_t<TIME>* node = *node_iter.base();
 
     // Assign resource to all operators.
     for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)

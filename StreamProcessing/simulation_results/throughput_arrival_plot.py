@@ -41,30 +41,28 @@ def plot_throughput(records):
 
     x_labels = []
     throughputs = []
-    tasas_llegada_real = []
+    arrival_rates = []
 
     #prev_rates = None
     for rates, _, _, throughput, _, arrival_rate in records:
-        #if rates != prev_rates:
-            label = f"[{rates}]"
-            x_labels.append(label)
-            throughputs.append(throughput)
-            tasas_llegada_real.append(arrival_rate)
-            #prev_rates = rates
+        label = f"[{rates}]"
+        x_labels.append(label)
+        throughputs.append(throughput)
+        arrival_rates.append(arrival_rate)
 
     x = range(len(x_labels))
 
     plt.figure(figsize=(10, 6))
     #plt.style.use('dark_background')
     plt.plot(x, throughputs, marker='o', label='Throughput (req/s)', color='blue')
-    plt.plot(x, tasas_llegada_real, marker='s', linestyle='--', label='Arrival Rate (req/s)', color='orange')
+    plt.plot(x, arrival_rates, marker='s', linestyle='--', label='Arrival Rate (req/s)', color='orange')
 
     plt.xlabel("Rate")
     plt.ylabel("(req/s)")
-    plt.title("Throughput and Arrival Rate")
-    plt.xticks(ticks=x, labels=x_labels, rotation=45)
+    plt.title("Throughput vs Arrival Rate")
+    plt.xticks(fontsize=6, ticks=x, labels=x_labels, rotation=90)
     plt.grid(True)
-    plt.legend()
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
     plt.show()
 

@@ -257,7 +257,7 @@ node_util_by_rate, operator_util_by_rate = compute_utilization(states_by_time, a
 #for rate, start, end in arrival_periods:
 #    print(f"Rate {rate} desde {start} hasta {end}")
 
-#for t, state in list(states_by_time.items())[:3]:  # Muestra los primeros 3 tiempos
+#for t, state in list(states_by_time.items())[:]:  # Muestra los primeros 3 tiempos
 #    print(f"{t}:")
 #    for node, info in state['nodes'].items():
 #        print(f"  {node} - processing: {info['processing']}, slots: {info['slots']}")
