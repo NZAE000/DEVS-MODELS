@@ -23,12 +23,15 @@ struct TaskSlot_t {
     constexpr void pushTuple()              noexcept { ++buffer; }
     constexpr void popTuple()               noexcept { if (buffer) --buffer; }
     constexpr uint32_t nTuples()      const noexcept { return buffer; }
-    constexpr bool isRunnig()         const noexcept { return busy; }
-    constexpr void setExecution(bool state) noexcept { busy = state; }
+    constexpr bool isRunnig()         const noexcept { return running; }
+    constexpr void setExecution(bool state) noexcept { running = state; }
+    constexpr bool isBusy()           const noexcept { return busy; }
+    constexpr void setBusy(bool state) noexcept      { busy = state; }
     bool pendingTuples()              const noexcept { return nTuples(); }
 
 private:
     operId_t const& operator_id;
+    bool running{false};
     bool busy{false};
     uint32_t buffer{};
 };

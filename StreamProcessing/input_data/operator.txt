@@ -1,4 +1,4 @@
-source 1 fix 2
+source 1 fix 50
 op1 1 norm 50 5
 op2 1 expo 0.03
-sink 1 fix 1
+sink 1 fix 10

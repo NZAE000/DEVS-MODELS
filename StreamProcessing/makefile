@@ -6,7 +6,7 @@ ifneq ($(N_NODES),0)
 endif
 CFLAGS=-std=c++20 -g # -Wall -Wextra -Wpedantic -Wconvertions
 
-INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.87.0_1/include
+INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
 INCLUDEDESTIMES=-I ../../Cadmium-Simulation-Environment/DESTimes/include/
 
 #CREATE BIN AND BUILD FOLDERS TO SAVE THE COMPILED FILES DURING RUNTIME
