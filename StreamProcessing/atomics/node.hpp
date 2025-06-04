@@ -138,7 +138,7 @@ public:
         os <<"processing: " << i.processing << ", buffer executions: " << i.taskman_.executionPending()<<",";
         for (auto const& [id, slot] : i.taskman_.getSlots())
         {
-            os << " [slot_"<<id<<"->"<<slot.getOperator()<<": running: "<<slot.isRunnig()<<", active: "<<slot.isBusy()<<", tuples: "<<slot.nTuples() <<"]";
+            os << " [slot_"<<id<<"->"<<slot.getOperator()<<": active: "<<slot.isActive()<<", using: "<<slot.isUsing()<<", tuples: "<<slot.nTuples() <<"]";
         }
         return os;
     }

@@ -77,7 +77,7 @@ JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
     for (auto const& loc : locations)
     {
         auto const& slot = resourceMan_.slotFrom(loc);
-        if (!slot.isRunnig()) free_locs.push_back(&loc); // Detect free slot.
+        if (!slot.isActive()) free_locs.push_back(&loc); // Detect free slot.
         else 
         {
             n_tuple = slot.nTuples();    // Know n tuples from slot´s queue of node.

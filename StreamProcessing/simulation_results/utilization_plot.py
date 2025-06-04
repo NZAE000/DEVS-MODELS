@@ -72,9 +72,9 @@ def load_states_log(file_path):
                     is_processing = int(is_processing)
                     slots = {}
                     
-                    slot_matches = re.findall(r"\[(slot_\d+)->(\w+): running: (\d), active: (\d), tuples: \d+\]", slots_str)
-                    for slot_id, operator, running, active in slot_matches:
-                        slots[slot_id] = {'operator': operator, 'running': int(running)}
+                    slot_matches = re.findall(r"\[(slot_\d+)->(\w+): active: (\d), using: (\d), tuples: \d+\]", slots_str)
+                    for slot_id, operator, active, using in slot_matches:
+                        slots[slot_id] = {'operator': operator, 'active': int(active)}
 
                     states_by_time[current_time]['nodes'][node_name] = {
                         'processing': is_processing,
@@ -103,11 +103,11 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
 
         # Initialize usage level counters.
         node_usage_time = defaultdict(int)
-        operator_running_time = defaultdict(int)
+        operator_active_time = defaultdict(int)
 
         # Set operators and order
         for operator in operator_replicas.keys():
-            operator_running_time[operator] = 0
+            operator_active_time[operator] = 0
 
         # Iterate over pairs of times within the interval.
         relevant_times = [t for t in sorted_times if t_start <= t <= t_end]
@@ -130,17 +130,17 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
                     node_usage_time[node] += 0
 
                 # Active slots → operators in use.
-                oper_source = False
+                oper = False
                 for slot_id, slot_info in info['slots'].items():
                     op_name = slot_info['operator']
-                    if slot_info['running'] == 1:
+                    if slot_info['active'] == 1:
                         if (op_name == "source"):
                             print("source-",slot_id, ": t_curr", t_curr, ", t_next: ", t_next, ", delta: ", delta)
-                            oper_source = True
-                        operator_running_time[op_name] += delta
+                            oper = True
+                        operator_active_time[op_name] += delta
                     else:
-                        operator_running_time[op_name] += 0
-                if (oper_source == True):
+                        operator_active_time[op_name] += 0
+                if (oper == True):
                     print("")
 
         #print("current rate:", rate)
@@ -153,7 +153,7 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
 
         # Calculate operator usage.
         dictio2 = {}
-        for op, usage in operator_running_time.items():
+        for op, usage in operator_active_time.items():
             ro = operator_replicas.get(op, 1)
             #operator_util_by_rate[rate][op] = (usage / ro) / interval_duration
             dictio2[op] = (usage / ro) / interval_duration

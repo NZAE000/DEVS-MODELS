@@ -41,7 +41,7 @@ TaskManager_t::scheduleExec(slotId_t slot_id, JobManager_t& jobMan) noexcept
 {
     TaskSlot_t& slot = getSlot(slot_id); // Get task slot.
 
-    if (slot.isBusy()) slot.pushTuple(); // Queuing on buffer.
+    if (slot.isUsing()) slot.pushTuple(); // Queuing on buffer.
     else 
     {
         // Get avg time excecution with some distribution and create execution.
@@ -70,9 +70,9 @@ TaskManager_t::createSubTask(TaskSlot_t& slot, slotId_t slot_id, int lapse) noex
 {
     TIME timeExec = {0,0,0,0,lapse};                        // Create time execution (hrs::mins:secs:mills:micrs::nns:pcs::fms).
     this->bufferExec_.emplace_back(slot_id, timeExec);      // Add to execution buffer.
-    slot.setBusy(true);
+    slot.setUsing(true);
     if (getPriorityExecution().slot_id == slot_id)
-        slot.setExecution(true);                            // State to execute.
+        slot.setActive(true);                            // Slot active in execution.
 }
 
 Subtask_t const& 
@@ -92,13 +92,13 @@ TaskManager_t::terminatePriorityExecution() noexcept
 {
     // Get the slot_id used and delete what was executed.
     slotId_t slot_id_used { getPriorityExecution().slot_id };
-    getSlot(slot_id_used).setExecution(false);
-    getSlot(slot_id_used).setBusy(false);
+    getSlot(slot_id_used).setActive(false);
+    getSlot(slot_id_used).setUsing(false);
     bufferExec_.erase(bufferExec_.begin());
 
     if (executionPending()) {
         slotId_t slot_id { getPriorityExecution().slot_id };
-        getSlot(slot_id).setExecution(true);
+        getSlot(slot_id).setActive(true);
     }
 
     return slot_id_used;

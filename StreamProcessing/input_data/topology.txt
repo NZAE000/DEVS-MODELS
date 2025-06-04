@@ -1,3 +1,5 @@
-source op1
-op1 op2
-op2 sink
+source map1
+map1 filter1
+filter1 keyby1
+keyby1 window1
+window1 sink

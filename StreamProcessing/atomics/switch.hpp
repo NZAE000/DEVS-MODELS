@@ -86,7 +86,7 @@ public:
     state_type state;
 
     TIME send_time_{};  // Time left until next departure
-    int mean_ {10};
+    int mean_ {50};
 
     // Default constructor
     Switch_t() noexcept {}
