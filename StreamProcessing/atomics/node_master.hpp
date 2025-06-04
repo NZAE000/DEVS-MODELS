@@ -46,13 +46,18 @@ public:
     
     // External transition
     void external_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
-    {
-        check_external_transition_from_producer(mbs);      // Check some message of producer.
-        this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
-        
+    {      
+
         vector<Message_t>& prod_bag = get_messages<typename Node_defs::in_source>(mbs);
         if (prod_bag.size())
             std::cout<<"\n[master external]: message "<<prod_bag.begin()->id_<<" recivied\n";
+
+        vector<OperatorLocation_t>& bag = get_messages<typename Node_defs::in>(mbs);
+        if (bag.size())
+            std::cout<<"\n[master external]: message "<<*bag.begin().base()<<" recivied\n";
+
+        check_external_transition_from_producer(mbs);      // Check some message of producer.
+        this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
         
         if (send_inmediatly_to_switch()){ // Do you have to send messages to other locations immediately?
             this->lapse_time_ = {0};     // Imminent for the output to the switch.
@@ -87,7 +92,7 @@ public:
         if (send_inmediatly_to_switch()){        // Do you have to send messages to other locations immediately?
             bag_port_out = externLocations;
             auto loc = bag_port_out.at(0);
-            std::cout<<"[master output]: send inmediatly to switch: loc "<< loc.node_id <<", "<<loc.slot_id <<"\n";
+            std::cout<<"[master output]: send inmediatly to switch: loc "<< loc <<"\n";
         }
         else {
             std::cout<<"[master output]: search_next_operator_destinations\n";

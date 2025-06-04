@@ -244,7 +244,7 @@ private:
     {
         int lapse { static_cast<int>(Random_t::poisson(mean_)) }; // Poisson distribution send time.
         //std::cout<<"\nlapse:" << lapse;
-        send_time_ = TIME{0,0,0,0,lapse}; // hrs::mins:secs:mills:micrs::nns:pcs::fms
+        send_time_ = TIME{0,0,0,0,0}; // hrs::mins:secs:mills:micrs::nns:pcs::fms
         state.transmitting_ = true;
     }
 };

@@ -86,7 +86,11 @@ public:
     // make_message_bags<>: is a template data type that the simulator needs (found in <cadmium/modeling/message_bag.hpp>)
     // (Here (in this model), mbs is a tuple of one bag: the message bag in port in. The messages inside the set of messages in the bag are stored in a C++ vector.)
     void external_transition(TIME e, typename make_message_bags<input_ports>::type mbs) // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
-    {
+    {   
+        vector<OperatorLocation_t>& bag = get_messages<typename Node_defs::in>(mbs);
+        if (bag.size())
+            std::cout<<"\n[slave external "<<state.id<< "]: message "<<*bag.begin().base()<<" recivied\n";
+
         check_external_transition_from_switch(mbs); // Check some location message of switch
 
         FLINK::Subtask_t& exec_prior { state.taskman_.getPriorityExecution() };

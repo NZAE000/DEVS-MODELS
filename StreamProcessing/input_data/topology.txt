@@ -1,5 +1,5 @@
-source map1
-map1 filter1
-filter1 keyby1
-keyby1 window1
-window1 sink
+source map
+map filter
+filter keyby
+keyby window
+window sink

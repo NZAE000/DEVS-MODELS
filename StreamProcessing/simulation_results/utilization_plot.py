@@ -94,9 +94,11 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
     last_2 = len(arrival_periods[last_1])-1
     arrival_periods[last_1][last_2] = sorted_times[len(sorted_times)-1] # Replace None value to last time.
 
-    #for rate, start, end in arrival_periods:
-    #    print(f"Rate {rate} desde {start} hasta {end}")
+    for rate, start, end in arrival_periods:
+        print(f"Rate {rate} desde {start} hasta {end}")
 
+    list3 = []
+    count = 0
     for i in range(len(arrival_periods)):
         rate, t_start, t_end = arrival_periods[i]
         interval_duration = t_end - t_start
@@ -135,14 +137,15 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
                     op_name = slot_info['operator']
                     if slot_info['active'] == 1:
                         if (op_name == "source"):
-                            print("source-",slot_id, ": t_curr", t_curr, ", t_next: ", t_next, ", delta: ", delta)
+                            #print(node,", source-",slot_id, ": t_curr", t_curr, ", t_next: ", t_next, ", delta: ", delta)
+                            count += 1
                             oper = True
                         operator_active_time[op_name] += delta
                     else:
                         operator_active_time[op_name] += 0
-                if (oper == True):
-                    print("")
-
+                #if (oper == True):
+                #    print("")            
+#
         #print("current rate:", rate)
         # Calculate node utilization.
         dictio1 = {}
@@ -156,9 +159,15 @@ def compute_utilization(states_by_time, arrival_periods, operator_replicas):
         for op, usage in operator_active_time.items():
             ro = operator_replicas.get(op, 1)
             #operator_util_by_rate[rate][op] = (usage / ro) / interval_duration
+            if (op == "source"):
+                #print("Filter: ", "usage: ", usage, "rep: ", ro, "interval: ", t_start,"-",t_end)
+                list3.append([t_start, t_end, usage, ro])
             dictio2[op] = (usage / ro) / interval_duration
         operator_util_by_rate.append((rate, dictio2))
 
+    print("source time active: ", count)
+    for l in list3:
+        print(l)
     #print("OPERTORS BY RATE: ", operator_util_by_rate)
     #print("NODES BY RATE: ", node_util_by_rate)
     return node_util_by_rate, operator_util_by_rate
