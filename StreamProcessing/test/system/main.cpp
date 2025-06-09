@@ -12,13 +12,13 @@
 #include <NDTime.hpp> // NDTime is a C++ class that implements time operations and allows defining the time as in digital clock format (“hh:mm:ss:mss”) or as a list of integer elements ({ hh, mm, ss, mss})
 
 //Data structures
-#include "../data_structures/cluster_config.hpp"
-#include "../data_structures/flink/jobmanager.hpp"
+#include "../../data_structures/cluster_config.hpp"
+#include "../../data_structures/flink/jobmanager.hpp"
 
 //Atomic model headers
-#include "../atomics/producer.hpp"
-#include "../atomics/node_master.hpp"
-#include "../atomics/switch.hpp"
+#include "../../atomics/producer.hpp"
+#include "../../atomics/node_master.hpp"
+#include "../../atomics/switch.hpp"
 
 //C++ libraries
 #include <iostream>

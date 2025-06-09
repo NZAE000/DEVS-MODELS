@@ -61,8 +61,8 @@ main_prod_nmaster_test.o: test/integration/main_prod_nmaster_test.cpp
 
 
 # SIMULATOR
-main_top.o: top_model/main.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) top_model/main.cpp -o build/main_top.o
+main_top.o: test/system/main.cpp
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) test/system/main.cpp -o build/main_top.o
 
 unitary_producer: main_producer_test.o operator_location.o message.o random.o flinklib
 	$(CC) -o bin/PRODUCTOR_TEST build/libflink.a build/main_producer_test.o build/random.o build/operator_location.o build/message.o

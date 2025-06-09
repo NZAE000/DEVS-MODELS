@@ -1,8 +1,8 @@
 StreamProcessing/bin/*
 StreamProcessing/build/*
-StreamProcessing/distribution_tests/expo_test
-StreamProcessing/distribution_tests/norm_test
+StreamProcessing/distribution_test/expo_test
+StreamProcessing/distribution_test/norm_test
 StreamProcessing/simulation_results/unitary/*
 StreamProcessing/simulation_results/integration/*
 StreamProcessing/simulation_results/system/*
-metrics/throughput_result.txt
+StreamProcessing/metrics/throughput_result.txt
