@@ -68,7 +68,7 @@ def plot_throughput(records):
 
 
 # === File path ===
-throughput_path = "throughput.txt"
+throughput_path = "metrics/throughput_result.txt"
 
 # === Main execution ===
 

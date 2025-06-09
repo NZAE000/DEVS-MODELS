@@ -76,7 +76,7 @@ def record_throughput(rates, reqs, finish_time, time_last_arrival, output_path):
 # === File paths ===
 arrival_periods_path = "simulation_results/system/rate_change.txt"
 states_by_time_path = "simulation_results/system/system_test_output_state.txt"
-throughput_path = "throughput.txt"
+throughput_path = "metrics/throughput_result.txt"
 
 # === Main execution ===
 requirements_completed, finish_time, time_last_arr = extract_requirements_completed(states_by_time_path)

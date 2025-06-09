@@ -4,7 +4,7 @@ CC=clang++
 ifneq ($(N_NODES),0)
 	CC += -DN_NODES=$(N_NODES)
 endif
-CFLAGS=-std=c++20 -g # -Wall -Wextra -Wpedantic -Wconvertions
+CFLAGS=-std=c++20 #-g #-Wall -Wextra -Wpedantic -Wconvertions
 
 INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
 INCLUDEDESTIMES=-I ../../Cadmium-Simulation-Environment/DESTimes/include/

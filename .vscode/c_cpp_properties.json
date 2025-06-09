@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/homebrew/Cellar/boost/1.87.0/include/",
+                "/Users/eliezer/Documents/eliezer/CADMIUM/Cadmium-Simulation-Environment/cadmium/include/",
+                "/Users/eliezer/Documents/eliezer/CADMIUM/Cadmium-Simulation-Environment/DESTimes/include"
+
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c23",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "macos-clang-arm64"
+        }
+    ],
+    "version": 4
+}
