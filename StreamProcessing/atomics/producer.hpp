@@ -97,9 +97,20 @@ public:
             log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
             std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
         }
-
         int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), current_rate_->second))) };
-        arrival_time_ = {0,0,0,0,lapse}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        int lapse_us {lapse};
+        int lapse_hr  = lapse_us / 3'600'000'000;
+        lapse_us     %= 3'600'000'000;
+        int lapse_min = lapse_us / 60'000'000;
+        lapse_us     %= 60'000'000;
+        int lapse_s   = lapse_us / 1'000'000;
+        lapse_us     %= 1'000'000;
+        int lapse_ms  = lapse_us / 1'000;
+        lapse_us     %= 1'000;
+
+        //std::cout<<"lapse: "<<lapse<<"\n";
+        //std::cout<<"hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<"\n";
+        arrival_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
         current_time_ += arrival_time_;
 
         ++this->state;
