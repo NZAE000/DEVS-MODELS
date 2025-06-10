@@ -1,8 +1,12 @@
 SIMULATOR := STREAM_PROCESSING
 N_NODES := 0
+N_CORES := 0
 CC=clang++
 ifneq ($(N_NODES),0)
 	CC += -DN_NODES=$(N_NODES)
+endif
+ifneq ($(N_CORES),0)
+	CC += -DN_CORES=$(N_CORES)
 endif
 CFLAGS=-std=c++20 #-g #-Wall -Wextra -Wpedantic -Wconvertions
 

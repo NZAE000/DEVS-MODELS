@@ -37,16 +37,16 @@ TaskManager_t::getSlots() const noexcept
 }
 
 void 
-TaskManager_t::scheduleExec(slotId_t slot_id, JobManager_t& jobMan) noexcept
+TaskManager_t::scheduleExec(mssgId_t mssg_id, slotId_t slot_id, JobManager_t& jobMan) noexcept
 {
     TaskSlot_t& slot = getSlot(slot_id); // Get task slot.
 
-    if (slot.isUsing()) slot.pushTuple(); // Queuing on buffer.
+    if (slot.isUsing()) slot.pushTuple(mssg_id); // Queuing on buffer.
     else 
     {
         // Get avg time excecution with some distribution and create execution.
         int lapse { static_cast<int>(std::round(jobMan.getTimeExecution(slot.getOperator()))) };
-        createSubTask(slot, slot_id, lapse);
+        createSubTask(slot, mssg_id, slot_id, lapse);
     }
 }
 
@@ -57,25 +57,130 @@ TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noex
 
     if (slot.pendingTuples()) // Has pending tuples to execute? 
     {
-        slot.popTuple();  // Remove tuple from slot buffer.
+        mssgId_t mssg_id = slot.popTuple();  // Remove tuple from slot buffer.
         // Get avg time excecution with some distribution and create execution.
         int lapse { static_cast<int>(std::round(jobMan.getTimeExecution(slot.getOperator()))) };
-        createSubTask(slot, slot_id, lapse);
+        createSubTask(slot, mssg_id, slot_id, lapse);
 
     } //else slot.setExecution(false);
 }
 
 void 
-TaskManager_t::createSubTask(TaskSlot_t& slot, slotId_t slot_id, int lapse) noexcept 
+TaskManager_t::createSubTask(TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_id, int lapse) noexcept 
 {
     TIME timeExec = {0,0,0,0,lapse};                        // Create time execution (hrs::mins:secs:mills:micrs::nns:pcs::fms).
-    this->bufferExec_.emplace_back(slot_id, timeExec);      // Add to execution buffer.
+
+    // Search core buffer with less congestion.
+    // std::map<coreId_t, std::vector<Subtask_t>> buffersExec_;
+    std::vector<Subtask_t>* bufferLessCongestion{nullptr};
+    std::size_t n_exec_less{ std::numeric_limits<uint32_t>::max() };
+    for (auto& [id_core, buffer] : buffersExec_){
+        auto n_exec {buffer.size()};
+        if (n_exec < n_exec_less) {
+            n_exec_less = n_exec;
+            bufferLessCongestion = &buffer;
+        }
+    }
+
+    //this->bufferExec_.emplace_back(slot_id, timeExec);      // Add to execution buffer.
+    bufferLessCongestion->emplace_back(mssg_id, slot_id, timeExec);
     slot.setUsing(true);
-    if (getPriorityExecution().slot_id == slot_id)
-        slot.setActive(true);                            // Slot active in execution.
+    //if (getPriorityExecution().slot_id == slot_id)
+    //    slot.setActive(true);                            // Slot active in execution.
+    for (auto& priority_exec : getPriorityExecutions()){
+        if (priority_exec->slot_id == slot_id){
+            slot.setActive(true);                          // Slot active in execution.
+            break;
+        }
+    }
 }
 
-Subtask_t const& 
+std::vector<Subtask_t*>& 
+TaskManager_t::getPriorityExecutions() noexcept
+{
+    priorityExecs_.clear(); // !
+    for (auto& [id_core, buffer] : buffersExec_){
+        if (!buffer.empty()){
+            priorityExecs_.push_back(buffer.begin().base());
+        }
+    }
+    return priorityExecs_;
+    //return *bufferExec_.begin();
+}
+
+//std::vector<Subtask_t*>&
+//TaskManager_t::getPriorityExecutions() noexcept {
+//    std::vector<Subtask_t*> const& execs_pending { const_cast<TaskManager_t const*>(this)->getPriorityExecutions() };
+//    return const_cast<std::vector<Subtask_t*>&>(execs_pending);
+//}
+
+
+std::vector<slotId_t> const*
+TaskManager_t::terminatePriorityExecutions() noexcept
+{
+    // Detect subtask with less exec time.
+    slots_used_.clear();
+    TIME less_exec_time { std::numeric_limits<TIME>::max() };
+    //Subtask_t* subtask_more_priority{nullptr};
+    std::vector<Subtask_t*>& priority_execs { getPriorityExecutions() };
+    for (auto& subtask_prior : priority_execs){
+        if (subtask_prior->lapse_ < less_exec_time) {
+            less_exec_time = subtask_prior->lapse_;
+            //subtask_more_priority = subtask_prior;
+        }
+    }
+
+    // Subtract time and eliminate what remains at 0.
+    for (auto& [_, buffer] : buffersExec_){
+        if (!buffer.empty())
+        {
+            Subtask_t& subtask { *buffer.begin().base() };
+            subtask.lapse_ -= less_exec_time;
+            if (subtask.lapse_ == TIME{0})
+            {
+                slotId_t slot_id_used { subtask.slot_id };
+                getSlot(slot_id_used).setActive(false);
+                getSlot(slot_id_used).setUsing(false);
+                buffer.erase(buffer.begin());
+                slots_used_.push_back(slot_id_used);
+                
+                if ( buffer.size() ) { // Execution pending.
+                    Subtask_t& subtask { *buffer.begin().base() };
+                    slotId_t slot_id { subtask.slot_id };
+                    getSlot(slot_id).setActive(true);
+                }
+            }
+        }
+    }
+    return &slots_used_;
+
+    //slotId_t slot_id_used { getPriorityExecution().slot_id };
+    //getSlot(slot_id_used).setActive(false);
+    //getSlot(slot_id_used).setUsing(false);
+    //bufferExec_.erase(bufferExec_.begin());
+//
+    //if (executionPending()) {
+    //    slotId_t slot_id { getPriorityExecution().slot_id };
+    //    getSlot(slot_id).setActive(true);
+    //}
+    //return slot_id_used;
+}
+
+std::size_t  
+TaskManager_t::pendingExecutions() const noexcept
+{
+    std::size_t n_exec_pending {0};
+    for (auto& [id_core, buffer] : buffersExec_){
+        auto n_exec {buffer.size()};
+        n_exec_pending += n_exec;
+    }
+    return n_exec_pending;
+    //return bufferExec_.size();
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+/*Subtask_t const& 
 TaskManager_t::getPriorityExecution() const noexcept
 {
     return *bufferExec_.begin();
@@ -108,6 +213,6 @@ std::size_t
 TaskManager_t::executionPending() const noexcept
 {
     return bufferExec_.size();
-}
+}*/
 
 } // namespace FLINK

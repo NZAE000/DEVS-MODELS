@@ -19,8 +19,8 @@ public:
     NodeMaster_t() noexcept
     : Node_t<TIME>{} {}
 
-    NodeMaster_t(FLINK::JobManager_t& jman) noexcept
-    : Node_t<TIME>{jman} {}
+    NodeMaster_t(FLINK::JobManager_t& jman, uint32_t n_cores) noexcept
+    : Node_t<TIME>{jman, n_cores} {}
 
 
     // Internal transition
@@ -29,10 +29,18 @@ public:
         if (send_inmediatly_to_switch()){
             std::cout<<"[master internal]: send inmediatly to switch\n";
             externLocations.clear();
-            if (this->state.taskman_.executionPending())
+            if (this->state.taskman_.pendingExecutions())
             {
-                FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
-                this->lapse_time_      = exec_prior.lapse_;  // Update lapse.
+                //FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
+                //this->lapse_time_      = exec_prior.lapse_;  // Update lapse.
+                //this->state.processing = true;
+                //std::cout<<"\t[master] pending exec: "<< this->lapse_time_ <<"\n";
+
+                std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
+                TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
+                for (auto& subtask : execs_prior)
+                    if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
+                this->lapse_time_      = lapse_prioriry;  // Update lapse.
                 this->state.processing = true;
                 std::cout<<"\t[master] pending exec: "<< this->lapse_time_ <<"\n";
 
@@ -49,12 +57,10 @@ public:
     {      
 
         vector<Message_t>& prod_bag = get_messages<typename Node_defs::in_source>(mbs);
-        if (prod_bag.size())
-            std::cout<<"\n[master external]: message "<<prod_bag.begin()->id_<<" recivied\n";
+        if (prod_bag.size()) std::cout<<"\n[master external from prod]: message "<<prod_bag.begin()->id_<<" recivied\n";
 
         vector<OperatorLocation_t>& bag = get_messages<typename Node_defs::in>(mbs);
-        if (bag.size())
-            std::cout<<"\n[master external]: message "<<*bag.begin().base()<<" recivied\n";
+        if (bag.size())      std::cout<<"\n[master external from switch]: message "<<*bag.begin().base()<<" recivied\n";
 
         check_external_transition_from_producer(mbs);      // Check some message of producer.
         this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
@@ -63,13 +69,31 @@ public:
             this->lapse_time_ = {0};     // Imminent for the output to the switch.
             std::cout<<"[master external]: send inmediatly to switch"<<"\n";
         }
-        else if (this->state.taskman_.executionPending())
+        else if (this->state.taskman_.pendingExecutions())
         {
-            FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
-            if (this->state.processing) 
-                exec_prior.lapse_ -= e;             // Minus time left (e = elapsed time value since last transition).
-            this->lapse_time_ = exec_prior.lapse_;  // Update lapse.
-            
+            //FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
+            //if (this->state.processing) 
+            //    exec_prior.lapse_ -= e;             // Minus time left (e = elapsed time value since last transition).
+            //this->lapse_time_ = exec_prior.lapse_;  // Update lapse.
+            //std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
+
+            std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
+            TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
+            if (this->state.processing) {
+                for (auto& subtask : execs_prior)
+                {
+                    bool recently = (prod_bag.size() && prod_bag[0].id_ == subtask->mssg_id) || (bag.size() && bag[0].mssg_id == subtask->mssg_id);
+                    if (subtask->lapse_ >= e && !recently){
+                        subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
+                    }
+                    if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
+                }
+            }
+            else {
+                for (auto& subtask : execs_prior)
+                    if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
+            }
+            this->lapse_time_ = lapse_prioriry;  // Update lapse.
             std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
         }
         this->state.processing = true;
@@ -119,12 +143,13 @@ private:
 
         if (size_bag) // Are there a message from the producer?
         {
-            // Find less congested location of first operator.
+            // Find less congested location of first operator (source by default).
             FLINK::operId_t const& first_op_id = this->jobman_.firstOperator();
-            OperatorLocation_t const& loc      = this->jobman_.getOperLocationLessload(first_op_id);
+            OperatorLocation_t loc             = this->jobman_.getOperLocationLessload(first_op_id);
+            loc.mssg_id = bag_port_in_src[0].id_;
 
             if (loc.node_id == this->state.id){ // Chosen location on this node?
-                this->state.taskman_.scheduleExec(loc.slot_id, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
+                this->state.taskman_.scheduleExec(loc.mssg_id, loc.slot_id, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
             }
             else {
                 externLocations.emplace_back(loc); // Location messages for elsewhere.

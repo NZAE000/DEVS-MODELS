@@ -7,6 +7,7 @@
 #pragma once
 #include<string>
 #include "typealiases.hpp"
+#include<vector>
 
 
 namespace FLINK {
@@ -20,9 +21,13 @@ struct TaskSlot_t {
 
 // Methods
     operId_t const& getOperator()     const noexcept { return operator_id_;    }
-    constexpr void pushTuple()              noexcept { ++buffer_;              }
-    constexpr void popTuple()               noexcept { if (buffer_) --buffer_; }
-    constexpr uint32_t nTuples()      const noexcept { return buffer_;         }
+    constexpr void pushTuple(mssgId_t id)   noexcept { buffer_.push_back(id);  }
+    constexpr mssgId_t popTuple()           noexcept { 
+        mssgId_t id = *buffer_.begin();
+        buffer_.erase(buffer_.begin());
+        return id;
+    }
+    constexpr uint32_t nTuples()      const noexcept { return buffer_.size();  }
     constexpr bool isUsing()          const noexcept { return using_;          }
     constexpr void setUsing(bool state)     noexcept { using_ = state;         }
     constexpr bool isActive()         const noexcept { return active_;         }
@@ -33,7 +38,7 @@ private:
     operId_t const& operator_id_;
     bool using_{false};
     bool active_{false};
-    uint32_t buffer_{};
+    std::vector<mssgId_t> buffer_{};
 };
 
 

@@ -12,7 +12,7 @@
 /***************************************************/
 std::ostream& operator<<(std::ostream& os, const OperatorLocation_t& loc) {
   //os << loc.packet << " " << loc.bit;
-  os << loc.node_id <<" "<< loc.slot_id;
+  os << loc.mssg_id <<" "<<loc.node_id <<" "<< loc.slot_id;
   return os;
 }
 
@@ -20,7 +20,7 @@ std::ostream& operator<<(std::ostream& os, const OperatorLocation_t& loc) {
 /************* Input stream ************************/
 /***************************************************/
 std::istream& operator>>(std::istream& is, OperatorLocation_t& loc) {
-  is >> loc.node_id >> loc.slot_id;
+  is >> loc.mssg_id >> loc.node_id >> loc.slot_id;
   //is >> loc.bit;
   return is;
 }

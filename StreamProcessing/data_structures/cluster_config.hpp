@@ -56,6 +56,7 @@ struct ClusterConfig_t {
     operId_t const* begin_op{};
     std::vector<operId_t const*> end_ops{};
     uint32_t n_nodes_{};
+    uint32_t n_cores_ {};
 
 private:
 
@@ -143,9 +144,11 @@ private:
     void initHardware(std::string_view path) noexcept
     {
         //std::ifstream file(path.data());
-        //file>>n_nodes_;
+        //file>>n_cores_;
         n_nodes_ = N_NODES;
+        n_cores_ = N_CORES;
         assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes is 0" );
+        assert( n_cores_ > 0 && "Invalid hardware parameter: n_cores is 0" );
     }
 
     void initRates(std::string_view path) noexcept

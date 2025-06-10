@@ -7,12 +7,13 @@ namespace FLINK {
 void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& abstract_nodes) noexcept
 {
     uint32_t nNodes { cluster_cfg_.n_nodes_ };
+    uint32_t nCores { cluster_cfg_.n_cores_ };
     std::vector<Node_t<TIME>*> nodes;
     abstract_nodes.reserve(nNodes);
     nodes.reserve(nNodes); 
 
     // Create always first node (master=node_0).
-    abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, JobManager_t&>("node_0", *this));
+    abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, JobManager_t&>("node_0", *this, nCores));
     nodes.push_back(dynamic_cast<Node_t<TIME>*>(abstract_nodes.begin()->get()));
 
     // Create slave nodes (node_1, node_2, ..., node_n).
@@ -20,7 +21,7 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
     for (uint32_t id=1; id<nNodes; ++id)
     {
         fullname = name_base + std::to_string(id);
-        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<Node_t, TIME, JobManager_t&>(fullname, *this));
+        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<Node_t, TIME, JobManager_t&>(fullname, *this, nCores));
         nodes.push_back(dynamic_cast<Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
     }
 
@@ -59,7 +60,7 @@ void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& 
 }
 
 // Load balancing: find less congested location.
-OperatorLocation_t const& 
+OperatorLocation_t 
 JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
 {
     std::vector<OperatorLocation_t> const& 

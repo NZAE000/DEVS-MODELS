@@ -134,7 +134,7 @@ public:
         for (auto const& bag_port_in :  bags_port_in) { // Get each bag port int.
             for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
                 MessageBuffer_t& buffer = state.port_buffers_[mess.node_id];
-                buffer.messages.emplace_back(mess.node_id, mess.slot_id);
+                buffer.messages.emplace_back(mess.mssg_id, mess.node_id, mess.slot_id);
             }
         }
         if (!state.transmitting_) {  // Activate newly queued buffers.

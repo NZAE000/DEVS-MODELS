@@ -53,6 +53,15 @@
         "mutex": "cpp",
         "optional": "cpp",
         "variant": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "deque": "cpp",
+        "forward_list": "cpp",
+        "list": "cpp",
+        "print": "cpp",
+        "queue": "cpp",
+        "shared_mutex": "cpp",
+        "source_location": "cpp",
+        "stack": "cpp",
+        "unordered_set": "cpp"
     }
 }

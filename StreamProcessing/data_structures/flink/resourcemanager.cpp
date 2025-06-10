@@ -21,7 +21,7 @@ slotId_t ResourceManager_t::assignResource(operId_t const& oper_id, nodeId_t nod
 
 TaskSlot_t const& ResourceManager_t::slotFrom(OperatorLocation_t const& operatorLocation) const noexcept
 {
-    auto const [node_id, slot_id] = operatorLocation;
+    auto const [_, node_id, slot_id] = operatorLocation;
     auto iter = refResources_.find(node_id);
 
     return iter->second->getSlot(slot_id);

@@ -13,11 +13,12 @@ void JobMaster_t::addLocation(operId_t const& oper_id, nodeId_t node_id, slotId_
     auto loc_iter = operLocations_.find(&oper_id);
 
     // Is there the operator registered? add new location.
+    mssgId_t mssgid {0};
     if (loc_iter != end(operLocations_)){
-        loc_iter->second.emplace_back(node_id, slot_id);
+        loc_iter->second.emplace_back(mssgid, node_id, slot_id);
     }
     // Otherwise, add new operator with new location.
-    else operLocations_[&oper_id].emplace_back(node_id, slot_id);
+    else operLocations_[&oper_id].emplace_back(mssgid, node_id, slot_id);
 }
 
 [[nodiscard]] std::vector<OperatorLocation_t> const& 

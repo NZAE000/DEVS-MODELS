@@ -4,10 +4,9 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/homebrew/Cellar/boost/1.87.0/include/",
-                "/Users/eliezer/Documents/eliezer/CADMIUM/Cadmium-Simulation-Environment/cadmium/include/",
-                "/Users/eliezer/Documents/eliezer/CADMIUM/Cadmium-Simulation-Environment/DESTimes/include"
-
+                "/opt/homebrew/Cellar/boost/1.88.0/include/",
+                "/Users/eliezerzuniga/Documents/tesis/sem1/CADMIUM/Cadmium-Simulation-Environment/cadmium/include",
+                "/Users/eliezerzuniga/Documents/tesis/sem1/CADMIUM/Cadmium-Simulation-Environment/DESTimes/include"
             ],
             "defines": [],
             "macFrameworkPath": [
