@@ -5,5 +5,6 @@
 #endif
 
 #ifndef N_CORES
-#define N_CORES 1 // Here!: define number core for each node..
+#define N_CORES 1 // Here!: define core number for each node.
 #endif
+

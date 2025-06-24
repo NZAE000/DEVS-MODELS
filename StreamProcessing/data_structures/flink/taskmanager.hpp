@@ -28,7 +28,7 @@ struct Subtask_t {
 };
 
 
-struct JobManager_t; // forwarding declaration
+struct JobManager_t; // Forward declaration
 
 struct TaskManager_t {
 
@@ -70,9 +70,9 @@ private:
     std::map<slotId_t, TaskSlot_t>  taskSlots_;
     //std::vector<Subtask_t>          bufferExec_;
     
-    std::map<coreId_t, std::vector<Subtask_t>> buffersExec_;
+    std::map<coreId_t, std::vector<Subtask_t>> buffersExec_; // CORES HERE!.
     mutable std::vector<Subtask_t*> priorityExecs_;
-            std::vector<slotId_t> slots_used_;
+            std::vector<slotId_t>   slots_used_;
 
     coreId_t n_cores_{1};
     slotId_t nextID {0};

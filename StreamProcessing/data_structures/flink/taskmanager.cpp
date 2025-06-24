@@ -72,8 +72,8 @@ TaskManager_t::createSubTask(TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_i
 
     // Search core buffer with less congestion.
     // std::map<coreId_t, std::vector<Subtask_t>> buffersExec_;
-    std::vector<Subtask_t>* bufferLessCongestion{nullptr};
-    std::size_t n_exec_less{ std::numeric_limits<uint32_t>::max() };
+    std::vector<Subtask_t>* bufferLessCongestion {nullptr};
+    std::size_t n_exec_less { std::numeric_limits<uint32_t>::max() };
     for (auto& [id_core, buffer] : buffersExec_){
         auto n_exec {buffer.size()};
         if (n_exec < n_exec_less) {
@@ -88,8 +88,8 @@ TaskManager_t::createSubTask(TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_i
     //if (getPriorityExecution().slot_id == slot_id)
     //    slot.setActive(true);                            // Slot active in execution.
     for (auto& priority_exec : getPriorityExecutions()){
-        if (priority_exec->slot_id == slot_id){
-            slot.setActive(true);                          // Slot active in execution.
+        if (priority_exec->slot_id == slot_id){           // Slot added recently is priority? set active in execution.
+            slot.setActive(true);                         
             break;
         }
     }
@@ -101,7 +101,7 @@ TaskManager_t::getPriorityExecutions() noexcept
     priorityExecs_.clear(); // !
     for (auto& [id_core, buffer] : buffersExec_){
         if (!buffer.empty()){
-            priorityExecs_.push_back(buffer.begin().base());
+            priorityExecs_.push_back(buffer.begin().base()); // Collect priority executions.
         }
     }
     return priorityExecs_;
@@ -131,12 +131,13 @@ TaskManager_t::terminatePriorityExecutions() noexcept
     }
 
     // Subtract time and eliminate what remains at 0.
+    TIME t_zero {0};
     for (auto& [_, buffer] : buffersExec_){
         if (!buffer.empty())
         {
             Subtask_t& subtask { *buffer.begin().base() };
             subtask.lapse_ -= less_exec_time;
-            if (subtask.lapse_ == TIME{0})
+            if (subtask.lapse_ == t_zero)
             {
                 slotId_t slot_id_used { subtask.slot_id };
                 getSlot(slot_id_used).setActive(false);
@@ -170,10 +171,9 @@ std::size_t
 TaskManager_t::pendingExecutions() const noexcept
 {
     std::size_t n_exec_pending {0};
-    for (auto& [id_core, buffer] : buffersExec_){
-        auto n_exec {buffer.size()};
-        n_exec_pending += n_exec;
-    }
+    for (auto& [id_core, buffer] : buffersExec_)
+        n_exec_pending += buffer.size();
+    
     return n_exec_pending;
     //return bufferExec_.size();
 }
