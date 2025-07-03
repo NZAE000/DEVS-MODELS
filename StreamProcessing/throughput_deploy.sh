@@ -8,7 +8,7 @@ path="metrics/throughput_result.txt"
 
 # If 1, empty file
 if [ "$empty" -eq 1 ]; then
-    > "$path"  # Esto vacía el archivo
+    > "$path"  # This empties the file.
 fi
 
 make clean && make STREAM_PROCESSING N_NODES=${n_nodes} N_CORES=${n_cores} -j

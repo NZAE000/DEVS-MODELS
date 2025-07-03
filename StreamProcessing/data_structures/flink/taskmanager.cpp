@@ -68,7 +68,18 @@ TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noex
 void 
 TaskManager_t::createSubTask(TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_id, int lapse) noexcept 
 {
-    TIME timeExec = {0,0,0,0,lapse};                        // Create time execution (hrs::mins:secs:mills:micrs::nns:pcs::fms).
+    int lapse_us {lapse};
+    int lapse_hr  = lapse_us / 3'600'000'000;
+    lapse_us     %= 3'600'000'000;
+    int lapse_min = lapse_us / 60'000'000;
+    lapse_us     %= 60'000'000;
+    int lapse_s   = lapse_us / 1'000'000;
+    lapse_us     %= 1'000'000;
+    int lapse_ms  = lapse_us / 1'000;
+    lapse_us     %= 1'000;
+
+    TIME timeExec = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+    //TIME timeExec = {0,0,0,0,lapse};                        // Create time execution (hrs::mins:secs:mills:micrs::nns:pcs::fms).
 
     // Search core buffer with less congestion.
     // std::map<coreId_t, std::vector<Subtask_t>> buffersExec_;
