@@ -1,6 +1,6 @@
-source 1 expo 0.02
-map    1 norm 80 10
-filter 1 fix 25
-keyby  1 expo 0.01
-window 1 norm 180 20
-sink   1 expo 0.015
+source 8 expo 0.02
+map    8 norm 80 10
+filter 8 fix 25
+keyby  8 expo 0.01
+window 8 norm 180 20
+sink   8 expo 0.015

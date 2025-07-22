@@ -257,7 +257,7 @@ def plot_utilization_by_entity(util_by_rate, arrival_periods, title, ylabel, ent
     plt.ylabel(ylabel)
     plt.ylim(0, 1.05)
     plt.xticks(x_rate_indices, x_rate_labels, rotation=45)
-    plt.legend(title=entity_label, bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.legend(title=entity_label, loc='upper left')
     plt.grid(True)
     plt.tight_layout()
     #plt.show()
