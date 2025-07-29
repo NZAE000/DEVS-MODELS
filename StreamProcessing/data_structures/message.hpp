@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <iostream>
 #include <string>
+#include <cstdint>
 
 
 /*******************************************/
