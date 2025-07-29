@@ -6,4 +6,3 @@ StreamProcessing/simulation_results/unitary/*
 StreamProcessing/simulation_results/integration/*
 StreamProcessing/simulation_results/system/*
 StreamProcessing/metrics/throughput_result.txt
-.vscode
