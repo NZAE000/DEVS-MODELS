@@ -5,13 +5,10 @@
 * Taskslot definition
 */
 #pragma once
-#include <NDTime.hpp>
 #include "taskmanager.hpp"
 #include "../operator_location.hpp"
 
 namespace FLINK {
-
-using TIME = NDTime;
 
 
 struct ResourceManager_t {

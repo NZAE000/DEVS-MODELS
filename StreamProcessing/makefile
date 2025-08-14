@@ -87,7 +87,7 @@ integration_tests: main_prod_nmaster_test.o random.o operator_location.o message
 
 #TARGET TO COMPILE ONLY STREAN PROCESSING SIMULATOR
 $(SIMULATOR): main_top.o random.o operator_location.o message.o flinklib
-	$(CC) -o bin/$(SIMULATOR) build/libflink.a build/main_top.o build/random.o build/operator_location.o build/message.o
+	$(CC) -o bin/$(SIMULATOR) build/main_top.o build/random.o build/operator_location.o build/message.o build/libflink.a
 	
 #TARGET TO COMPILE EVERYTHING (ABP SIMULATOR + TESTS TOGETHER)
 all: $(SIMULATOR) unitary_tests integration_tests

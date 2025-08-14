@@ -5,11 +5,11 @@
 * Taskmanager definition
 */
 #pragma once
+#include<iostream>
 #include<string>
 #include<map>
 #include "taskslot.hpp"
 #include "../operator_location.hpp"
-#include<iostream>
 
 //Time class header
 #include <NDTime.hpp>

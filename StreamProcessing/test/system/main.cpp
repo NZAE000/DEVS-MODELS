@@ -13,7 +13,8 @@
 
 //Data structures
 #include "../../data_structures/cluster_config.hpp"
-#include "../../data_structures/flink/jobmanager.hpp"
+//#include "../../data_structures/flink/jobmanager.hpp"
+#include "../../data_structures/flink/jobmanager.tpp"
 
 //Atomic model headers
 #include "../../atomics/producer.hpp"
@@ -50,8 +51,25 @@ int main(void){
     productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME, std::map<TIME, double>&>("productor", cluster_cfg.arrivalRates_, "simulation_results/system/rate_change.txt");
 
 /****** Node master atomic model instantiations *******************/
-    std::vector<shared_ptr<dynamic::modeling::model>> nodes{};
-    JobManager.deployJob(nodes);
+    std::vector<shared_ptr<dynamic::modeling::model>> abstract_nodes{};
+    JobManager.deployJob([&](uint32_t nNodes, uint32_t nCores, std::vector<Node_t<TIME>*>& nodes)
+    {
+        abstract_nodes.reserve(nNodes);
+        nodes.reserve(nNodes);
+
+        // Create always first node (master=node_0).
+        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, FLINK::JobManager_t&>("node_0", JobManager, nCores));
+        nodes.push_back(dynamic_cast<Node_t<TIME>*>(abstract_nodes.begin()->get()));
+
+        // Create slave nodes (node_1, node_2, ..., node_n).
+        std::string name_base{"node_"}, fullname{};
+        for (uint32_t id=1; id<nNodes; ++id)
+        {
+            fullname = name_base + std::to_string(id);
+            abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<Node_t, TIME, FLINK::JobManager_t&>(fullname, JobManager, nCores));
+            nodes.push_back(dynamic_cast<Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
+        }
+    });
     
 /****** Switch atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> sswitch;
@@ -74,7 +92,7 @@ int main(void){
     dynamic::modeling::Ports oports_Cluster = {};
 
 // Submodels: std::vector<shared_prt<..::model>>
-    dynamic::modeling::Models submodels_Cluster = nodes;
+    dynamic::modeling::Models submodels_Cluster = abstract_nodes;
     submodels_Cluster.push_back(sswitch); // This might duplicate capacity!!
 
 // eics, eocs, ics
