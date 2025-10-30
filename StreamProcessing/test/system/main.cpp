@@ -48,7 +48,7 @@ int main(void){
 
 /****** Productor atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> productor;
-    productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME, std::map<TIME, double>&>("productor", cluster_cfg.arrivalRates_, "simulation_results/system/rate_change.txt");
+    productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME/*std::map<TIME, double>&*/>("productor", cluster_cfg.requeriments_, cluster_cfg.rate_,/*&cluster_cfg.arrivalRates*/ "simulation_results/system/rate_change.txt");
 
 /****** Node master atomic model instantiations *******************/
     std::vector<shared_ptr<dynamic::modeling::model>> abstract_nodes{};

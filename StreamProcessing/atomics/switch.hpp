@@ -94,7 +94,7 @@ public:
     // internal transition: model sets the state variable transmitting_ to false.
     void internal_transition() 
     {
-        std::cout<<"[switch internal]\n";
+        //std::cout<<"[switch internal]\n";
         uint8_t pending_sends{0};
 
         for (auto & [_, buffer] : state.port_buffers_) { // Are there any pending messages in any of the output port buffers?
@@ -148,7 +148,7 @@ public:
         } 
         else send_time_ -= e;  // Minus time left (e = elapsed time value since last transition).
 
-        std::cout<<"\n[switch external]: send time: "<<send_time_<<"\n";
+        //std::cout<<"\n[switch external]: send time: "<<send_time_<<"\n";
     }
 
     // cconfluence transition
@@ -203,7 +203,7 @@ public:
             }
         }
 
-        std::cout<<"[switch output]\n";
+        //std::cout<<"[switch output]\n";
 
         //get_messages<typename defs_port::out_0>(bags) = bag_port_out0;
         //get_messages<typename defs_port::out_1>(bags) = bag_port_out1;

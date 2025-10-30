@@ -42,7 +42,10 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     TIME current_time_ {0};
     TIME arrival_time_ {0};
 
-    std::map<TIME, double>& arrivalRates_;
+    uint32_t requeriments_{};
+    double   rate_{};
+
+    std::map<TIME, double>* arrivalRates_{nullptr};
     typename std::map<TIME, double>::iterator current_rate_;
     typename std::map<TIME, double>::iterator next_rate_;
     bool generating_ {true};
@@ -57,10 +60,18 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
 public:
 
     Producer_t() {};
-    Producer_t(std::map<TIME, double>& ar, std::string_view path_to_log)
-    : basic_models::pdevs::generator<Message_t, TIME>{}, gen_{rd_()}, uni_distr_{0, 1}, arrivalRates_{ar}, log_rate(path_to_log.data())
+
+    Producer_t(uint32_t req, double rate, std::string_view path_to_log) 
+    : requeriments_{req}, rate_{rate}, log_rate(path_to_log.data())
     {
-        current_rate_ = begin(arrivalRates_); // Init current rate.
+        log_rate<<current_time_<<" "<<rate_<<"\n";
+        std::cout<<"time: "<<current_time_<<" lambda: "<<rate_<<"\n";
+    };
+
+    Producer_t(std::map<TIME, double>& ar, std::string_view path_to_log)
+    : basic_models::pdevs::generator<Message_t, TIME>{}, gen_{rd_()}, uni_distr_{0, 1}, arrivalRates_{&ar}, log_rate(path_to_log.data())
+    {
+        current_rate_ = begin(*arrivalRates_); // Init current rate.
         log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
         std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
     }
@@ -82,7 +93,7 @@ public:
 
     void internal_transition()
     {   
-        next_rate_ = current_rate_;
+        /*next_rate_ = current_rate_;
         ++next_rate_; // inspect next
 
         // Should be changed to the following rate?
@@ -98,6 +109,31 @@ public:
             std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
         }
         int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), current_rate_->second))) };
+        int lapse_us {lapse};
+        int lapse_hr  = lapse_us / 3'600'000'000;
+        lapse_us     %= 3'600'000'000;
+        int lapse_min = lapse_us / 60'000'000;
+        lapse_us     %= 60'000'000;
+        int lapse_s   = lapse_us / 1'000'000;
+        lapse_us     %= 1'000'000;
+        int lapse_ms  = lapse_us / 1'000;
+        lapse_us     %= 1'000;
+
+        //std::cout<<"lapse: "<<lapse<<"\n";
+        //std::cout<<"hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<"\n";
+        arrival_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        current_time_ += arrival_time_;
+
+        ++this->state;*/
+
+        if (this->state >= this->requeriments_)
+        {
+            generating_ = false;
+            log_rate<<current_time_<<" "<<0<<"\n";
+            return;
+        }
+
+        int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), this->rate_))) };
         int lapse_us {lapse};
         int lapse_hr  = lapse_us / 3'600'000'000;
         lapse_us     %= 3'600'000'000;

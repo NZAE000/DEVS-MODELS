@@ -1,5 +1,5 @@
-source map
-map filter
-filter keyby
-keyby window
-window sink
+sourcedatagen1 calc2
+calc2 watermarkassigner3
+watermarkassigner3 minibatchassigner4
+minibatchassigner4 calc5
+calc5 nexmarkq26writer

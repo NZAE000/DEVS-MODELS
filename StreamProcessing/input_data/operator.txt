@@ -1,6 +1,6 @@
-source 8 expo 0.02
-map    8 norm 80 10
-filter 8 fix 25
-keyby  8 expo 0.01
-window 8 norm 180 20
-sink   8 expo 0.015
+calc2                1 expo     .25796442687747035618
+calc5                1 norm     658.00865800865800865000 277.3500981126145000
+minibatchassigner4   1 expo     .26591428571428571496
+sourcedatagen1       1 expo     .00499266839773942263
+watermarkassigner3   1 expo     .39012574850299401250
+nexmarkq26writer     1 fix      1

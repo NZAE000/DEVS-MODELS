@@ -37,7 +37,7 @@ struct TaskManager_t {
     {
         //std::cout<<"NCORES: "<<n_cores<<"\n";
         for (coreId_t i=0; i<n_cores; ++i) 
-            buffersExec_[i].reserve(100);
+            buffersExec_[i].reserve(1000);
 
         priorityExecs_.reserve(n_cores);
         slots_used_.reserve(n_cores);

@@ -26,10 +26,11 @@ using TIME = NDTime;
 
 
 struct ConfigPath_t {
-    static constexpr std::string_view topo_path    {"input_data/topology.txt"};
-    static constexpr std::string_view oper_path    {"input_data/operator.txt"};
-    static constexpr std::string_view hw_path      {"input_data/hardware.txt"};
-    static constexpr std::string_view arrival_path {"input_data/arrival_rate.txt"};
+    static constexpr std::string_view topo_path     {"input_data/topology.txt"};
+    static constexpr std::string_view oper_path     {"input_data/operator.txt"};
+    static constexpr std::string_view hw_path       {"input_data/hardware.txt"};
+    static constexpr std::string_view arrival_path  {"input_data/arrival_rate.txt"};
+    static constexpr std::string_view reqsRate_path {"input_data/reqsRate.txt"};
 };
 
 struct OperatorProperties_t {
@@ -47,14 +48,18 @@ struct ClusterConfig_t {
         initTopology(ConfigPath_t::topo_path);
         initHardware(ConfigPath_t::hw_path);
         initRates(ConfigPath_t::arrival_path);
+        initReqsRate(ConfigPath_t::reqsRate_path);
     }
 
 // Data config
     std::map<operId_t, OperatorProperties_t>                operProps_{}; // Operator ids resource.
     std::map<operId_t const*, std::vector<operId_t const*>> topology_{};
     std::map<TIME, double>                                  arrivalRates_{};
+    uint32_t requeriments_{}; double rate_{};
+
     operId_t const* begin_op{};
     std::vector<operId_t const*> end_ops{};
+
     uint32_t n_nodes_{};
     uint32_t n_cores_ {};
 
@@ -65,7 +70,6 @@ private:
         std::ifstream file(path.data());
         std::string name{}, distr{};
         uint32_t replica{};
-        uint32_t count{};
 
         while (!file.eof())
         {
@@ -94,11 +98,6 @@ private:
                     return Random_t::exponential(param);
                 }};
             }
-
-            // Store first operator.
-            if (count == 0) { 
-                begin_op = &operProps_.find(name)->first; ++count; 
-            }
         }
     }
 
@@ -106,6 +105,8 @@ private:
     {
         std::ifstream file(path.data());
         std::string from{}, to{};
+        uint32_t count_op{};
+
         while (!file.eof())
         {
             file>>from>>to;
@@ -113,6 +114,11 @@ private:
             auto& to_ref   = operProps_.find(to)->first;
 
             topology_[&from_ref].emplace_back(&to_ref);
+
+            // Store first operator.
+            if (!count_op) { 
+                begin_op = &operProps_.find(from)->first; ++count_op; 
+            }
         }
 
         // Store all end operators
@@ -162,5 +168,18 @@ private:
             arrivalRates_[time] = rate;
             //std::cout<<"time: "<<time<<" rate: "<<rate<<"\n";
         }
+    }
+
+    void initReqsRate(std::string_view path) noexcept
+    {
+        std::ifstream file(path.data());
+        int requriments {}; double rate{};
+
+        //while (!file.eof())
+        //{
+            file>>this->requeriments_>>this->rate_;
+            
+            //std::cout<<"requriments: "<<requeriments_<<" rate: "<<rate_<<"\n";
+        //}
     }
 };

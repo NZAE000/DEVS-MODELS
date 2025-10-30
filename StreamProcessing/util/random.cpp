@@ -15,7 +15,9 @@ double Random_t::normal(double mean, double std)
 	//std::mt19937 gen(rd());
 	//std::normal_distribution<double> normalDistr(mean,std);
 	setNormal(mean, std);
-	return( normalDistr(gen) );
+	double x {};
+	while ((x = normalDistr(gen)) < 0){}
+	return(x);
 }
 
 double Random_t::poisson(int mean)

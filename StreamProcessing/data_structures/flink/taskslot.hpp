@@ -17,7 +17,9 @@ struct TaskSlot_t {
 
     //explicit TaskSlot_t() noexcept = default;
     explicit TaskSlot_t(operId_t const& oper_id) noexcept
-    : operator_id_{oper_id} {} 
+    : operator_id_{oper_id} {
+        buffer_.reserve(1000);
+    } 
 
 // Methods
     operId_t const& getOperator()     const noexcept { return operator_id_;    }

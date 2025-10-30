@@ -27,27 +27,22 @@ public:
     void internal_transition()
     {
         if (send_inmediatly_to_switch()){
-            std::cout<<"[master internal]: send inmediatly to switch\n";
+            //std::cout<<"[master internal]: send inmediatly to switch\n";
             externLocations.clear();
             if (this->state.taskman_.pendingExecutions())
             {
-                //FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
-                //this->lapse_time_      = exec_prior.lapse_;  // Update lapse.
-                //this->state.processing = true;
-                //std::cout<<"\t[master] pending exec: "<< this->lapse_time_ <<"\n";
-
                 std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
                 TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
                 for (auto& subtask : execs_prior)
                     if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
                 this->lapse_time_      = lapse_prioriry;  // Update lapse.
                 this->state.processing = true;
-                std::cout<<"\t[master] pending exec: "<< this->lapse_time_ <<"\n";
+                //std::cout<<"\t[master] pending exec: "<< this->lapse_time_ <<"\n";
 
             } else this->state.processing = false;
         }
         else {
-            std::cout<<"[call slave internal]\n";
+            //std::cout<<"[call slave internal]\n";
             static_cast<Node_t<TIME>*>(this)->internal_transition(); // Cast to super to call Node_t's internal transition algorithm.
         }
     }
@@ -57,26 +52,19 @@ public:
     {      
 
         vector<Message_t>& prod_bag = get_messages<typename Node_defs::in_source>(mbs);
-        if (prod_bag.size()) std::cout<<"\n[master external from prod]: message "<<prod_bag.begin()->id_<<" recivied\n";
-
+        //if (prod_bag.size()) //std::cout<<"\n[master external from prod]: message "<<prod_bag.begin()->id_<<" recivied\n";
         vector<OperatorLocation_t>& bag = get_messages<typename Node_defs::in>(mbs);
-        if (bag.size())      std::cout<<"\n[master external from switch]: message "<<*bag.begin().base()<<" recivied\n";
+        //if (bag.size())      //std::cout<<"\n[master external from switch]: message "<<*bag.begin().base()<<" recivied\n";
 
         check_external_transition_from_producer(mbs);      // Check some message of producer.
         this->check_external_transition_from_switch(mbs);  // Check some location message of switch.
         
         if (send_inmediatly_to_switch()){ // Do you have to send messages to other locations immediately?
             this->lapse_time_ = {0};     // Imminent for the output to the switch.
-            std::cout<<"[master external]: send inmediatly to switch"<<"\n";
+            //std::cout<<"[master external]: send inmediatly to switch"<<"\n";
         }
         else if (this->state.taskman_.pendingExecutions())
         {
-            //FLINK::Subtask_t& exec_prior { this->state.taskman_.getPriorityExecution() };
-            //if (this->state.processing) 
-            //    exec_prior.lapse_ -= e;             // Minus time left (e = elapsed time value since last transition).
-            //this->lapse_time_ = exec_prior.lapse_;  // Update lapse.
-            //std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
-
             std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
             TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
             if (this->state.processing) {
@@ -94,7 +82,7 @@ public:
                     if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
             }
             this->lapse_time_ = lapse_prioriry;  // Update lapse.
-            std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
+            //std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
         }
         this->state.processing = true;
     }
@@ -102,7 +90,6 @@ public:
     // Confluence transition
     void confluence_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs) { // mbs = std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
         // Default definition
-        //std::cout<<"ACA son: "<<*get_messages<typename Node_defs::in_source>(mbs).begin()<<"\n";
         internal_transition();
         external_transition(TIME(), std::move(mbs)); // move(std::tuple<message_bag<Ps>...> / Ps = ports 'in').
     }
@@ -116,10 +103,10 @@ public:
         if (send_inmediatly_to_switch()){        // Do you have to send messages to other locations immediately?
             bag_port_out = externLocations;
             auto loc = bag_port_out.at(0);
-            std::cout<<"[master output]: send inmediatly to switch: loc "<< loc <<"\n";
+            //std::cout<<"[master output]: send inmediatly to switch: loc "<< loc <<"\n";
         }
         else {
-            std::cout<<"[master output]: search_next_operator_destinations\n";
+            //std::cout<<"[master output]: search_next_operator_destinations\n";
             this->search_next_operator_destinations(bag_port_out); // Normal output: send new destinations for next operation.
         }
 

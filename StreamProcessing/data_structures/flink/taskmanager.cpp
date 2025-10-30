@@ -54,8 +54,7 @@ void
 TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noexcept
 {
     TaskSlot_t& slot = getSlot(slot_id); // Get task slot.
-
-    if (slot.pendingTuples()) // Has pending tuples to execute? 
+    if (slot.pendingTuples())            // Has pending tuples to execute? 
     {
         mssgId_t mssg_id = slot.popTuple();  // Remove tuple from slot buffer.
         // Get avg time excecution with some distribution and create execution.
@@ -82,20 +81,22 @@ TaskManager_t::createSubTask(TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_i
     //TIME timeExec = {0,0,0,0,lapse};                        // Create time execution (hrs::mins:secs:mills:micrs::nns:pcs::fms).
 
     // Search core buffer with less congestion.
-    // std::map<coreId_t, std::vector<Subtask_t>> buffersExec_;
     std::vector<Subtask_t>* bufferLessCongestion {nullptr};
+    uint32_t id_core_select{0};
     std::size_t n_exec_less { std::numeric_limits<uint32_t>::max() };
     for (auto& [id_core, buffer] : buffersExec_){
         auto n_exec {buffer.size()};
         if (n_exec < n_exec_less) {
             n_exec_less = n_exec;
             bufferLessCongestion = &buffer;
+            id_core_select = id_core;
         }
     }
 
-    //this->bufferExec_.emplace_back(slot_id, timeExec);      // Add to execution buffer.
+    // Add to execution buffer.
     bufferLessCongestion->emplace_back(mssg_id, slot_id, timeExec);
     slot.setUsing(true);
+    //std::cout<<slot.getOperator()<<" : "<<slot_id<<" "<<id_core_select<<" "<<bufferLessCongestion->size()<<'\n';
     //if (getPriorityExecution().slot_id == slot_id)
     //    slot.setActive(true);                            // Slot active in execution.
     for (auto& priority_exec : getPriorityExecutions()){
@@ -140,6 +141,7 @@ TaskManager_t::terminatePriorityExecutions() noexcept
             //subtask_more_priority = subtask_prior;
         }
     }
+    //std::cout<<"priors: "<<priority_execs.size()<<" "<<less_exec_time<<'\n';
 
     // Subtract time and eliminate what remains at 0.
     TIME t_zero {0};
@@ -159,7 +161,7 @@ TaskManager_t::terminatePriorityExecutions() noexcept
                 if ( buffer.size() ) { // Execution pending.
                     Subtask_t& subtask { *buffer.begin().base() };
                     slotId_t slot_id { subtask.slot_id };
-                    getSlot(slot_id).setActive(true);
+                    getSlot(slot_id).setActive(true); // setUsing(true) is already.
                 }
             }
         }
@@ -182,8 +184,11 @@ std::size_t
 TaskManager_t::pendingExecutions() const noexcept
 {
     std::size_t n_exec_pending {0};
-    for (auto& [id_core, buffer] : buffersExec_)
-        n_exec_pending += buffer.size();
+    for (auto& [id_core, buffer] : buffersExec_){
+        auto buffize {buffer.size()};
+        if (buffize) std::cout<<"core "<<id_core<<": "<<buffize<<'\n';
+        n_exec_pending += buffize;//buffer.size();
+    }
     
     return n_exec_pending;
     //return bufferExec_.size();
