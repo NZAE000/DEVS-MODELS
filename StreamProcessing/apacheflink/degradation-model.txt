@@ -1,0 +1,29 @@
+t_effec_op = t_base_op × Degradation(P)
+
+donde:
+	Degradation(P) = Finter(P) × Fsatu(P) × Fineff_par(P)
+	Finter(P)      = (1 + α(P) · max(0, U_cpu(P) − U_thr(P)))
+	Fsatu(P)       = (1 + B · max(0, U_cpu(P) − U_sat(P))), donde B = 0.05
+	Fineff_par(P)  = 1 / E(P), donde E(P) = Tmax(P) / (Peff · Tmax(1))
+
+
+Tmax(p): mejor throughput observado en nivel de paralelismo p
+U_thr(p): CPU al 95% de Tmax
+U_sat(p): CPU en el punto de máximo throughput
+α(p): pendiente de caída de throughput vs aumento de CPU
+P0: primer p a partir del cual ningún P mayor mejora Tmax
+E(p): eficiencia paralela real respecto al escalamiento ideal
+
+
+
+accumBusy += tbase​ * InternalOccupation(P,op)
+
+donde:
+	InternalOcupation(P,op) = (1 + Foccup(P,op))
+	Foccup(P,op) 		= occupEvent(P,op) / occupEvent(ref,op)
+	occupEvent(P,op)	= U(P,op) x P / Thr(P)
+	occupEvent(ref,op)	= U(1,op) x 1 / Thr(1)
+
+ya que por ley de utilizacion:
+	
+	U(P,op) = TP(p) * occupEvent(P,op) / P  = "Througput por el tiempo medio de ocupacion, y dividir por P porque existen P instancias paralelas"

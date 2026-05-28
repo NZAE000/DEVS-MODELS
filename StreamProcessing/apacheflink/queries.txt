@@ -1,0 +1,8 @@
+bash get_query.sh
+bash get_query.sh $(bash get_job_id.sh)
+bash get_query.sh $(bash get_job_id.sh)/vertices/$(bash get_oper_id.sh Source)/metrics
+bash get_query.sh $(bash get_job_id.sh)/vertices/$(bash get_oper_id.sh Source)/metrics?get=0.numRecordsIn,0.numRecordsOut,0.accumulateBusyTimeMs,1.numRecordsIn,1.numRecordsOut,1.accumulateBusyTimeM
+bash get_query.sh $(bash get_job_id.sh)/vertices/$(bash get_oper_id.sh Source)/subtasks/metrics
+bash get_query.sh $(bash get_job_id.sh)/vertices/$(bash get_oper_id.sh Source)/subtasks/metrics?get=numRecordsIn,numRecordsOut,accumulateBusyTimeMs
+bash get_query.sh $(bash get_job_id.sh)/vertices/$(bash get_oper_id.sh Source)/subtasks/0
+

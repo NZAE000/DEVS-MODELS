@@ -1,5 +1,16 @@
 sourcedatagen1 calc2
+sourcedatagen1 calc10
+calc10 watermarkassigner11
+watermarkassigner11 minibatchassigner12
+minibatchassigner12 calc13
+calc13 localwindowaggregate14
+localwindowaggregate14 globalwindowaggregate16
+globalwindowaggregate16 windowjoin18
 calc2 watermarkassigner3
 watermarkassigner3 minibatchassigner4
 minibatchassigner4 calc5
-calc5 nexmarkq26writer
+calc5 localwindowaggregate6
+localwindowaggregate6 globalwindowaggregate8
+globalwindowaggregate8 windowjoin18
+windowjoin18 calc19
+calc19 nexmarkq820writer

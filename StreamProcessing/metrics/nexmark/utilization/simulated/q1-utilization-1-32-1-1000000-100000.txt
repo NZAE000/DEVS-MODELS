@@ -1,0 +1,6 @@
+sourcedatagen1:0.955649;calc2:0.0807175;watermarkassigner3:0.0545105;minibatchassigner4:0.0482208;calc5:0.064898;nexmarkq16writer:0.0206826;
+sourcedatagen1:0.952461;calc2:0.0780893;watermarkassigner3:0.0520595;minibatchassigner4:0.0433196;calc5:0.0624144;nexmarkq16writer:0.0213769;
+sourcedatagen1:0.952462;calc2:0.0780893;watermarkassigner3:0.0520596;minibatchassigner4:0.0433196;calc5:0.0624145;nexmarkq16writer:0.0213739;
+sourcedatagen1:0.95246;calc2:0.0780892;watermarkassigner3:0.0520595;minibatchassigner4:0.0433196;calc5:0.0624144;nexmarkq16writer:0.0213809;
+sourcedatagen1:0.952458;calc2:0.078089;watermarkassigner3:0.0520593;minibatchassigner4:0.0433195;calc5:0.0624142;nexmarkq16writer:0.0213825;
+sourcedatagen1:0.952458;calc2:0.078089;watermarkassigner3:0.0520593;minibatchassigner4:0.0433194;calc5:0.0624142;nexmarkq16writer:0.0213774;

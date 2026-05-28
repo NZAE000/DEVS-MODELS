@@ -66,7 +66,7 @@ def load_states_log(file_path):
             
             # Detect node state.
             elif line.startswith("State for model node_"):
-                node_match = re.match(r"State for model (\w+) is processing: (\d), buffer executions: \d+, (.+)", line)
+                node_match = re.match(r"State for model (\w+) is processing: (\d), buffer executions: \d+, executing: \d+, (.+)", line)
                 if node_match:
                     node_name, is_processing, slots_str = node_match.groups()
                     is_processing = int(is_processing)

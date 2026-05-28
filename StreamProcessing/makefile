@@ -1,6 +1,7 @@
 SIMULATOR := STREAM_PROCESSING
 N_NODES := 0
 N_CORES := 0
+PARALLELISM_L := 0
 CC=clang++
 ifneq ($(N_NODES),0)
 	CC += -DN_NODES=$(N_NODES)
@@ -8,7 +9,10 @@ endif
 ifneq ($(N_CORES),0)
 	CC += -DN_CORES=$(N_CORES)
 endif
-CFLAGS=-std=c++20 #-g #-Wall -Wextra -Wpedantic -Wconvertions
+ifneq ($(PARALLELISM_L),0)
+	CC += -DPARALLELISM_L=$(PARALLELISM_L)
+endif
+CFLAGS=-std=c++20 -O3#-g #-Wall -Wextra -Wpedantic -Wconvertions
 
 INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
 INCLUDEDESTIMES=-I ../../Cadmium-Simulation-Environment/DESTimes/include/

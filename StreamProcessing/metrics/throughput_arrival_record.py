@@ -24,9 +24,10 @@ def extract_requirements_completed(state_file):
     final_time = None
     req_completed = None
 
-    for line in reversed(lines): # Get from last line.
+    # Get from last line (to get final time and last productor state) ####################
+    for line in reversed(lines):
         if re.match(r"\d{2}:\d{2}:\d{2}:\d{3}:\d{3}:\d{3}:\d{3}:\d{3}", line.strip()):
-            final_time = line.strip()
+            final_time = line.strip() # Detect final time.
             block.append(line.strip())
             break
         else:
@@ -38,13 +39,15 @@ def extract_requirements_completed(state_file):
         if "State for model productor is" in linea:
             req_completed = int(linea.split()[-1])
             break
+    #######################################################################################
 
-    # === Find the first time that state appears ===
+    # Find the first time that state appears (becauso it is the the last arrival time) ####
     time_last_arrival = None
     for i in range(len(lines)):
         if f"State for model productor is {req_completed}" in lines[i]:
             time_last_arrival = lines[i-1]
             break
+    #######################################################################################
     
     #print("fini: ", final_time, "last: ", time_last_arrival)
     finish_time = parse_time_to_sec(final_time) if final_time else None

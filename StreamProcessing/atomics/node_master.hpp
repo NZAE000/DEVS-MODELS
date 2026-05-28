@@ -9,6 +9,7 @@
 
 #include "node.hpp"
 
+namespace streamprcs {
 
 template<typename TIME> 
 class NodeMaster_t : public Node_t<TIME> { // Node master is an atomic node
@@ -44,6 +45,11 @@ public:
         else {
             //std::cout<<"[call slave internal]\n";
             static_cast<Node_t<TIME>*>(this)->internal_transition(); // Cast to super to call Node_t's internal transition algorithm.
+
+            //for (auto const& [core_id, buffer] : this->state.taskman_.getExecBuffers()) {
+            //    std::cout<<"core"<<core_id<<":  "<<buffer.size()<<' ';
+            //}
+            //std::cout<<'\n';  
         }
     }
     
@@ -144,5 +150,7 @@ private:
         }
     }
 };
+
+} // namespace streamprcs
 
 #endif // _NODE_MASTER_HPP__

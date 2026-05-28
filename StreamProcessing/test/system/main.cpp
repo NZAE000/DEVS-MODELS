@@ -24,6 +24,7 @@
 //C++ libraries
 #include <iostream>
 #include <string>
+#include <iomanip>
 
 using namespace std;
 using namespace cadmium;
@@ -31,13 +32,30 @@ using namespace cadmium;
 
 using TIME = NDTime;
 
+
+
+double to_second(TIME const& time)
+{
+    
+    return static_cast<double>(
+        time.getHours()         *  3600 +
+        time.getMinutes()       *    60 +
+        time.getSeconds()       *     1 +
+        time.getMilliseconds()  *  1e-3 +
+        time.getMicroseconds()  *  1e-6 +
+        time.getNanoseconds()   *  1e-9 +
+        time.getPicoseconds()   * 1e-12 +
+        time.getFemtoseconds()  * 1e-15
+    );
+}
+
 // Input and output ports of the Cluster coupled model
 namespace Cluster_defs {
     struct in : public in_port<Message_t> {};
 }
 
 
-int main(void){
+int main(int arg, char** argv){
 
     TIME::startDeepView(); // extend to hrs::mins:secs:mills:micrs::nns:pcs::fms
 
@@ -48,35 +66,35 @@ int main(void){
 
 /****** Productor atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> productor;
-    productor = dynamic::translate::make_dynamic_atomic_model<Producer_t, TIME/*std::map<TIME, double>&*/>("productor", cluster_cfg.requeriments_, cluster_cfg.rate_,/*&cluster_cfg.arrivalRates*/ "simulation_results/system/rate_change.txt");
+    productor = dynamic::translate::make_dynamic_atomic_model<streamprcsc::Producer_t, TIME/*std::map<TIME, double>&*/>("productor", cluster_cfg.requeriments_, cluster_cfg.rate_,/*&cluster_cfg.arrivalRates*/ "simulation_results/system/rate_change.txt");
 
 /****** Node master atomic model instantiations *******************/
     std::vector<shared_ptr<dynamic::modeling::model>> abstract_nodes{};
-    JobManager.deployJob([&](uint32_t nNodes, uint32_t nCores, std::vector<Node_t<TIME>*>& nodes)
+    JobManager.deployJob([&](uint32_t nNodes, uint32_t nCores, std::vector<streamprcs::Node_t<TIME>*>& nodes)
     {
         abstract_nodes.reserve(nNodes);
         nodes.reserve(nNodes);
 
         // Create always first node (master=node_0).
-        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, FLINK::JobManager_t&>("node_0", JobManager, nCores));
-        nodes.push_back(dynamic_cast<Node_t<TIME>*>(abstract_nodes.begin()->get()));
+        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcs::NodeMaster_t, TIME, FLINK::JobManager_t&>("node_0", JobManager, nCores));
+        nodes.push_back(dynamic_cast<streamprcs::Node_t<TIME>*>(abstract_nodes.begin()->get()));
 
         // Create slave nodes (node_1, node_2, ..., node_n).
         std::string name_base{"node_"}, fullname{};
         for (uint32_t id=1; id<nNodes; ++id)
         {
             fullname = name_base + std::to_string(id);
-            abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<Node_t, TIME, FLINK::JobManager_t&>(fullname, JobManager, nCores));
-            nodes.push_back(dynamic_cast<Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
+            abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcs::Node_t, TIME, FLINK::JobManager_t&>(fullname, JobManager, nCores));
+            nodes.push_back(dynamic_cast<streamprcs::Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
         }
     });
     
 /****** Switch atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> sswitch;
-    sswitch = dynamic::translate::make_dynamic_atomic_model<Switch_t, TIME>("switch");
+    sswitch = dynamic::translate::make_dynamic_atomic_model<streamprcsc::Switch_t, TIME>("switch");
 
 
-    //Node_t<TIME>& node_m = dynamic_cast<Node_t<TIME>&>(*nodes.begin()->get());
+    //streamprcs::Node_t<TIME>& node_m = dynamic_cast<streamprcs::Node_t<TIME>&>(*nodes.begin()->get());
     //FLINK::operId_t oper1 = node_m.getTaskManager().getOperator(0);
     //FLINK::operId_t oper2 = node_m.getTaskManager().getOperator(1);
     //FLINK::operId_t oper3 = node_m.getTaskManager().getOperator(2);
@@ -97,36 +115,36 @@ int main(void){
 
 // eics, eocs, ics
     dynamic::modeling::EICs eics_Cluster = {
-        dynamic::translate::make_EIC<Cluster_defs::in, Node_defs::in_source>("node_0")    // eic to node_0 = node_master   ->[->(node_0)]
+        dynamic::translate::make_EIC<Cluster_defs::in, streamprcs::Node_defs::in_source>("node_0")    // eic to node_0 = node_master   ->[->(node_0)]
     };
 
     // Metaprogramming at the preprocessing level with Boost Preprocessor.
     #define GENERATE_IC(z, n, data) \
-    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::BOOST_PP_CAT(in_, n)>(BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n)), "switch"), \
-    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::BOOST_PP_CAT(out_, n), Node_defs::in>("switch", BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n))),
+    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcsc::Switch_t<TIME>::defs_port::BOOST_PP_CAT(in_, n)>(BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n)), "switch"), \
+    dynamic::translate::make_IC<streamprcsc::Switch_t<TIME>::defs_port::BOOST_PP_CAT(out_, n), streamprcs::Node_defs::in>("switch", BOOST_PP_STRINGIZE(BOOST_PP_CAT(node_, n))),
 
     dynamic::modeling::ICs ics_Cluster = {
         BOOST_PP_REPEAT(N_NODES, GENERATE_IC, _)
     };
 
     //dynamic::modeling::ICs ics_Cluster = {
-    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_0>("node_0", "switch"),
-    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_1>("node_1", "switch"),
-    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_2>("node_2", "switch"),
-    //    dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_3>("node_3", "switch"),
+    //    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcsc::Switch_t<TIME>::defs_port::in_0>("node_0", "switch"),
+    //    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcsc::Switch_t<TIME>::defs_port::in_1>("node_1", "switch"),
+    //    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcsc::Switch_t<TIME>::defs_port::in_2>("node_2", "switch"),
+    //    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcsc::Switch_t<TIME>::defs_port::in_3>("node_3", "switch"),
     //    
-    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_0, Node_defs::in>("switch", "node_0"),
-    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_1, Node_defs::in>("switch", "node_1"),
-    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_2, Node_defs::in>("switch", "node_2"),
-    //    dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_3, Node_defs::in>("switch", "node_3"),
+    //    dynamic::translate::make_IC<streamprcsc::Switch_t<TIME>::defs_port::out_0, streamprcs::Node_defs::in>("switch", "node_0"),
+    //    dynamic::translate::make_IC<streamprcsc::Switch_t<TIME>::defs_port::out_1, streamprcs::Node_defs::in>("switch", "node_1"),
+    //    dynamic::translate::make_IC<streamprcsc::Switch_t<TIME>::defs_port::out_2, streamprcs::Node_defs::in>("switch", "node_2"),
+    //    dynamic::translate::make_IC<streamprcsc::Switch_t<TIME>::defs_port::out_3, streamprcs::Node_defs::in>("switch", "node_3"),
     //};
     //dynamic::modeling::ICs ics_Cluster;
     //ics_Cluster.reserve(nodes.size() * 2); // For each existent node, there are two ports (in, out)
     //for (auto const& node : nodes)
     //{
-    //    ics_Cluster.push_back(dynamic::translate::make_IC<Node_defs::out, Switch_t<TIME>::defs_port::in_0>(node->get_id(), "switch"));
-    //    ics_Cluster.push_back(dynamic::translate::make_IC<Switch_t<TIME>::defs_port::out_0, Node_defs::in>("switch", node->get_id()));
-    //    // dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Node_defs::in_source>("productor", "node_master") // FROM output port of productor submodel (Prod->) TO input port node submodel (-> Node) =  ( [Prod(out) -> (int)node] ).
+    //    ics_Cluster.push_back(dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcsc::Switch_t<TIME>::defs_port::in_0>(node->get_id(), "switch"));
+    //    ics_Cluster.push_back(dynamic::translate::make_IC<streamprcsc::Switch_t<TIME>::defs_port::out_0, streamprcs::Node_defs::in>("switch", node->get_id()));
+    //    // dynamic::translate::make_IC<Producer_t<TIME>::defs::out, streamprcs::Node_defs::in_source>("productor", "node_master") // FROM output port of productor submodel (Prod->) TO input port node submodel (-> Node) =  ( [Prod(out) -> (int)node] ).
     //}
     dynamic::modeling::EOCs eocs_Cluster = {};     // Nothing to EOC of Cluster
 
@@ -168,7 +186,7 @@ int main(void){
     dynamic::modeling::ICs ics_TOP;
     ics_TOP = {
         // It uses the type of the output port of the submodel “from” and the type of the input port of the submodel “to”, in this specific order. 
-        dynamic::translate::make_IC<Producer_t<TIME>::defs::out, Cluster_defs::in>("productor", "Cluster") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
+        dynamic::translate::make_IC<streamprcsc::Producer_t<TIME>::defs::out, Cluster_defs::in>("productor", "Cluster") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
     };
 
 
@@ -180,12 +198,12 @@ int main(void){
 
 
 /*************** Loggers *******************/
-    static ofstream out_messages("simulation_results/system/system_test_output_messages.txt");
-    struct oss_sink_messages {  // We then define the structure oss_sink_messages to tell the simulator where we will save the message log
-        static ostream& sink(){          
-            return out_messages;
-        }
-    };
+    //static ofstream out_messages("simulation_results/system/system_test_output_messages.txt");
+    //struct oss_sink_messages {  // We then define the structure oss_sink_messages to tell the simulator where we will save the message log
+    //    static ostream& sink(){          
+    //        return out_messages;
+    //    }
+    //};
     static ofstream out_state("simulation_results/system/system_test_output_state.txt");
     struct oss_sink_state {     // We define the structure oss_sink_state to tell the simulator where to save the state log
         static ostream& sink(){          
@@ -193,20 +211,139 @@ int main(void){
         }
     };
     
-    using log_state       = logger::logger<logger::logger_state,       dynamic::logger::formatter<TIME>, oss_sink_state>; //  The state log generates the global time when a state on the top model changes, and the states of all the atomic models at that time.
-    using log_messages    = logger::logger<logger::logger_messages,    dynamic::logger::formatter<TIME>, oss_sink_messages>;
+    //using log_state       = logger::logger<logger::logger_state,       dynamic::logger::formatter<TIME>, oss_sink_state>; //  The state log generates the global time when a state on the top model changes, and the states of all the atomic models at that time.
+    //using log_messages    = logger::logger<logger::logger_messages,    dynamic::logger::formatter<TIME>, oss_sink_messages>;
     // Also, include the global time of the simulation inside the state and message
-    using global_time_mes = logger::logger<logger::logger_global_time, dynamic::logger::formatter<TIME>, oss_sink_messages>;
-    using global_time_sta = logger::logger<logger::logger_global_time, dynamic::logger::formatter<TIME>, oss_sink_state>;
+    //using global_time_mes = logger::logger<logger::logger_global_time, dynamic::logger::formatter<TIME>, oss_sink_messages>;
+    //using global_time_sta = logger::logger<logger::logger_global_time, dynamic::logger::formatter<TIME>, oss_sink_state>;
 
     // Once we have declared all the loggers we need, we have to combine them, so our simulation generates all the logs at the same time.
-    using logger_top = logger::multilogger<log_state, log_messages, global_time_mes, global_time_sta>;
+    //using logger_top = logger::multilogger<log_state, log_messages, global_time_mes, global_time_sta>;
+    //using logger_top = logger::multilogger<log_state, global_time_sta>;
+    using logger_top = logger::multilogger<>;
 
 
 /************** Runner call ************************/ 
     dynamic::engine::runner<NDTime, logger_top> r(TOP, {0}); // runner class defined in <cadmium/engine/pdevs_dynamic_runner.hpp>. Init time to 0
     //r.run_until(NDTime("04:00:00:000"));
-    r.run_until_passivate(); // Run the simulation until all models are passivated
+
+    TIME finish_time = r.run_until_passivate(); // Run the simulation until all models are passivated
+
+/********** Calculate and store throughput results into file ****************/
+    std::string app_name { argv[1] };
+    uint32_t    registry { static_cast<uint32_t>(std::atoi(argv[2])) };
+    double ft_second      = to_second(finish_time);
+    uint32_t n_nodes      = cluster_cfg.n_nodes_;
+    uint32_t n_cores      = cluster_cfg.n_cores_;
+    uint32_t arrival_rate = static_cast<uint32_t>(cluster_cfg.rate_ * 1e12); // req/ps to res/s.
+    uint32_t total_reqs   = cluster_cfg.requeriments_;
+    uint32_t prl_level    = cluster_cfg.operProps_[*cluster_cfg.begin_op].replication_; // Assume all operators have same replication level.
+    double throughput { total_reqs / ft_second };
+    //std::cout<<"Arrival rate\t\tRequirements\t\tFinish time (s)\t\tThroughput (req/s)"<<'\n';
+    //std::cout<<arrival_rate<<"\t\t"<<total_reqs<<"\t\t"<<ft_second<<"\t\t"<<throughput<<'\n';
+
+    std::cout << std::left
+        << std::setw(15) << "Nodes"
+        << std::setw(15) << "Cores"
+        << std::setw(20) << "Requirements"
+        << std::setw(25) << "Arrival rate (req/s)"
+        << std::setw(20) << "Parallelism level"
+        << std::setw(20) << "Finish time (s)"
+        << std::setw(20) << "Throughput (req/s)"
+        << '\n';
+
+    std::cout << std::left
+        << std::setw(15) << n_nodes
+        << std::setw(15) << n_cores
+        << std::setw(20) << total_reqs
+        << std::setw(25) << arrival_rate
+        << std::setw(20) << prl_level
+        << std::setw(20) << ft_second
+        << std::setw(20) << throughput
+        << "\n\n";
+
+    if (registry)
+    {
+        std::string file_throughput = "metrics/nexmark/throughput/simulated/"+ app_name + "-throughput-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+                            + std::to_string(prl_level) + "-" + std::to_string(total_reqs) + "-" + std::to_string(arrival_rate) + ".txt";
+
+        ofstream out_throughput_result(file_throughput, std::ios::app);
+        out_throughput_result<<ft_second<<' '<<throughput<<'\n'; // Write in file.
+    }
+
+/********** Calculate and store operator utilization results into file ****************/
+    std::cout << std::left
+        << std::setw(25) << "Operator"
+        << std::setw(15) << "Parallelism"
+        //<< std::setw(15) << "RecordsSend"
+        << std::setw(15) << "AccumBusyTime"
+        << std::setw(15) << "BusyTime"
+        << std::setw(15) << "Utilization"
+        << '\n';
+
+    std::string file_utilization{};
+    ofstream out_utilization_result{};
+    if (registry)
+    {
+        file_utilization = "metrics/nexmark/utilization/simulated/"+ app_name + "-utilization-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+                        + std::to_string(prl_level) + "-" + std::to_string(total_reqs) + "-" + std::to_string(arrival_rate) + ".txt";
+        out_utilization_result = ofstream(file_utilization, std::ios::app);
+    }
+
+    std::ifstream operator_file(ConfigPath_t::oper_path.data());
+    std::string oper_name{};
+    double total_time {}, acum_busytime{}, busytime{}, utilization{};
+
+    // Vesion 1
+    /*while (operator_file >> oper_name)
+    {
+        //operator_file>>oper_name;
+        operator_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Jump next line.
+        auto const& props = cluster_cfg.operProps_[oper_name];
+        double acum_time {to_second(props.accum_exec_time_)};
+        total_time += acum_time;
+        utilization = (acum_time/props.replication_)/ft_second;
+        std::cout << std::left 
+            << std::setw(25) << oper_name
+            << std::setw(15) << props.replication_
+            << std::setw(15) << props.acumm_recordsSend_
+            << std::setw(15) << acum_time
+            << std::setw(15) << utilization <<'\n';
+
+        out_utilization_result<<oper_name<<':'<<utilization<<';'; // Write in file.
+    }
+    out_utilization_result<<'\n';
+    std::cout<<"total time: "<<total_time<<'\n';*/
+
+    // Version 2
+    std::string line{};
+    while (std::getline(operator_file, line)) 
+    {    
+        if (line.empty()) continue;      // Ignore empty lines.
+        std::istringstream iss(line);
+        std::string oper_name;
+        iss >> oper_name;
+
+        auto const& props = cluster_cfg.operProps_[oper_name];
+        acum_busytime     = props.accum_busy_time_; //to_second(props.accum_exec_time_)};
+        busytime          = acum_busytime / props.replication_;
+        utilization       = busytime / ft_second;
+
+        std::cout << std::left
+            << std::setw(25) << oper_name
+            << std::setw(15) << props.replication_
+            //<< std::setw(15) << props.acumm_recordsSend_
+            << std::setw(15) << acum_busytime
+            << std::setw(15) << busytime
+            << std::setw(15) << utilization << '\n';
+
+        if (registry) out_utilization_result << oper_name << ':' << utilization << ';';
+
+        total_time += acum_busytime;
+    }
+
+    if (registry) out_utilization_result << '\n';
+    //std::cout << "total time: " << total_time << '\n';
     //auto time1 = NDTime{0,0,0,0,200};
     //auto time2 = time1 + NDTime("00:00:00:000:900");
     //std::cout<<"time: "<<time2<<"\n";

@@ -6,9 +6,8 @@
 */
 #pragma once
 #include<string>
-#include "typealiases.hpp"
 #include<vector>
-
+#include "typealiases.hpp"
 
 namespace FLINK {
 

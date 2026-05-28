@@ -25,6 +25,7 @@
 using namespace cadmium;
 using namespace std;
 
+namespace streamprcsc {
 
 
 // Productor is an atomic generator
@@ -62,7 +63,7 @@ public:
     Producer_t() {};
 
     Producer_t(uint32_t req, double rate, std::string_view path_to_log) 
-    : requeriments_{req}, rate_{rate}, log_rate(path_to_log.data())
+    : requeriments_{req}, rate_{rate}, log_rate(path_to_log.data()), gen_(rd_()), uni_distr_(0.0, 1.0)
     {
         log_rate<<current_time_<<" "<<rate_<<"\n";
         std::cout<<"time: "<<current_time_<<" lambda: "<<rate_<<"\n";
@@ -126,32 +127,63 @@ public:
 
         ++this->state;*/
 
-        if (this->state >= this->requeriments_)
+        if (this->state >= this->requeriments_-1)
         {
             generating_ = false;
             log_rate<<current_time_<<" "<<0<<"\n";
             return;
         }
 
-        int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), this->rate_))) };
-        int lapse_us {lapse};
-        int lapse_hr  = lapse_us / 3'600'000'000;
-        lapse_us     %= 3'600'000'000;
-        int lapse_min = lapse_us / 60'000'000;
-        lapse_us     %= 60'000'000;
-        int lapse_s   = lapse_us / 1'000'000;
-        lapse_us     %= 1'000'000;
-        int lapse_ms  = lapse_us / 1'000;
-        lapse_us     %= 1'000;
+        //int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), this->rate_))) };
+        //int lapse_us {lapse};
+        //int lapse_hr  = lapse_us / 3'600'000'000;
+        //lapse_us     %= 3'600'000'000;
+        //int lapse_min = lapse_us / 60'000'000;
+        //lapse_us     %= 60'000'000;
+        //int lapse_s   = lapse_us / 1'000'000;
+        //lapse_us     %= 1'000'000;
+        //int lapse_ms  = lapse_us / 1'000;
+        //lapse_us     %= 1'000;
+        
+        // Generate time
+        int lapse_ps {};
+        do{
+            lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_(gen_), this->rate_)));
+        } while (lapse_ps < 0);
+        
+        // Descompose time
+        int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
+        lapse_ps    %=  3'600'000'000'000'000;
+
+        int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
+        lapse_ps     %= 60'000'000'000'000;
+
+        int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
+        lapse_ps   %= 1'000'000'000'000;
+
+        int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
+        lapse_ps    %= 1'000'000'000;
+
+        int lapse_us = lapse_ps / 1'000'000;              // 1e6
+        lapse_ps    %= 1'000'000;
+
+        int lapse_ns = lapse_ps / 1'000;                  // 1e3
+        lapse_ps    %= 1'000;
 
         //std::cout<<"lapse: "<<lapse<<"\n";
-        //std::cout<<"hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<"\n";
-        arrival_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        //std::cout<<"prod: hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<" ns: "<<lapse_ns<<" ps: "<<lapse_ps<<"\n";
+        //arrival_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        arrival_time_ = {lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
         current_time_ += arrival_time_;
 
         ++this->state;
+        //std::cout<<"time: "<<current_time_<<" req: "<<this->state<<"\n";
     }
 
 };
 
+
+} // namespace streeamprcs
+
 #endif // _PRODUCER_HPP__
+

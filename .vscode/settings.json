@@ -3,6 +3,9 @@
     //"files.autoD": true, // Ensures VS Code correctly detects external changes
     //"files.simpleDialog.showFileModifiedMessage": true, // Displays a warning if the file was modified externally
     //"files.restoreUndoStack": false, // Avoid storing old content from large files in memory
+    "workbench.colorCustomizations": {
+        "editorCursor.foreground": "#FFFFFF",
+    },
     "files.associations": {
         "vector": "cpp",
         "__split_buffer": "cpp",

@@ -8,3 +8,7 @@
 #define N_CORES 1 // Here!: define core number for each node.
 #endif
 
+
+#ifndef PARALLELISM_L
+#define PARALLELISM_L 1 // Here!: define operator parallelism level.
+#endif

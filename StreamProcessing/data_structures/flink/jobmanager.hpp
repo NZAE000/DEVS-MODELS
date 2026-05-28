@@ -8,6 +8,7 @@
 #include "../cluster_config.hpp"
 #include "resourcemanager.hpp"
 #include "jobmaster.hpp"
+#include<iostream>
 //#include "../../atomics/node.hpp"
 
 // Cadmium
@@ -21,10 +22,12 @@ namespace FLINK {
 
 struct JobManager_t {
 
-    explicit JobManager_t(ClusterConfig_t const& c_cgf)
-    : cluster_cfg_{c_cgf} , jobMaster_{cluster_cfg_.topology_}, resourceMan_{}
+    explicit JobManager_t(ClusterConfig_t& c_cgf)
+    : cluster_cfg_{c_cgf},
+      jobMaster_{c_cgf.topology_}, resourceMan_{}
     {
         std::srand(std::time(nullptr)); // Set seed.
+        //std::cout<<"Deg: "<<degradation_factor_<<'\n';
     }
 
 // Methods
@@ -75,13 +78,17 @@ struct JobManager_t {
     [[nodiscard]] OperatorLocation_t                  getOperLocationLessload(operId_t const&)  const noexcept;
     [[nodiscard]] std::vector<operId_t const*> const& getOperatorDestinations(operId_t const&)  const noexcept;
     [[nodiscard]] double getTimeExecution(operId_t const&)                                      const noexcept;
+    [[nodiscard]] double getDegradationFactor()                                                 const noexcept;
+                  void   accumBusyTime(operId_t const&, double t)                                     noexcept;
 
     //ClusterConfig_t const& getClusterCfg() const noexcept { return cluster_cfg_; }
     [[nodiscard]] operId_t const& firstOperator()                const noexcept;
     [[nodiscard]] bool            lastOperator(operId_t const&)  const noexcept;
+    [[nodiscard]] OperatorProperties_t const& getOperatorProperties(operId_t const&) const noexcept;
+    [[nodiscard]] OperatorProperties_t&       getOperatorProperties(operId_t const&)       noexcept;
 
 private:
-    ClusterConfig_t const& cluster_cfg_;
+    ClusterConfig_t& cluster_cfg_;
 
 // Two principal components
     JobMaster_t         jobMaster_;

@@ -53,9 +53,11 @@ struct TaskManager_t {
     void checkQueuedExecution(slotId_t, JobManager_t&)          noexcept;
 
 
-    std::vector<Subtask_t*>&     getPriorityExecutions()        noexcept;
-    std::vector<slotId_t> const* terminatePriorityExecutions()  noexcept;
-    std::size_t pendingExecutions()                       const noexcept;
+    std::vector<Subtask_t*>&     getPriorityExecutions()         noexcept;
+    std::vector<slotId_t> const* terminatePriorityExecutions()   noexcept;
+    std::size_t pendingExecutions()                              const noexcept;
+    std::size_t executing()                                      const noexcept;
+    auto const& getExecBuffers() const noexcept { return buffersExec_; }
 
     //std::vector<Subtask_t*> const& getPriorityExecutions() const noexcept;
 
@@ -65,17 +67,18 @@ struct TaskManager_t {
     //std::size_t      executionPending()                   const noexcept;
 
 private:
-    void createSubTask(TaskSlot_t&, mssgId_t, slotId_t, int lapse) noexcept;
+    void createSubTask(JobManager_t&, TaskSlot_t&, mssgId_t, slotId_t) noexcept;
 
-    std::map<slotId_t, TaskSlot_t>  taskSlots_;
-    //std::vector<Subtask_t>          bufferExec_;
+    std::map<slotId_t, TaskSlot_t>  taskSlots_;              // Slots here!. 
+    std::map<coreId_t, std::vector<Subtask_t>> buffersExec_; // Cores here!.
     
-    std::map<coreId_t, std::vector<Subtask_t>> buffersExec_; // CORES HERE!.
     mutable std::vector<Subtask_t*> priorityExecs_;
             std::vector<slotId_t>   slots_used_;
 
     coreId_t n_cores_{1};
     slotId_t nextID {0};
+
+    mutable std::size_t current_executions_{0};
 };
 
 } // namespace FLINK

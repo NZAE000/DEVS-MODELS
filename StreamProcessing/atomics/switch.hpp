@@ -31,6 +31,9 @@ using namespace std;
 /*Call order: external, time_avance, output, internal*/
 
 
+namespace streamprcsc {
+
+
 struct MessageBuffer_t {
     std::vector<OperatorLocation_t> messages{};
     bool active {false};
@@ -86,7 +89,8 @@ public:
     state_type state;
 
     TIME send_time_{};  // Time left until next departure
-    int mean_ {50};
+    int const mean_ {50};
+    myrandom::Poisson_t poisson_distr_{mean_};
 
     // Default constructor
     Switch_t() noexcept {}
@@ -242,11 +246,40 @@ private:
 
     void send() noexcept 
     {
-        int lapse { static_cast<int>(Random_t::poisson(mean_)) }; // Poisson distribution send time.
+        //int lapse { static_cast<int>(Random_t::poisson(mean_)) }; // Poisson distribution send time.
+        //int lapse { static_cast<int>(poisson_distr_.generate()) }; // Poisson distribution send time.
         //std::cout<<"\nlapse:" << lapse;
-        send_time_ = TIME{0,0,0,0,0}; // hrs::mins:secs:mills:micrs::nns:pcs::fms
+    
+        //int lapse_us {lapse};
+        //int lapse_hr  = lapse_us / 3'600'000'000;
+        //lapse_us     %= 3'600'000'000;
+        //int lapse_min = lapse_us / 60'000'000;
+        //lapse_us     %= 60'000'000;
+        //int lapse_s   = lapse_us / 1'000'000;
+        //lapse_us     %= 1'000'000;
+        //int lapse_ms  = lapse_us / 1'000;
+        //lapse_us     %= 1'000;
+
+        // Descompose time
+        int lapse_ns { static_cast<int>(poisson_distr_.generate()) }; // Poisson distribution send time.
+        int lapse_hr  = lapse_ns / 3'600'000'000'000;  // 3.6e12
+        lapse_ns     %= 3'600'000'000'000;
+        int lapse_min = lapse_ns / 60'000'000'000;      // 6e10
+        lapse_ns     %= 60'000'000'000;
+        int lapse_s   = lapse_ns / 1'000'000'000;       // 1e9
+        lapse_ns     %= 1'000'000'000;
+        int lapse_ms  = lapse_ns / 1'000'000;           // 1e6
+        lapse_ns     %= 1'000'000;
+        int lapse_us  = lapse_ns / 1'000;               // 1e3
+        lapse_ns     %= 1'000;
+        
+        //send_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        send_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us,lapse_ns}; // hrs::mins:secs:mills:micrs::(nns):pcs::fms
         state.transmitting_ = true;
     }
 };
+
+
+} // namespace streamprcsc
 
 #endif // _SWITCH_HPP__

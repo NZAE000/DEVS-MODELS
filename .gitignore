@@ -2,7 +2,5 @@ StreamProcessing/bin/*
 StreamProcessing/build/*
 StreamProcessing/distribution_test/expo_test
 StreamProcessing/distribution_test/norm_test
-StreamProcessing/simulation_results/unitary/*
-StreamProcessing/simulation_results/integration/*
-StreamProcessing/simulation_results/system/*
-StreamProcessing/metrics/throughput_result.txt
+StreamProcessing/apacheflink/flink
+StreamProcessing/apacheflink/nexmark

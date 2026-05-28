@@ -24,16 +24,34 @@ double Random_t::poisson(int mean)
 {
 	setPoisson(mean);
 	return( poissonDistr(gen) );
-}	
+}
 
-void Random_t::setNormal(double mean, double std) {
+double Random_t::logNormal(double mean, double std)
+{
+	setLogNormal(mean, std);
+	return( logNormalDistr(gen) );
+}
+
+double Random_t::gamma(double shape, double scale)
+{
+	setGamma(shape, scale);
+	return( gammaDistr(gen) );
+}
+
+void Random_t::setNormal(double mean, double std){
     normalDistr = std::normal_distribution<double>(mean, std);
 }
-void Random_t::setExponential(double rate) {
+void Random_t::setExponential(double rate){
     expoDistr = std::exponential_distribution<double>(rate);
 }
 void Random_t::setPoisson(int mean){
 	poissonDistr = std::poisson_distribution<>(mean);
+}
+void Random_t::setLogNormal(double mean, double std){
+	logNormalDistr = std::lognormal_distribution<double>(mean, std);
+}
+void Random_t::setGamma(double shape, double scale){
+	gammaDistr = std::gamma_distribution<double>(shape, scale);
 }
 
 
@@ -54,15 +72,6 @@ int Random_t::integer(int32_t min, int32_t max)
 
 	return distrib(gen);
 
-}
-
-double Random_t::logNormal(double mean, double std)
-{
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::lognormal_distribution<double> logNormalDistr(mean,std);
-	
-	return( logNormalDistr(gen) );
 }
 
 double Random_t::rayleigh(double sd)

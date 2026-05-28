@@ -1,6 +1,6 @@
 //#include "jobmanager.hpp"
 #include "../../atomics/node_master.hpp"
-
+//#include<iostream>
 
 namespace FLINK {
 
@@ -9,7 +9,7 @@ void JobManager_t::deployJob(Callable&& createNodes) noexcept
 {
     uint32_t nNodes { cluster_cfg_.n_nodes_ };
     uint32_t nCores { cluster_cfg_.n_cores_ };
-    std::vector<Node_t<TIME>*> nodes;
+    std::vector<streamprcs::Node_t<TIME>*> nodes;
 
     createNodes(nNodes, nCores, nodes);
 
@@ -21,12 +21,12 @@ void JobManager_t::deployJob(Callable&& createNodes) noexcept
     uint32_t replica{};
     slotId_t slot_id{};
     auto node_iter     = nodes.begin();
-    Node_t<TIME>* node = *node_iter.base();
+    streamprcs::Node_t<TIME>* node = *node_iter.base();
 
     // Assign resource to all operators.
     for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
     {   
-        replica = properties.replication; // Operator parallelism (suboperators).
+        replica = properties.replication_; // Operator parallelism (suboperators).
         for (auto i=0; i<replica; i++)
         {
             slot_id = resourceMan_.assignResource(oper_id, node->id());             // Assign resource to operator.
@@ -36,15 +36,15 @@ void JobManager_t::deployJob(Callable&& createNodes) noexcept
         }
     }
 
-    // Show distribution.
-    for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
-    {
-        auto locations = jobMaster_.getLocations(oper_id);
-        std::cout<<"Locations of "<<oper_id<<":\n";
-        for (auto const& loc : locations){
-            std::cout<<"\tnode: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
-        }
-    }
+    //// Show distribution.
+    //for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
+    //{
+    //    auto locations = jobMaster_.getLocations(oper_id);
+    //    std::cout<<"Locations of "<<oper_id<<":\n";
+    //    for (auto const& loc : locations){
+    //        std::cout<<"\tnode: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
+    //    }
+    //}
 }
 
 }

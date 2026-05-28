@@ -119,10 +119,28 @@ JobManager_t::getOperatorDestinations(operId_t const& oper_id) const noexcept
     return topo_iter->second;
 }
 
-double JobManager_t::getTimeExecution(operId_t const& oper_id) const noexcept
+double 
+JobManager_t::getTimeExecution(operId_t const& oper_id) const noexcept
 {   
     auto oper_props_iter = cluster_cfg_.operProps_.find(oper_id);
-    return oper_props_iter->second.distribution();
+    //double t_base { oper_props_iter->second.random_->generate() };
+    
+    // Apply model degradation
+    //double t_eff  { t_base * cluster_cfg_.interferency_ * cluster_cfg_.saturation_ * cluster_cfg_.p_inefficiency_ };
+    //return t_eff;
+    return oper_props_iter->second.random_->generate();
+    //return oper_props_iter->second.distribution();
+}
+
+double 
+JobManager_t::getDegradationFactor() const noexcept {
+    return this->cluster_cfg_.degradation_factor_;
+}
+
+void JobManager_t::
+accumBusyTime(operId_t const& operid, double time) noexcept
+{
+    this->cluster_cfg_.accumBusyTime(operid, time);
 }
 
 
@@ -142,6 +160,20 @@ lastOperator(operId_t const& oper_id) const noexcept
         }
     }
     return last;   
+}
+
+[[nodiscard]] OperatorProperties_t const&  JobManager_t::
+getOperatorProperties(operId_t const& operid) const noexcept
+{
+    auto prop_it = this->cluster_cfg_.operProps_.find(operid);
+    return prop_it->second;
+}
+
+[[nodiscard]] OperatorProperties_t&  JobManager_t::
+getOperatorProperties(operId_t const& operid) noexcept
+{
+    auto prop_it = const_cast<ClusterConfig_t&>(this->cluster_cfg_).operProps_.find(operid);
+    return prop_it->second;
 }
 
 

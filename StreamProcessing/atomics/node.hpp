@@ -19,11 +19,14 @@
 #include "../data_structures/operator_location.hpp"
 #include "../data_structures/message.hpp"
 #include "../data_structures/flink/jobmanager.hpp"
+#include "../util/random.hpp"
 
 using namespace cadmium;
 using namespace std;
 
 /*Call order: external, time_avance, output, internal*/
+
+namespace streamprcs {
 
 //Port definition
 struct Node_defs {
@@ -38,8 +41,9 @@ class Node_t {
 
 public:
 
-    FLINK::TaskManager_t& getTaskManager() noexcept { return state.taskman_;  }
-    FLINK::nodeId_t id()                   noexcept { return state.id;        }
+    FLINK::TaskManager_t&       getTaskManager()       noexcept { return state.taskman_;  }
+    FLINK::TaskManager_t const& getTaskManager() const noexcept { return state.taskman_;  }
+    FLINK::nodeId_t id() noexcept { return state.id; }
 
     // ports definition: tuple for distintes types of messages
     // NOTA: The 'typename' specifies that Node_defs::in and Node_defs::out aredatatypesthatwilloverwritethetemplateclassinthesimulator
@@ -71,10 +75,10 @@ public:
         // Terminate what was executed.
         std::vector<FLINK::slotId_t> const* slot_ids_used { state.taskman_.terminatePriorityExecutions() };
         
-        // Before, schedule pending requeriments, if there are pending. 
-        for (auto& location : this->internalLocations){
+        // Before, schedule pending requeriments (if there are pending). 
+        for (auto& location : this->internal_pending_){
             state.taskman_.scheduleExec(location.mssg_id, location.slot_id, jobman_);
-        } internalLocations.clear(); // Clear pendings.
+        } internal_pending_.clear(); // Clear pendings.
 
         // Then, know if there are queued executions of the slot to execute.
         for (auto slot_id_used : *slot_ids_used){
@@ -165,7 +169,7 @@ public:
     // We need to declare the operator using the keyword 'friend's to specify that the function can access the private members of the structure state_type.
     friend ostringstream& operator<<(ostringstream& os, const typename Node_t<TIME>::state_type& i) { // State log
         //os <<"node_"<<i.id<<": buff: "<<i.buffer<<" & sent loc: " << i.index << " & processing: " << i.processing; 
-        os<<"processing: " << i.processing << ", buffer executions: " << i.taskman_.pendingExecutions()<<","; // TODO.
+        os<<"processing: " << i.processing << ", buffer executions: " << i.taskman_.pendingExecutions()<<", executing: "<<i.taskman_.executing()<<","; // TODO.
         for (auto const& [id, slot] : i.taskman_.getSlots())
         {
             os<<" [slot_"<<id<<"->"<<slot.getOperator()<<": active: "<<slot.isActive()<<", using: "<<slot.isUsing()<<", tuples: "<<slot.nTuples() <<"]";
@@ -204,19 +208,27 @@ protected: // Son access (node_master).
             if (subtask->lapse_ == lapse_prioriry) 
             {
                 FLINK::operId_t const& oper_id = state.taskman_.getSlot(subtask->slot_id).getOperator(); //getOperator(exec_prior.slot_id);
+                
+                // Know if send message or not according operator's selectivity probability.
+                double selectivity { jobman_.getOperatorProperties(oper_id).selectivity_ };
+                if (selectivity < 1.0 && unidistr_.generate() > selectivity) continue; // Don't send mensaje to destination.
+                
                 if (!jobman_.lastOperator(oper_id)) // Haven't reached the last operator?
                 {
+                    this->jobman_.getOperatorProperties(oper_id).acumm_recordsSend_++; // Accumulate send messages.
                     vector<FLINK::operId_t const*> const& operDestinations = jobman_.getOperatorDestinations(oper_id);
                     
                     // Get balanced destiny locations for each destiny opeartor.
                     for (auto const* oper_id_des : operDestinations) {
+                        //if (*oper_id_des == "nexmarkq26writer")
+                        //    std::cout<<"size: "<<operDestinations.size()<< " oper_id: "<<oper_id_des<<'\n';
                         OperatorLocation_t location = jobman_.getOperLocationLessload(*oper_id_des);
-                        location.mssg_id = subtask->mssg_id;
+                        location.mssg_id = subtask->mssg_id; // Pass message.
 
-                        // Location in this node? schedule execution now.
+                        // Location in this node? store local pending.
                         if (location.node_id == state.id){
                             //state.taskman_.scheduleExec(location.mssg_id, location.slot_id, jobman_);
-                            internalLocations.emplace_back(location);
+                            internal_pending_.emplace_back(location);
                         }
                         else { // The operator is in other node.
                             bag_port_out.push_back(location); 
@@ -224,7 +236,9 @@ protected: // Son access (node_master).
                         //std::cout<<"\toper priority exec: "<<oper_id<<", and next: "<<*oper_id_des<<" in location node: "<<location.node_id<<" slot: "<<location.slot_id<<"\n";
                     }
                 }
-                //else { //std::cout<<"\tLast\n"; } // TODO !!
+                //else { // TODO !!
+                //    std::cout<<"\tLast: "<<oper_id<<'\n';
+                //} 
             }
         }
     }   
@@ -236,7 +250,10 @@ protected: // Son access (node_master).
 
 private:
     inline static FLINK::nodeId_t nextID {0};
-    mutable vector<OperatorLocation_t> internalLocations{}; 
+    mutable vector<OperatorLocation_t> internal_pending_{}; 
+    mutable myrandom::Uniform_t unidistr_{0.0, 1.0};
 };
+
+} // namespace streamprcs
 
 #endif // _NODE_HPP__
