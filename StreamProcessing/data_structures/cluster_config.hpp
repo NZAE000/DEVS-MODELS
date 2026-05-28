@@ -34,7 +34,7 @@ struct ConfigPath_t {
     static constexpr std::string_view dg_path       {"input_data/degradation.txt"};
     static constexpr std::string_view iw_path       {"input_data/extraoccupation.txt"};
     static constexpr std::string_view arrival_path  {"input_data/arrival_rate.txt"};
-    static constexpr std::string_view reqsRate_path {"input_data/reqsRate.txt"};
+    static constexpr std::string_view reqsRate_path {"input_data/workload.txt"};
 };
 
 struct OperatorProperties_t {
