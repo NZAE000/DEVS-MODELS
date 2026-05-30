@@ -15817,5 +15817,43 @@ Entonces, como aquelo es tedioso, necesito un script bash llamado 'generate_fact
 	- Con el nombre de la app almecene la ruta de los factores de degradacion extraidos: 'degradation-params-app.txt', y los factores de ocupacion: 'w-params-app.txt'
 	- Con el nivel p busque los valores respectivos en cada archivo y los copia a sus arhivos de configuracion respetivos del simulador.
 
-La ruta del arhivo 'degradation.txt' es ralativa: ../StreamProcessing/input_data/degradation.txt, y la de extraoccupation.txt tambien: ../StreamProcessing/input_data/extraoccupation.txt
+La ruta del arhivo 'degradation.txt' es ralativa: ../StreamProcessing/input_data/degradation.txt, y la de extraoccupation.txt tambien: ../StreamProcessing/input_data/extraoccupation.txt.
+
+
+Excelente, he lanzado todos los experimetnos de manera agil obteniendo buenos resultados al integrar los factores de ocupacion interno.
+Necesito entonces informar aquello a Daniel wladdimiro a traves de un correo, con la siguiente estructura:
+
+	- Partir hablando sobre los fenomenos que existen interamiente en el sistema donde se despliegan estas aplicacion de stream processing systems (SPS)
+	- Necesidad de capturar estos fenimentos a traves de barridos de ejecuciones y y obtenicion de parametros de manera empirica
+	- De ello, resumidamente hablar respecto al modelo de degradacion, el cual enfatizar la captura de tales fenomenos como la interferencia, saturacion e ineficiemcia de paralelismo 
+	emergente cuando se instancian una cantidad numeros a de threads:
+		
+		t_effec_op = t_base_op × Degradation(P)
+
+		donde:
+			Degradation(P) = Finter(P) × Fsatu(P) × Fineff_par(P)
+
+	- Y de lo nuevo, hablar sobre el factor de ocupacion interno, otro fenomeno que se encontro mediante la experimentacion tanto las ejecuciones del sistema y las ejecuiones de la
+	simulacion, donde se pude ver porque habian tantas diferencias entre aquellas 2 variables, el cual se pudo determinar que la simulacion faltaba capturar tiempos de ocupacion extras
+	de los operadores, consiguiendo obtener aquellos factores a traves de la Ley de Utilizacion:
+
+		accumBusy_op += t_base_op​ * InternalOccupation(P,op)
+
+		donde:
+			InternalOcupation(P,op) = (1 + Foccup(P,op))
+			Foccup(P,op) 		= occupEvent(P,op) / occupEvent(ref,op)
+			occupEvent(P,op)		= U(P,op) x P / Thr(P)
+			occupEvent(ref,op)	= U(1,op) x 1 / Thr(1)
+
+		ya que por ley de utilizacion: U(P,op) = TP(p) * occupEvent(P,op) / P  = "Througput por el tiempo medio de ocupacion, y dividir por P porque existen P instancias paralelas"
+	
+	- Necesito que seas claro y conciso de como se logró llegar a aquellos factores de ocupacion interno:
+		 - Mencionar que es a partir de los barridos tanto de throughput como de utilizaciones de operadores (no cpu, sino logica (U = accumTime / p / T))
+		 - Por que se deben capturan las utilizaciones de los ultimos workloads del barrido de utilizaciones para luego ser promediadas
+		 - Como se llego a la formula del calculo de la 'ocupacion por eventos' (U(P,op) x P / Thr(P)) explicando que se obtuvo mediante Ley de Utilizacion: thoroughut x avg_service_time
+
+	- Concluir respecto a la labor hecha y pedir horario de citacion de reunion posible: para mañana viernes o para el prixmo dia lunes.
+
+Quiero que el correo tenga el formato listo para copiar y pegar (especialmete por las formulas matematicas de los fenomenos) en el correo del outlook. 
+
 

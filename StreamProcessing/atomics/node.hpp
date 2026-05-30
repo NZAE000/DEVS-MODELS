@@ -41,10 +41,6 @@ class Node_t {
 
 public:
 
-    FLINK::TaskManager_t&       getTaskManager()       noexcept { return state.taskman_;  }
-    FLINK::TaskManager_t const& getTaskManager() const noexcept { return state.taskman_;  }
-    FLINK::nodeId_t id() noexcept { return state.id; }
-
     // ports definition: tuple for distintes types of messages
     // NOTA: The 'typename' specifies that Node_defs::in and Node_defs::out aredatatypesthatwilloverwritethetemplateclassinthesimulator
     //"typename" indicates that the expression that follows is a "data type" (not a specific object).
@@ -55,16 +51,16 @@ public:
     // State definition (state variables of the Node_t model)
     struct state_type {
 
-        state_type(uint32_t n_cores) : taskman_{n_cores} {}
+        state_type(uint32_t n_cores) 
+        : taskman_{n_cores} {}
 
-        FLINK::nodeId_t id {nextID++};
-        bool processing{false};           // Used to define that the model has something to output
+        FLINK::nodeId_t              id_ {nextID++};
+        bool                         processing_{false};
         mutable FLINK::TaskManager_t taskman_{1};
     };
     state_type state{1};
-
-    // Default constructor
-    Node_t() noexcept {}
+    
+    Node_t() noexcept {} // Default constructor
 
     Node_t(FLINK::JobManager_t& jman, uint32_t n_cores) noexcept
     :  state{n_cores}, jobman_{jman} {}
@@ -73,15 +69,15 @@ public:
     void internal_transition() 
     {
         // Terminate what was executed.
-        std::vector<FLINK::slotId_t> const* slot_ids_used { state.taskman_.terminatePriorityExecutions() };
+        std::vector<FLINK::slotId_t> const& slot_ids_used { state.taskman_.terminatePriorityExecutions() };
         
         // Before, schedule pending requeriments (if there are pending). 
-        for (auto& location : this->internal_pending_){
-            state.taskman_.scheduleExec(location.mssg_id, location.slot_id, jobman_);
-        } internal_pending_.clear(); // Clear pendings.
+        for (auto& location : this->internal_pendings_){
+            state.taskman_.scheduleExec(location.mssg_id_, location.slot_id_, jobman_);
+        } internal_pendings_.clear(); // Clear pendings.
 
         // Then, know if there are queued executions of the slot to execute.
-        for (auto slot_id_used : *slot_ids_used){
+        for (auto slot_id_used : slot_ids_used){
             state.taskman_.checkQueuedExecution(slot_id_used, jobman_);
         }
         //std::cout<<"[slave internal "<<state.id<< "]: terminate prior execution\n";
@@ -91,14 +87,16 @@ public:
         {            
             std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
             TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
+
             for (auto& subtask : execs_prior)
                 if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
-            this->lapse_time_      = lapse_prioriry;  // Update lapse.
-            this->state.processing = true;
+
+            this->lapse_time_       = lapse_prioriry;  // Update lapse.
+            this->state.processing_ = true;
             //std::cout<<"\t[slave] pending exec: "<< this->lapse_time_ <<"\n";
 
         }
-        else state.processing = false;
+        else state.processing_ = false;
     }
 
     // External transition. Params: the elapsed time (e) and a bag of message (mbs).
@@ -110,14 +108,14 @@ public:
         //if (bag.size())
             //std::cout<<"\n[slave external "<<state.id<< "]: message "<<*bag.begin().base()<<" recivied\n";
 
-        check_external_transition_from_switch(mbs); // Check some location message of switch
+        checkExternalTransitionFromSwitch(mbs); // Check some location message of switch
 
         std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
         TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
-        if (this->state.processing) {
+        if (this->state.processing_) {
             for (auto& subtask : execs_prior)
             {
-                bool recently = bag.size() && bag[0].mssg_id == subtask->mssg_id;
+                bool recently = bag.size() && bag[0].mssg_id_ == subtask->mssg_id;
                 if (subtask->lapse_ >= e && !recently)
                     subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
                 if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
@@ -126,7 +124,7 @@ public:
         else {
             for (auto& subtask : execs_prior)
                 if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
-            state.processing = true;
+            state.processing_ = true;
         }      
         lapse_time_ = lapse_prioriry;
         //std::cout<<"[slave external "<<state.id<< "]: time execution: "<<lapse_time_ <<"\n";
@@ -144,12 +142,12 @@ public:
     typename make_message_bags<output_ports>::type output() const 
     {
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
-        vector<OperatorLocation_t> bag_port_out;             // To build the message bag for the output port 'out'.
-        //std::cout<<"[slave output "<<state.id<< "]: search_next_operator_destinations\n";
-        search_next_operator_destinations(bag_port_out);
+        vector<OperatorLocation_t> bag_out_port;             // To build the message bag for the output port 'out'.
+        //std::cout<<"[slave output "<<state.id<< "]: searchNextOperatorDestinations\n";
+        searchNextOperatorDestinations(bag_out_port);
         // get_messages uses a template parameter for the port we want to access, in this case, the port 'out'.
         // The function parameter is the bag of messages we want to access, in this case bags.
-        get_messages<typename Node_defs::out>(bags) = bag_port_out; // vector<OperatorLocation_t> = bag_port_out
+        get_messages<typename Node_defs::out>(bags) = bag_out_port; // vector<OperatorLocation_t> = bag_out_port
         return bags;
     }
 
@@ -157,7 +155,7 @@ public:
     TIME time_advance() const 
     {
         // TIME next_interval;
-        if (state.processing) return lapse_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        if (state.processing_) return lapse_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
         else                  return numeric_limits<TIME>::infinity();
         
         //return next_interval;
@@ -169,7 +167,7 @@ public:
     // We need to declare the operator using the keyword 'friend's to specify that the function can access the private members of the structure state_type.
     friend ostringstream& operator<<(ostringstream& os, const typename Node_t<TIME>::state_type& i) { // State log
         //os <<"node_"<<i.id<<": buff: "<<i.buffer<<" & sent loc: " << i.index << " & processing: " << i.processing; 
-        os<<"processing: " << i.processing << ", buffer executions: " << i.taskman_.pendingExecutions()<<", executing: "<<i.taskman_.executing()<<","; // TODO.
+        os<<"processing: " << i.processing_ << ", buffer executions: " << i.taskman_.pendingExecutions()<<", executing: "<<i.taskman_.executing()<<","; // TODO.
         for (auto const& [id, slot] : i.taskman_.getSlots())
         {
             os<<" [slot_"<<id<<"->"<<slot.getOperator()<<": active: "<<slot.isActive()<<", using: "<<slot.isUsing()<<", tuples: "<<slot.nTuples() <<"]";
@@ -178,23 +176,28 @@ public:
     }
 
 
+    FLINK::TaskManager_t&       getTaskManager()       noexcept { return state.taskman_;  }
+    FLINK::TaskManager_t const& getTaskManager() const noexcept { return state.taskman_;  }
+    FLINK::nodeId_t             id()                   noexcept { return state.id_;       }
+
 protected: // Son access (node_master).
 
-    void check_external_transition_from_switch(typename make_message_bags<input_ports>::type& mbs)
+    void checkExternalTransitionFromSwitch(typename make_message_bags<input_ports>::type& mbs)
     {   
         vector<OperatorLocation_t>
-        bag_port_in = get_messages<typename Node_defs::in>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
-        auto size_bag { bag_port_in.size() };
+        bag_in_port = get_messages<typename Node_defs::in>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
+        
+        auto size_bag { bag_in_port.size() };
         if (size_bag > 1) assert(false && "One message at a time");
         
         if (size_bag) {
-            auto const [mssg_id, _, slot_id] = *bag_port_in.begin();
+            auto const [mssg_id, _, slot_id] = *bag_in_port.begin();
             state.taskman_.scheduleExec(mssg_id, slot_id, jobman_); // SHCEDULE ON SPECIFIC SLOT.
         }
         //else{ //std::cout<<"\nno switch\n"; }
     }
 
-    void search_next_operator_destinations(vector<OperatorLocation_t>& bag_port_out) const
+    void searchNextOperatorDestinations(vector<OperatorLocation_t>& bag_out_port) const
     {
         // Find less lapse execution.
         std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
@@ -215,23 +218,25 @@ protected: // Son access (node_master).
                 
                 if (!jobman_.lastOperator(oper_id)) // Haven't reached the last operator?
                 {
-                    this->jobman_.getOperatorProperties(oper_id).acumm_recordsSend_++; // Accumulate send messages.
-                    vector<FLINK::operId_t const*> const& operDestinations = jobman_.getOperatorDestinations(oper_id);
+                    this->jobman_.accumSentRecords(oper_id, 1); // Accumulate send messages.
+                    
+                    vector<FLINK::operId_t const*> const& 
+                    operDestinations = jobman_.getOperatorDestinations(oper_id);
                     
                     // Get balanced destiny locations for each destiny opeartor.
                     for (auto const* oper_id_des : operDestinations) {
                         //if (*oper_id_des == "nexmarkq26writer")
                         //    std::cout<<"size: "<<operDestinations.size()<< " oper_id: "<<oper_id_des<<'\n';
                         OperatorLocation_t location = jobman_.getOperLocationLessload(*oper_id_des);
-                        location.mssg_id = subtask->mssg_id; // Pass message.
+                        location.mssg_id_ = subtask->mssg_id; // Pass message.
 
                         // Location in this node? store local pending.
-                        if (location.node_id == state.id){
+                        if (location.node_id_ == state.id_){
                             //state.taskman_.scheduleExec(location.mssg_id, location.slot_id, jobman_);
-                            internal_pending_.emplace_back(location);
+                            internal_pendings_.emplace_back(location);
                         }
                         else { // The operator is in other node.
-                            bag_port_out.push_back(location); 
+                            bag_out_port.push_back(location); 
                         }
                         //std::cout<<"\toper priority exec: "<<oper_id<<", and next: "<<*oper_id_des<<" in location node: "<<location.node_id<<" slot: "<<location.slot_id<<"\n";
                     }
@@ -245,13 +250,14 @@ protected: // Son access (node_master).
 
 
     //const TIME exec_time_{0,0,0,0,5}; // Excecution time
-    TIME lapse_time_{0}; // Time left until next departure
-    FLINK::JobManager_t& jobman_;
+protected:
+    TIME                    lapse_time_{0}; // Time left until next departure.
+    FLINK::JobManager_t&    jobman_;
 
 private:
-    inline static FLINK::nodeId_t nextID {0};
-    mutable vector<OperatorLocation_t> internal_pending_{}; 
-    mutable myrandom::Uniform_t unidistr_{0.0, 1.0};
+    inline static FLINK::nodeId_t       nextID {0};
+    mutable vector<OperatorLocation_t>  internal_pendings_{}; 
+    mutable myrandom::Uniform_t         unidistr_{0.0, 1.0};
 };
 
 } // namespace streamprcs

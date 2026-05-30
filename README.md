@@ -1,6 +1,6 @@
 Repository with models implemented using Discrete Event Specification (DEVS) formalism, through the CADMIUM tool, whose installation can be found in the user guide: https://cell-devs.sce.carleton.ca/index.php/cadmium/.
 
-# Simulador DEVS StreamProcessing
+# Simulador DEVS Stream Processing System (SPS)
 
 ## Requisitos de Sistema
 
@@ -116,7 +116,7 @@ $ brew install git
 
 Una vez listos los requisitos, se debe instalar la librería **Cadmium** para construir el modelo basado en DEVS. Instrucciones detalladas en su [documentación](https://cell-devs.sce.carleton.ca/index.php/cadmium/).
 
-Luego, clonar este repositorio:
+Luego, clonar este repositorio en la misma ruta donde se instaló Cadmium:
 ```bash
 $ git clone https://github.com/NZAE000/DEVS-MODELS.git
 ```
@@ -129,14 +129,14 @@ $ git clone https://github.com/NZAE000/DEVS-MODELS.git
 - `build/`: contiene todos lo binarios intermedios compilados, los cuales son enlazados para generar el binario ejecutable en `bin/`.
 - `data_structures/`: abarca el código de las estructuras de datos que el desarrollador diseña para fines de segmentar el comportamiento del modelo en conceptos y responsabilidades que complementa a los modelos atómicos. Por ejemplo, están ubicados las estructuras que definen los tipos de mensajes que utilizan los puertos de comunicación entre componentes atómicos y acoplados, también las estructuras de los componentes de la arquitectura Flink y sus funciones.
 - `distribution_test/`: incluye fuentes utilizados para probar distintas funciones de distribución aleatoria (normal, exponencial, etc) con el fin de conocer previamente valores aleatorios con ciertos argumentos elegidos para la simulación.
-- `input_data/`: incluye los archivos .txt que yace la configuración de parámetros para la simulación (`arrival_rate.txt`, `hardware.hpp`, `hardware.txt`, `operator.txt` y `topology.txt`).
-- `metrics/`: comprende la implementación para el cálculo de métricas y despliegue gráfico con Python.
-- `simulation_result/`: sitúa archivos .txt que contiene el registro de mensajes y estados de los modelos atómicos de la pruebas unitarias, de integración y de sistema. El registro de sistema es el utilizado para la obtención de las métricas.
+- `input_data/`: incluye los archivos que yace la configuración de parámetros para la simulación (`arrivalrates.txt`, `workload.txt`, `hardware.hpp`, `operator.txt`, `topology.txt`, etc).
+- `metrics/`: comprende la implementación para el cálculo de métricas, importación a csv y despliegue gráfico con Python.
+- `simulation_result/`: sitúa archivos que contiene el registro de mensajes y estados de los modelos atómicos de la pruebas unitarias, de integración y de sistema
+mediante los loggers de Cadmium. IMPORTANTE: Inicialmente el registro de sistema era utilizado para su lectura y obtención de  métricas. Sin embargo, ya no se usa y los loggers de Cadmium fueron descativados, debido al uso de altas cargas de trabajo como parámetros para el modelo SPS, lo cual repercute en horas de ejecucion del simulador debido a la inmensa frecuencia de escritura en disco de los loggers.
 - `test/`: contiene código fuente principal para las pruebas unitarias, de integración y sistema. En los fuentes principales es donde se construye el modelo o partes del modelo de acuerdo al tipo de prueba, instanciando los componentes atómicos, puertos de modelos acoplados, el acoplamiento entre modelos, modelo superior, loggers y la llamada a ejecución de la simulación.
 - `util/`: contiene código de utilidades necesarias, como funciones de distribución aleatoria.
 - `makefile`: archivo que automatiza la compilación y construcción del simulador. Su propósito principal es gestionar dependencias y simplificar el proceso de compilación.
-- `throughput_deploy.sh`: script que automatiza la ejecución de comandos para el despliegue de rendimiento.
-- `utilization_deploy.sh`: script que automatiza lala ejecución de comandos para el despliegue de utilización.
+- `run_simulation.sh`: script que automatiza ejecuciones de la simulación.
 
 ## Manual de Usuario
 

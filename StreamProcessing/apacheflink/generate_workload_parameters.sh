@@ -7,7 +7,7 @@
 # Paths
 CONFIG_FILE="nexmark/conf/nexmark.yaml"
 #OUTPUT_FILE="parameters/reqsRate.txt"
-OUTPUT_FILE="/mnt/c/Users/Cuda/Documents/eliezer/cadmium/DEVS-MODELS/StreamProcessing/input_data/reqsRate.txt"
+OUTPUT_FILE="../input_data/workload.txt"
 
 #------------------------------------------------------------------------------
 # Check if configuration file exists

@@ -9,7 +9,7 @@ namespace myrandom {
 
 	struct RandomBase_t {
 
-		virtual ~RandomBase_t() = default;
+		virtual ~RandomBase_t()   = default;
 		virtual double generate() = 0;
 		private:	std::random_device rd{};
 		protected:  std::mt19937 gen{rd()};
@@ -135,10 +135,10 @@ private:
     inline static std::random_device rd{};
 	inline static std::mt19937 gen{rd()};
 	inline static std::exponential_distribution<double> expoDistr;
-  inline static std::normal_distribution<double> normalDistr;
-	inline static std::poisson_distribution<int> poissonDistr;
-	inline static std::lognormal_distribution<double> logNormalDistr;
-	inline static std::gamma_distribution<double> gammaDistr;
+    inline static std::normal_distribution<double> 		normalDistr;
+	inline static std::poisson_distribution<int> 		poissonDistr;
+	inline static std::lognormal_distribution<double> 	logNormalDistr;
+	inline static std::gamma_distribution<double> 		gammaDistr;
 
 // Setters
     static void setExponential(double rate);

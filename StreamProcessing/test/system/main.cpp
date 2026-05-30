@@ -204,12 +204,12 @@ int main(int arg, char** argv){
     //        return out_messages;
     //    }
     //};
-    static ofstream out_state("simulation_results/system/system_test_output_state.txt");
-    struct oss_sink_state {     // We define the structure oss_sink_state to tell the simulator where to save the state log
-        static ostream& sink(){          
-            return out_state;
-        }
-    };
+    //static ofstream out_state("simulation_results/system/system_test_output_state.txt");
+    //struct oss_sink_state {     // We define the structure oss_sink_state to tell the simulator where to save the state log
+    //    static ostream& sink(){          
+    //        return out_state;
+    //    }
+    //};
     
     //using log_state       = logger::logger<logger::logger_state,       dynamic::logger::formatter<TIME>, oss_sink_state>; //  The state log generates the global time when a state on the top model changes, and the states of all the atomic models at that time.
     //using log_messages    = logger::logger<logger::logger_messages,    dynamic::logger::formatter<TIME>, oss_sink_messages>;
@@ -220,7 +220,7 @@ int main(int arg, char** argv){
     // Once we have declared all the loggers we need, we have to combine them, so our simulation generates all the logs at the same time.
     //using logger_top = logger::multilogger<log_state, log_messages, global_time_mes, global_time_sta>;
     //using logger_top = logger::multilogger<log_state, global_time_sta>;
-    using logger_top = logger::multilogger<>;
+    using logger_top = logger::multilogger<>; // TODO!: Without loggers, too slow for this model!!
 
 
 /************** Runner call ************************/ 
@@ -325,14 +325,14 @@ int main(int arg, char** argv){
         iss >> oper_name;
 
         auto const& props = cluster_cfg.operProps_[oper_name];
-        acum_busytime     = props.accum_busy_time_; //to_second(props.accum_exec_time_)};
+        acum_busytime     = props.busy_time_accum_; //to_second(props.accum_exec_time_)};
         busytime          = acum_busytime / props.replication_;
         utilization       = busytime / ft_second;
 
         std::cout << std::left
             << std::setw(25) << oper_name
             << std::setw(15) << props.replication_
-            //<< std::setw(15) << props.acumm_recordsSend_
+            //<< std::setw(15) << props.sent_records_accum_
             << std::setw(15) << acum_busytime
             << std::setw(15) << busytime
             << std::setw(15) << utilization << '\n';

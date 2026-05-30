@@ -14,14 +14,14 @@ namespace FLINK {
 [[nodiscard]] slotId_t 
 TaskManager_t::reserveSlot(operId_t const& oper_id) noexcept
 {
-    auto pair = taskSlots_.insert(std::pair<slotId_t, operId_t const&>(nextID++, oper_id));
+    auto pair = taskslots_.insert(std::pair<slotId_t, operId_t const&>(next_slot_id_++, oper_id));
     return pair.first->first;
 }
 
 TaskSlot_t const& 
 TaskManager_t::getSlot(slotId_t id) const noexcept
 {
-    auto taskSlot_iter = taskSlots_.find(id);
+    auto taskSlot_iter = taskslots_.find(id);
     return taskSlot_iter->second;
 }
 TaskSlot_t&       
@@ -34,7 +34,7 @@ TaskManager_t::getSlot(slotId_t id) noexcept
 std::map<slotId_t, TaskSlot_t> const&
 TaskManager_t::getSlots() const noexcept
 {
-    return taskSlots_;
+    return taskslots_;
 }
 
 void 
@@ -63,21 +63,21 @@ void
 TaskManager_t::createSubTask(JobManager_t& jobMan, TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_id) noexcept 
 {    
     operId_t const& operid { slot.getOperator() };
-    double lapse_exec{}, productive_improductive_t{};
+    double exec_lapse{}, productive_improductive_lapse{};
     
     do {
-        lapse_exec                = jobMan.getTimeExecution(operid); // Get avg time excecution of some distribution.
-        productive_improductive_t = lapse_exec * jobMan.getDegradationFactor();
-    } while (productive_improductive_t < 0 || productive_improductive_t >= std::numeric_limits<int>::max());
+        exec_lapse                    = jobMan.getTimeExecution(operid);            // Get avg time excecution of some distribution.
+        productive_improductive_lapse = exec_lapse * jobMan.getDegradationFactor(); // Increase the time to degrade the system
+    } while (productive_improductive_lapse < 0 || productive_improductive_lapse >= std::numeric_limits<int>::max());
 
-    // Accumulate busy time.
-    jobMan.accumBusyTime(operid, lapse_exec / 1000000000000); // to sec.
-    //jobMan.getOperatorProperties(operid).accum_busy_time_ += (productive_improductive_t / 1000000000000); // to sec.
+    // Accumulate operator busy time (to sec).
+    jobMan.accumBusyTime(operid, exec_lapse / 1000000000000);
+    //jobMan.getOperatorProperties(operid).accum_busy_time_ += (productive_improductive_lapse / 1000000000000); // to sec.
     //if (operid == "sourcedatagen1")
     //    std::cout<<operid<<", slot: "<<slot_id<<", acumm: "<<jobMan.getOperatorProperties(operid).accum_busy_time_ <<'\n';
 
     // Time with degradation
-    int lapse_ps { static_cast<int>(std::round(productive_improductive_t)) };
+    int lapse_ps { static_cast<int>(std::round(productive_improductive_lapse)) };
     
 
     // Descompose time
@@ -108,7 +108,7 @@ TaskManager_t::createSubTask(JobManager_t& jobMan, TaskSlot_t& slot, mssgId_t ms
     std::vector<Subtask_t>* bufferLessCongestion {nullptr};
     uint32_t id_core_select{0};
     std::size_t n_exec_less { std::numeric_limits<uint32_t>::max() };
-    for (auto& [id_core, buffer] : buffersExec_){
+    for (auto& [id_core, buffer] : exec_buffers){
         auto n_exec {buffer.size()};
         if (n_exec <= n_exec_less) {
             n_exec_less = n_exec;
@@ -134,17 +134,17 @@ TaskManager_t::createSubTask(JobManager_t& jobMan, TaskSlot_t& slot, mssgId_t ms
 std::vector<Subtask_t*>& 
 TaskManager_t::getPriorityExecutions() noexcept
 {
-    priorityExecs_.clear(); // !
-    for (auto& [id_core, buffer] : buffersExec_){
+    priority_execs_.clear(); // !
+    for (auto& [id_core, buffer] : exec_buffers){
         if (!buffer.empty()){
-            priorityExecs_.push_back(buffer.begin().base()); // Collect priority executions.
+            priority_execs_.push_back(buffer.begin().base()); // Collect priority executions.
         }
     }
-    return priorityExecs_;
+    return priority_execs_;
 }
 
 
-std::vector<slotId_t> const*
+std::vector<slotId_t> const&
 TaskManager_t::terminatePriorityExecutions() noexcept
 {
     // Detect subtask with less exec time.
@@ -162,7 +162,7 @@ TaskManager_t::terminatePriorityExecutions() noexcept
 
     // Subtract time and eliminate what remains at 0.
     TIME t_zero {0};
-    for (auto& [_, buffer] : buffersExec_){
+    for (auto& [_, buffer] : exec_buffers){
         if (!buffer.empty())
         {
             // Less time execution.
@@ -172,7 +172,7 @@ TaskManager_t::terminatePriorityExecutions() noexcept
             if (subtask.lapse_ == t_zero) // Finished?
             {
                 // Free slot.
-                slotId_t slot_id_used  { subtask.slot_id };
+                slotId_t slot_id_used { subtask.slot_id };
                 getSlot(slot_id_used).setActive(false);
                 getSlot(slot_id_used).setUsing(false);
                 buffer.erase(buffer.begin());
@@ -186,7 +186,7 @@ TaskManager_t::terminatePriorityExecutions() noexcept
             }
         }
     }
-    return &slots_used_;
+    return slots_used_;
 
     //slotId_t slot_id_used { getPriorityExecution().slot_id };
     //getSlot(slot_id_used).setActive(false);
@@ -204,12 +204,12 @@ std::size_t
 TaskManager_t::pendingExecutions() const noexcept
 {
     std::size_t n_exec_pending {0};
-    this->current_executions_ = 0;
-    for (auto& [id_core, buffer] : buffersExec_)
+    this->current_execs_ = 0;
+    for (auto& [id_core, buffer] : exec_buffers)
     {
         auto buffize {buffer.size()};
         if (buffize){
-            ++current_executions_;
+            ++current_execs_;
             n_exec_pending += buffize;//buffer.size();
         }
         //std::cout<<"core "<<id_core<<": "<<buffize<<'\n';
@@ -220,7 +220,7 @@ TaskManager_t::pendingExecutions() const noexcept
 std::size_t 
 TaskManager_t::executing() const noexcept
 {
-    return current_executions_;
+    return current_execs_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

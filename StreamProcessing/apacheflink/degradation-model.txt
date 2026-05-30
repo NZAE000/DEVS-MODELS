@@ -16,7 +16,7 @@ E(p): eficiencia paralela real respecto al escalamiento ideal
 
 
 
-accumBusy += tbase​ * InternalOccupation(P,op)
+accumBusy_op += t_base_op​ * InternalOccupation(P,op)
 
 donde:
 	InternalOcupation(P,op) = (1 + Foccup(P,op))

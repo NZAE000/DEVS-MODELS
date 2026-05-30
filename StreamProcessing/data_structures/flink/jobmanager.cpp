@@ -4,60 +4,6 @@
 
 namespace FLINK {
 
-//void JobManager_t::deployJob(std::vector<shared_ptr<dynamic::modeling::model>>& abstract_nodes) noexcept
-//{
-//    uint32_t nNodes { cluster_cfg_.n_nodes_ };
-//    uint32_t nCores { cluster_cfg_.n_cores_ };
-//    std::vector<Node_t<TIME>*> nodes;
-//    abstract_nodes.reserve(nNodes);
-//    nodes.reserve(nNodes); 
-//
-//    // Create always first node (master=node_0).
-//    abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<NodeMaster_t, TIME, JobManager_t&>("node_0", *this, nCores));
-//    nodes.push_back(dynamic_cast<Node_t<TIME>*>(abstract_nodes.begin()->get()));
-//
-//    // Create slave nodes (node_1, node_2, ..., node_n).
-//    std::string name_base{"node_"}, fullname{};
-//    for (uint32_t id=1; id<nNodes; ++id)
-//    {
-//        fullname = name_base + std::to_string(id);
-//        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<Node_t, TIME, JobManager_t&>(fullname, *this, nCores));
-//        nodes.push_back(dynamic_cast<Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
-//    }
-//
-//    // Agregate all references to taskmanagers.
-//    std::for_each(nodes.begin(), nodes.end(), [&](auto& node_){
-//        resourceMan_.agregateResource(node_->id(), node_->getTaskManager());
-//    });
-//
-//    uint32_t replica{};
-//    slotId_t slot_id{};
-//    auto node_iter     = nodes.begin();
-//    Node_t<TIME>* node = *node_iter.base();
-//
-//    // Assign resource to all operators.
-//    for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
-//    {   
-//        replica = properties.replication; // Operator parallelism (suboperators).
-//        for (auto i=0; i<replica; i++)
-//        {
-//            slot_id = resourceMan_.assignResource(oper_id, node->id());             // Assign resource to operator.
-//            jobMaster_.addLocation(oper_id, node->id(), slot_id);                   // Store location (node_id, slot_id) of this suboperator.
-//            if (++node_iter == end(nodes)) node_iter = nodes.begin();               // Next node (if is end, then go back to begin node).
-//            node = *node_iter.base();
-//        }
-//    }
-//
-//    // Show distribution.
-//    for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
-//    {
-//        auto locations = jobMaster_.getLocations(oper_id);
-//        std::cout<<"Locations of "<<oper_id<<":\n";
-//        for (auto const& loc : locations){
-//            std::cout<<"\tnode: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
-//        }
-//    }
-//}
 
 // Load balancing: find less congested location.
 OperatorLocation_t 
@@ -128,7 +74,7 @@ JobManager_t::getTimeExecution(operId_t const& oper_id) const noexcept
     // Apply model degradation
     //double t_eff  { t_base * cluster_cfg_.interferency_ * cluster_cfg_.saturation_ * cluster_cfg_.p_inefficiency_ };
     //return t_eff;
-    return oper_props_iter->second.random_->generate();
+    return oper_props_iter->second.random_time_->generate();
     //return oper_props_iter->second.distribution();
 }
 
@@ -143,10 +89,16 @@ accumBusyTime(operId_t const& operid, double time) noexcept
     this->cluster_cfg_.accumBusyTime(operid, time);
 }
 
+void JobManager_t::
+accumSentRecords(operId_t const& operid, uint32_t n_rec) noexcept
+{
+    this->cluster_cfg_.accumSentRecords(operid, n_rec);
+}
+
 
 [[nodiscard]] 
 operId_t const& JobManager_t::
-firstOperator() const noexcept { return *cluster_cfg_.begin_op; }
+getFirstOperator() const noexcept { return *cluster_cfg_.begin_op; }
 
 
 [[nodiscard]] bool JobManager_t::

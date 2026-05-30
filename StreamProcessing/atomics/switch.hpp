@@ -83,8 +83,8 @@ public:
     
     // State definition (state variables of the Switch_t model)
     struct state_type {
-        bool transmitting_{false};   // Used to define that the model has something to output
         mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_{}; // node_id, buffer.
+        bool transmitting_{false};   // Used to define that the model has something to output
     };
     state_type state;
 
@@ -137,14 +137,14 @@ public:
 
         for (auto const& bag_port_in :  bags_port_in) { // Get each bag port int.
             for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
-                MessageBuffer_t& buffer = state.port_buffers_[mess.node_id];
-                buffer.messages.emplace_back(mess.mssg_id, mess.node_id, mess.slot_id);
+                MessageBuffer_t& buffer = state.port_buffers_[mess.node_id_];
+                buffer.messages.emplace_back(mess.mssg_id_, mess.node_id_, mess.slot_id_);
             }
         }
         if (!state.transmitting_) {  // Activate newly queued buffers.
             for (auto const& bag_port_in : bags_port_in) {
                 for (auto const& mess : bag_port_in) {
-                    MessageBuffer_t& buffer = state.port_buffers_[mess.node_id];
+                    MessageBuffer_t& buffer = state.port_buffers_[mess.node_id_];
                     if (!buffer.active) buffer.active = true;
                 } 
             }              

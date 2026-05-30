@@ -28,24 +28,24 @@ using TIME = NDTime;
 
 
 struct ConfigPath_t {
-    static constexpr std::string_view topo_path     {"input_data/topology.txt"};
-    static constexpr std::string_view oper_path     {"input_data/operator.txt"};
-    static constexpr std::string_view hw_path       {"input_data/hardware.txt"};
-    static constexpr std::string_view dg_path       {"input_data/degradation.txt"};
-    static constexpr std::string_view iw_path       {"input_data/extraoccupation.txt"};
-    static constexpr std::string_view arrival_path  {"input_data/arrival_rate.txt"};
-    static constexpr std::string_view reqsRate_path {"input_data/workload.txt"};
+    static constexpr std::string_view topo_path       {"input_data/topology.txt"};
+    static constexpr std::string_view oper_path       {"input_data/operator.txt"};
+    static constexpr std::string_view hw_path         {"input_data/hardware.txt"};
+    static constexpr std::string_view workload_path   {"input_data/workload.txt"};
+    static constexpr std::string_view arate_path      {"input_data/arrivalrates.txt"};
+    static constexpr std::string_view degrad_path     {"input_data/degradation.txt"};
+    static constexpr std::string_view extraoccup_path {"input_data/extraoccupation.txt"};
 };
 
 struct OperatorProperties_t {
 
     uint32_t                                replication_{};
-    std::unique_ptr<myrandom::RandomBase_t> random_{};
+    std::unique_ptr<myrandom::RandomBase_t> random_time_{};
     std::string                             ship_strategy_{};
     double                                  selectivity_{};
-    uint32_t                                acumm_recordsSend_{};
-    double                                  accum_busy_time_{}; // To calculate operator utilization.
-    double                                  w_{};               // Weight to operator extra internal work.
+    uint32_t                                sent_records_accum_{};
+    double                                  busy_time_accum_{};        // To calculate operator utilization.
+    double                                  extra_occup_factor_{};     // Extra internal occupation factor.
     
     //std::function<double(void)> distribution{}; // Callback
 };
@@ -59,26 +59,23 @@ struct ClusterConfig_t {
         initOperators(ConfigPath_t::oper_path); // It must inizialize first.
         initTopology(ConfigPath_t::topo_path);
         initHardware(ConfigPath_t::hw_path);
-        initDegradationFactors(ConfigPath_t::dg_path);
-        initWeightOperators(ConfigPath_t::iw_path);
-        initRates(ConfigPath_t::arrival_path);
-        initReqsRate(ConfigPath_t::reqsRate_path);
+        initWorkload(ConfigPath_t::workload_path);
+        initRates(ConfigPath_t::arate_path);
+        initDegradFactor(ConfigPath_t::degrad_path);
+        initExtraOccupFactors(ConfigPath_t::extraoccup_path);
     }
 
 // Data config
-    std::map<operId_t, OperatorProperties_t>                operProps_{}; // Operator ids resource.
+    std::map<operId_t, OperatorProperties_t>                operProps_{};
     std::map<operId_t const*, std::vector<operId_t const*>> topology_{};
+    operId_t const*                                         begin_op{};
+    std::vector<operId_t const*>                            end_ops{};
     std::map<TIME, double>                                  arrivalRates_{};
-    uint32_t requeriments_{}; double rate_{};
-
-    double degradation_factor_{};                               // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
-    //double //gamma_{};                                            // Function to extra internal work (applied to the accumulation of busy operator time).
-
-    operId_t const* begin_op{};
-    std::vector<operId_t const*> end_ops{};
-
-    uint32_t n_nodes_{};
-    uint32_t n_cores_{};
+    uint32_t                                                requeriments_{}; 
+    double                                                  rate_{};
+    uint32_t                                                n_nodes_{};
+    uint32_t                                                n_cores_{};
+    double                                                  degradation_factor_{};  // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
 
 
     void accumBusyTime(operId_t const& operid, double time) noexcept
@@ -88,7 +85,14 @@ struct ClusterConfig_t {
         //double lamda {0.9}, beta{0.071001}; // p=2 -> l=0.9, 
         //auto extrawork = [&]() -> double { return 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_; };
 
-        operprop.accum_busy_time_ += time * operprop.w_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
+        operprop.busy_time_accum_ += time * operprop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
+    }
+
+    void accumSentRecords(operId_t const& operid, uint32_t n_rec) noexcept
+    {
+        auto prop_it   = operProps_.find(operid);
+        auto& operprop = prop_it->second;
+        operprop.sent_records_accum_ += n_rec;
     }
 
 private:
@@ -218,7 +222,7 @@ private:
         assert( n_cores_ > 0 && "Invalid hardware parameter: n_cores is 0" );
     }
 
-    void initDegradationFactors(std::string_view path) noexcept
+    void initDegradFactor(std::string_view path) noexcept
     {
         double cpuu_{}, u_thr_{}, alpha_{}, u_sat_{}, b_{0.05}, e_{};
         std::ifstream file(path.data());
@@ -234,19 +238,19 @@ private:
         std::cout<<"deg: "<<degradation_factor_<<'\n';
     }
 
-    void initWeightOperators(std::string_view path) noexcept 
+    void initExtraOccupFactors(std::string_view path) noexcept 
     {
         std::ifstream file(path.data());
         std::string name{};
-        double weight{};
+        double extra_occ_factor{};
 
         std::string line{};
         while (std::getline(file, line)) 
         {    
             if (line.empty())  continue;      // Ignore empty lines.
             std::istringstream iss(line);
-            iss>>name>>weight;
-            operProps_[name].w_ = weight;
+            iss>>name>>extra_occ_factor;
+            operProps_[name].extra_occup_factor_ = extra_occ_factor;
         }
     }
 
@@ -263,7 +267,7 @@ private:
         }
     }
 
-    void initReqsRate(std::string_view path) noexcept
+    void initWorkload(std::string_view path) noexcept
     {
         std::ifstream file(path.data());
         int requriments {}; double rate{};

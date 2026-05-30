@@ -2,5 +2,6 @@ StreamProcessing/bin/*
 StreamProcessing/build/*
 StreamProcessing/distribution_test/expo_test
 StreamProcessing/distribution_test/norm_test
+StreamProcessing/distribution_test/lognorm_test
 StreamProcessing/apacheflink/flink
 StreamProcessing/apacheflink/nexmark

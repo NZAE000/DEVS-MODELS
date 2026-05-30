@@ -18,6 +18,7 @@
 #include <iostream>
 
 #include "../data_structures/message.hpp"
+#include "../util/random.hpp"
 #include <cadmium/basic_model/pdevs/generator.hpp>
 #include<fstream>
 #include<string_view>
@@ -32,45 +33,38 @@ namespace streamprcsc {
 template<typename TIME>
 class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> { 
 
-    static constexpr uint32_t PROB_MIN {0};
-    static constexpr uint32_t PROB_MAX {1};
-
     // Create a random number generator object based on Mersenne Twister
-    std::random_device rd_;                              // A seed source for the random number engine. Get a seed from the system's random device
-    std::mt19937      gen_;                              // Mersenne_twister_engine(2**19,937) generator, seeded with rd(). Initialize the generator with the device seed
-    std::uniform_real_distribution<double> uni_distr_;   // Define a range for uniform random numbers
-
-    TIME current_time_ {0};
-    TIME arrival_time_ {0};
-
-    uint32_t requeriments_{};
-    double   rate_{};
-
-    std::map<TIME, double>* arrivalRates_{nullptr};
-    typename std::map<TIME, double>::iterator current_rate_;
-    typename std::map<TIME, double>::iterator next_rate_;
-    bool generating_ {true};
-
-    std::ofstream log_rate;
+    //std::random_device rd_;                              // A seed source for the random number engine. Get a seed from the system's random device
+    //std::mt19937      gen_;                              // Mersenne_twister_engine(2**19,937) generator, seeded with rd(). Initialize the generator with the device seed
+    //std::uniform_real_distribution<double> uni_distr_;   // Define a range for uniform random numbers
+    myrandom::Uniform_t                        uni_distr_{0, 1};
+    uint32_t                                   requeriments_{};
+    double                                     rate_{};
+    std::map<TIME, double>*                    arrivalRates_{nullptr};
+    TIME                                       arrival_time_ {0};
+    TIME                                       current_time_ {0};
+    typename std::map<TIME, double>::iterator  current_rate_;
+    typename std::map<TIME, double>::iterator  next_rate_;
+    bool                                       generating_ {true};
+    std::ofstream                              log_rate;
 
     // Exponential distribution
-    [[nodiscard]] double expo_distr(double rd, double lambda) const noexcept {   
-        return -(1/lambda)*std::log(1-rd);
-    }
+    [[nodiscard]] double 
+    expo_distr(double rd, double lambda) const noexcept { return -(1/lambda)*std::log(1-rd); }
 
 public:
 
     Producer_t() {};
 
     Producer_t(uint32_t req, double rate, std::string_view path_to_log) 
-    : requeriments_{req}, rate_{rate}, log_rate(path_to_log.data()), gen_(rd_()), uni_distr_(0.0, 1.0)
+    : requeriments_{req}, rate_{rate}, log_rate(path_to_log.data())
     {
         log_rate<<current_time_<<" "<<rate_<<"\n";
         std::cout<<"time: "<<current_time_<<" lambda: "<<rate_<<"\n";
     };
 
     Producer_t(std::map<TIME, double>& ar, std::string_view path_to_log)
-    : basic_models::pdevs::generator<Message_t, TIME>{}, gen_{rd_()}, uni_distr_{0, 1}, arrivalRates_{&ar}, log_rate(path_to_log.data())
+    : arrivalRates_{&ar}, log_rate(path_to_log.data())
     {
         current_rate_ = begin(*arrivalRates_); // Init current rate.
         log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
@@ -109,7 +103,7 @@ public:
             log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
             std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
         }
-        int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), current_rate_->second))) };
+        int lapse { static_cast<int>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second))) };
         int lapse_us {lapse};
         int lapse_hr  = lapse_us / 3'600'000'000;
         lapse_us     %= 3'600'000'000;
@@ -134,7 +128,7 @@ public:
             return;
         }
 
-        //int lapse { static_cast<int>(std::round(expo_distr(uni_distr_(gen_), this->rate_))) };
+        //int lapse { static_cast<int>(std::round(expo_distr(uni_distr_.generate(), this->rate_))) };
         //int lapse_us {lapse};
         //int lapse_hr  = lapse_us / 3'600'000'000;
         //lapse_us     %= 3'600'000'000;
@@ -148,7 +142,7 @@ public:
         // Generate time
         int lapse_ps {};
         do{
-            lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_(gen_), this->rate_)));
+            lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), this->rate_)));
         } while (lapse_ps < 0);
         
         // Descompose time

@@ -15,11 +15,11 @@
 /*******************************************/
 struct OperatorLocation_t {
   OperatorLocation_t(uint32_t mssgId, uint32_t nid, uint32_t sid) 
-    :mssg_id{mssgId}, node_id{nid}, slot_id{sid} {}
+    : mssg_id_{mssgId}, node_id_{nid}, slot_id_{sid} {}
 
-    uint32_t mssg_id{};
-    uint32_t node_id{};
-    uint32_t slot_id{};
+    uint32_t mssg_id_{};
+    uint32_t node_id_{};
+    uint32_t slot_id_{};
 };
 
 /***************************************************/
