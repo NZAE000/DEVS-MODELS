@@ -139,7 +139,7 @@ def main():
     # ----------------------------------------------------------
     # Export plot to PNG file
     # ----------------------------------------------------------
-    out_dir  = BASE_DIR
+    out_dir  = os.path.join(BASE_DIR, "graphics-real-sim")
     out_name = f"throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(events)}-{str(arrival)}.png"
     out_path = os.path.join(out_dir, out_name)
     plt.savefig(out_path, dpi=300, bbox_inches='tight')

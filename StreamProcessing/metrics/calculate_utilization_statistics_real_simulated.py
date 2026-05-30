@@ -4,9 +4,9 @@ import numpy as np
 import random
 import csv
 
-REAL_PATH = "metrics/nexmark/utilization/real"
-SIM_PATH  = "metrics/nexmark/utilization/simulated"
-
+BASE_DIR = "metrics/nexmark/utilization"
+REAL_DIR = os.path.join(BASE_DIR, "real")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated")
 
 # -------------------------
 # LOAD
@@ -103,8 +103,8 @@ def main():
 
     appname = sys.argv[1]
 
-    real_files = [f for f in os.listdir(REAL_PATH) if f.startswith(appname)]
-    sim_files  = [f for f in os.listdir(SIM_PATH) if f.startswith(appname)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith(appname)]
+    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith(appname)]
 
     real_ids = {parse_identifier(f, appname): f for f in real_files}
     sim_ids  = {parse_identifier(f, appname): f for f in sim_files}
@@ -117,8 +117,8 @@ def main():
     all_ops = set()
 
     for identifier in common_ids:
-        real_file = os.path.join(REAL_PATH, real_ids[identifier])
-        sim_file  = os.path.join(SIM_PATH, sim_ids[identifier])
+        real_file = os.path.join(REAL_DIR, real_ids[identifier])
+        sim_file  = os.path.join(SIM_DIR, sim_ids[identifier])
 
         real_data = load_utilization(real_file)
         sim_data  = load_utilization(sim_file)
@@ -329,9 +329,11 @@ def main():
     # -------------------------
     # CSV
     # -------------------------
-    csv_filename = f"metrics/nexmark/utilization/utilization-statics-{appname}.csv"
+    csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim")
+    csv_name = f"utilization-real-sim-statics-{appname}.csv"
+    csv_path = os.path.join(csv_dir, csv_name)
 
-    with open(csv_filename, "w", newline="") as f:
+    with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f, delimiter=';')
 
         # HEADER TABLE 1
@@ -426,7 +428,7 @@ def main():
 
         writer.writerow(row)
 
-    print(f"\nCSV generado: {csv_filename}\n")
+    print(f"\nCSV generado: {csv_path}\n")
 
 
 if __name__ == "__main__":
