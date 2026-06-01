@@ -10,24 +10,25 @@
 
 #include <cadmium/modeling/ports.hpp>
 #include <cadmium/modeling/message_bag.hpp> // Used to declare a bag of messages for input or output port.
-
 #include <limits>
 #include <assert.h>
 #include <string>
 #include <random>
 #include <iostream>
-
-#include "../data_structures/message.hpp"
-#include "../util/random.hpp"
+#include <data_structures/message.hpp>
+#include <util/random.hpp>
+#include <util/metriclogger.hpp>
 #include <cadmium/basic_model/pdevs/generator.hpp>
-#include<fstream>
-#include<string_view>
+#include <fstream>
+#include <string_view>
 
 using namespace cadmium;
 using namespace std;
 
-namespace streamprcsc {
+namespace streamprcss {
 
+template<typename T>
+using MLogger_t = streamprcss::mylogger::MetricLogger_t<T>;
 
 // Productor is an atomic generator
 template<typename TIME>
@@ -37,90 +38,131 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     //std::random_device rd_;                              // A seed source for the random number engine. Get a seed from the system's random device
     //std::mt19937      gen_;                              // Mersenne_twister_engine(2**19,937) generator, seeded with rd(). Initialize the generator with the device seed
     //std::uniform_real_distribution<double> uni_distr_;   // Define a range for uniform random numbers
-    myrandom::Uniform_t                        uni_distr_{0, 1};
-    uint32_t                                   requeriments_{};
-    double                                     rate_{};
-    std::map<TIME, double>*                    arrivalRates_{nullptr};
-    TIME                                       arrival_time_ {0};
-    TIME                                       current_time_ {0};
-    typename std::map<TIME, double>::iterator  current_rate_;
-    typename std::map<TIME, double>::iterator  next_rate_;
-    bool                                       generating_ {true};
-    std::ofstream                              log_rate;
+
+    using const_iter = typename std::map<TIME, double>::const_iterator;
+
+    MLogger_t<double>&             metricLogger_;
+    myrandom::Uniform_t            uni_distr_{0, 1};
+    uint32_t                       requeriments_{};
+    double                         rate_{};
+    std::map<TIME, double> const&  arrivalRates_;
+    TIME                           arrival_time_ {0};
+    TIME                           current_time_ {0};
+    const_iter                     current_rate_;
+    const_iter                     next_rate_;
+    bool                           generating_ {true};
+    std::ofstream                  log_rate;
 
     // Exponential distribution
     [[nodiscard]] double 
     expo_distr(double rd, double lambda) const noexcept { return -(1/lambda)*std::log(1-rd); }
 
+    double to_second(TIME const& time)
+    {
+        
+        return static_cast<double>(
+            time.getHours()         *  3600 +
+            time.getMinutes()       *    60 +
+            time.getSeconds()       *     1 +
+            time.getMilliseconds()  *  1e-3 +
+            time.getMicroseconds()  *  1e-6 +
+            time.getNanoseconds()   *  1e-9 +
+            time.getPicoseconds()   * 1e-12 +
+            time.getFemtoseconds()  * 1e-15
+        );
+    }
+
 public:
 
     Producer_t() {};
 
-    Producer_t(uint32_t req, double rate, std::string_view path_to_log) 
-    : requeriments_{req}, rate_{rate}, log_rate(path_to_log.data())
+    Producer_t(MLogger_t<double>& mlogger, std::string_view path_to_log)
+    : 
+     metricLogger_ {mlogger},
+     requeriments_ {mlogger.getClusterCFG().requeriments_}, 
+     rate_         {mlogger.getClusterCFG().rate_},
+     arrivalRates_ {mlogger.getClusterCFG().arrivalRates_}, 
+     log_rate      (path_to_log.data())
     {
-        log_rate<<current_time_<<" "<<rate_<<"\n";
-        std::cout<<"time: "<<current_time_<<" lambda: "<<rate_<<"\n";
-    };
-
-    Producer_t(std::map<TIME, double>& ar, std::string_view path_to_log)
-    : arrivalRates_{&ar}, log_rate(path_to_log.data())
-    {
-        current_rate_ = begin(*arrivalRates_); // Init current rate.
+        current_rate_ = begin(arrivalRates_); // Init current rate.
         log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
-        std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
+        //std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
     }
 
-    TIME period() const override // time between consecutive messages
+    TIME period() const override // Time between consecutive messages.
     {
         if (generating_) return arrival_time_;
         return numeric_limits<TIME>::infinity();
     }
 
-    Message_t output_message() const override // message to be output
+    Message_t output_message() const override // Message to be output.
     {   
-        //static uint32_t id_node {0};
-        //++id_node;
-        //if (id_node == 3) id_node = 0;
-
         return {this->state};
     }
 
-    void internal_transition()
+    /*void internal_transition()
     {   
-        /*next_rate_ = current_rate_;
-        ++next_rate_; // inspect next
+        // Inspect next.
+        next_rate_=current_rate_;
+        ++next_rate_; 
 
         // Should be changed to the following rate?
         if (current_time_ >= next_rate_->first)
         {   
-            if (next_rate_->second == 0) { // Is the final rate?
+            // Is the final rate?
+            if (next_rate_->second == 0) 
+            {
+                // This is the way to set the final workload.
+                metricLogger_.getClusterCFG().rate_         = current_rate_->second;
+                metricLogger_.getClusterCFG().requeriments_ = this->state;
+                
+                // Passivate
                 generating_ = false;
                 log_rate<<current_time_<<" "<<0<<"\n";
                 return;
             }
+            else metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state); // Capture metrics!
+
             current_rate_ = next_rate_; // Pass to next rate
             log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
-            std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
+            //std::cout<<"time: "<<current_time_<<" lambda: "<<current_rate_->second<<"\n";
         }
-        int lapse { static_cast<int>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second))) };
-        int lapse_us {lapse};
-        int lapse_hr  = lapse_us / 3'600'000'000;
-        lapse_us     %= 3'600'000'000;
-        int lapse_min = lapse_us / 60'000'000;
-        lapse_us     %= 60'000'000;
-        int lapse_s   = lapse_us / 1'000'000;
-        lapse_us     %= 1'000'000;
-        int lapse_ms  = lapse_us / 1'000;
-        lapse_us     %= 1'000;
+        
+        // Generate time
+        int lapse_ps {};
+        do{
+            lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second)));
+        } while (lapse_ps < 0);
+        
+        // Descompose time
+        int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
+        lapse_ps    %=  3'600'000'000'000'000;
+
+        int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
+        lapse_ps     %= 60'000'000'000'000;
+
+        int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
+        lapse_ps   %= 1'000'000'000'000;
+
+        int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
+        lapse_ps    %= 1'000'000'000;
+
+        int lapse_us = lapse_ps / 1'000'000;              // 1e6
+        lapse_ps    %= 1'000'000;
+
+        int lapse_ns = lapse_ps / 1'000;                  // 1e3
+        lapse_ps    %= 1'000;
 
         //std::cout<<"lapse: "<<lapse<<"\n";
-        //std::cout<<"hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<"\n";
-        arrival_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        //std::cout<<"prod: hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<" ns: "<<lapse_ns<<" ps: "<<lapse_ps<<"\n";
+        arrival_time_ = {lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
         current_time_ += arrival_time_;
 
-        ++this->state;*/
+        ++this->state;
+    }*/
 
+    void internal_transition()
+    {   
         if (this->state >= this->requeriments_-1)
         {
             generating_ = false;
@@ -128,17 +170,6 @@ public:
             return;
         }
 
-        //int lapse { static_cast<int>(std::round(expo_distr(uni_distr_.generate(), this->rate_))) };
-        //int lapse_us {lapse};
-        //int lapse_hr  = lapse_us / 3'600'000'000;
-        //lapse_us     %= 3'600'000'000;
-        //int lapse_min = lapse_us / 60'000'000;
-        //lapse_us     %= 60'000'000;
-        //int lapse_s   = lapse_us / 1'000'000;
-        //lapse_us     %= 1'000'000;
-        //int lapse_ms  = lapse_us / 1'000;
-        //lapse_us     %= 1'000;
-        
         // Generate time
         int lapse_ps {};
         do{
@@ -171,9 +202,7 @@ public:
         current_time_ += arrival_time_;
 
         ++this->state;
-        //std::cout<<"time: "<<current_time_<<" req: "<<this->state<<"\n";
     }
-
 };
 
 

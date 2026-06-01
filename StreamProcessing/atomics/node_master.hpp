@@ -9,7 +9,7 @@
 
 #include "node.hpp"
 
-namespace streamprcs {
+namespace streamprcss {
 
 template<typename TIME> 
 class NodeMaster_t : public Node_t<TIME> { // Node master is an atomic node

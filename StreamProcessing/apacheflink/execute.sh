@@ -90,7 +90,7 @@ normalize() {
 
 TOTAL_ACUM_BUSY_TIME=0.0
 echo ""
-printf "%-25s %-15s %-15s %-15s %-15s\n" "Operator" "Parallelism" "AccumBusyTime" "BusyTime" "Utilization"
+printf "%-25s %-5s %-15s %-15s %-15s\n" "Operator" "P" "AccumBusyTime" "BusyTime" "Utilization"
 while IFS=';' read -r OPER_ID RAW_NAME PAR; do
     NAME=$(normalize "$RAW_NAME")
     total_acum_busy=0.0
@@ -104,7 +104,7 @@ while IFS=';' read -r OPER_ID RAW_NAME PAR; do
     BUSY_TIME=$(echo "$ACUM_BUSY_TIME / $PAR" | bc -l)          # Avg
     UTILIZATION=$(echo "($BUSY_TIME) / $FINISH_TIME" | bc -l)
     
-    printf "%-25s %-15s %-15.4f %-15.4f %-15s\n" "$NAME" "$PAR" "$ACUM_BUSY_TIME" "$BUSY_TIME" "$UTILIZATION"
+    printf "%-25s %-5s %-15.4f %-15.4f %-15s\n" "$NAME" "$PAR" "$ACUM_BUSY_TIME" "$BUSY_TIME" "$UTILIZATION"
 
 done < <(jq -r '.vertices[] | "\(.id);\(.name);\(.parallelism)"' "$PLAN_JSON")
 

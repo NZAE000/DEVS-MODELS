@@ -31,7 +31,7 @@ using namespace std;
 /*Call order: external, time_avance, output, internal*/
 
 
-namespace streamprcsc {
+namespace streamprcss {
 
 
 struct MessageBuffer_t {
@@ -89,8 +89,10 @@ public:
     state_type state;
 
     TIME send_time_{};  // Time left until next departure
-    int const mean_ {50};
-    myrandom::Poisson_t poisson_distr_{mean_};
+    //int const mean_ {50};
+    //myrandom::Poisson_t poisson_distr_{mean_};
+    double min_ {7000}, max_{12000};
+    myrandom::Uniform_t uniform_distr_{min_, max_};
 
     // Default constructor
     Switch_t() noexcept {}
@@ -135,8 +137,8 @@ public:
             BOOST_PP_ENUM(N_NODES, GET_MESSAGES_INPORT, _)
         };
 
-        for (auto const& bag_port_in :  bags_port_in) { // Get each bag port int.
-            for (auto const& mess : bag_port_in) {       // Add all messages to respective buffer.
+        for (auto const& bag_port_in : bags_port_in) {      // Get each bag port in.
+            for (auto const& mess : bag_port_in) {          // Add all messages to respective buffer.
                 MessageBuffer_t& buffer = state.port_buffers_[mess.node_id_];
                 buffer.messages.emplace_back(mess.mssg_id_, mess.node_id_, mess.slot_id_);
             }
@@ -166,7 +168,7 @@ public:
     typename make_message_bags<output_ports>::type output() const 
     {
         // make_message_bags<>: is a template data type that the simulator needs (found in <cadmium/modeling/message_bag.hpp>).
-        // Is instantiated as output_ports to   d efine the output bag.
+        // Is instantiated as output_ports to define the output bag.
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
         //vector<OperatorLocation_t> bag_port_out0, bag_port_out1, bag_port_out2;
 
@@ -219,7 +221,7 @@ public:
     // time_advance function:  if we are transmitting_, the time advance is 3 seconds. If we do not transmit, the model passivates.
     TIME time_advance() const 
     {
-        if (state.transmitting_) return send_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
+        if (state.transmitting_) return send_time_; // Lapse: hrs::mins:secs:mills:micrs::(nns):pcs::fms
         else                     return numeric_limits<TIME>::infinity();
     }
 
@@ -261,7 +263,7 @@ private:
         //lapse_us     %= 1'000;
 
         // Descompose time
-        int lapse_ns { static_cast<int>(poisson_distr_.generate()) }; // Poisson distribution send time.
+        int lapse_ns { static_cast<int>(uniform_distr_.generate()) }; // Uniform distribution send time.
         int lapse_hr  = lapse_ns / 3'600'000'000'000;  // 3.6e12
         lapse_ns     %= 3'600'000'000'000;
         int lapse_min = lapse_ns / 60'000'000'000;      // 6e10

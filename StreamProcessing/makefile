@@ -16,6 +16,7 @@ CFLAGS=-std=c++20 -O3#-g #-Wall -Wextra -Wpedantic -Wconvertions
 
 INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
 INCLUDEDESTIMES=-I ../../Cadmium-Simulation-Environment/DESTimes/include/
+INCLUDESTREAMPRCSS=-I .
 
 #CREATE BIN AND BUILD FOLDERS TO SAVE THE COMPILED FILES DURING RUNTIME
 bin_folder := $(shell mkdir -p bin)
@@ -26,26 +27,26 @@ results_folder := $(shell mkdir -p simulation_results simulation_results/unitary
 
 # UTILS
 random.o: util/random.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) util/random.cpp -o build/random.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) util/random.cpp -o build/random.o
 
 # DATA STRUCTURES
 operator_location.o : data_structures/operator_location.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/operator_location.cpp -o build/operator_location.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/operator_location.cpp -o build/operator_location.o
 
 message.o : data_structures/message.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/message.cpp -o build/message.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/message.cpp -o build/message.o
 
 jobmanager.o : data_structures/flink/jobmanager.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/flink/jobmanager.cpp -o build/jobmanager.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/jobmanager.cpp -o build/jobmanager.o
 
 resourcemanager.o : data_structures/flink/resourcemanager.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/flink/resourcemanager.cpp -o build/resourcemanager.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/resourcemanager.cpp -o build/resourcemanager.o
 
 jobmaster.o : data_structures/flink/jobmaster.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/flink/jobmaster.cpp -o build/jobmaster.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/jobmaster.cpp -o build/jobmaster.o
 
 taskmanager.o : data_structures/flink/taskmanager.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) data_structures/flink/taskmanager.cpp -o build/taskmanager.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/taskmanager.cpp -o build/taskmanager.o
 
 flinklib: jobmanager.o resourcemanager.o jobmaster.o taskmanager.o
 	ar -crs build/libflink.a  build/jobmanager.o build/resourcemanager.o build/jobmaster.o build/taskmanager.o
@@ -54,23 +55,23 @@ flinklib: jobmanager.o resourcemanager.o jobmaster.o taskmanager.o
 
 # UNITARY TESTS
 main_producer_test.o : test/unitary/main_producer_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) test/unitary/main_producer_test.cpp -o build/main_producer_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/unitary/main_producer_test.cpp -o build/main_producer_test.o
 
 main_nodemaster_test.o : test/unitary/main_nodemaster_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) test/unitary/main_nodemaster_test.cpp -o build/main_nodemaster_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/unitary/main_nodemaster_test.cpp -o build/main_nodemaster_test.o
 
 main_switch_test.o : test/unitary/main_switch_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) test/unitary/main_switch_test.cpp -o build/main_switch_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/unitary/main_switch_test.cpp -o build/main_switch_test.o
 
 
 # INTEGRATION TESTS
 main_prod_nmaster_test.o: test/integration/main_prod_nmaster_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) test/integration/main_prod_nmaster_test.cpp -o build/main_prod_nmaster_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/integration/main_prod_nmaster_test.cpp -o build/main_prod_nmaster_test.o
 
 
 # SIMULATOR
 main_top.o: test/system/main.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) test/system/main.cpp -o build/main_top.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/system/main.cpp -o build/main_top.o
 
 unitary_producer: main_producer_test.o operator_location.o message.o random.o flinklib
 	$(CC) -o bin/PRODUCTOR_TEST build/libflink.a build/main_producer_test.o build/random.o build/operator_location.o build/message.o
@@ -91,7 +92,7 @@ integration_tests: main_prod_nmaster_test.o random.o operator_location.o message
 
 #TARGET TO COMPILE ONLY STREAN PROCESSING SIMULATOR
 $(SIMULATOR): main_top.o random.o operator_location.o message.o flinklib
-	$(CC) -o bin/$(SIMULATOR) build/main_top.o build/random.o build/operator_location.o build/message.o build/libflink.a
+	$(CC) build/main_top.o build/random.o build/operator_location.o build/message.o build/libflink.a -o bin/$(SIMULATOR) 
 	
 #TARGET TO COMPILE EVERYTHING (ABP SIMULATOR + TESTS TOGETHER)
 all: $(SIMULATOR) unitary_tests integration_tests

@@ -26,7 +26,7 @@ using namespace std;
 
 /*Call order: external, time_avance, output, internal*/
 
-namespace streamprcs {
+namespace streamprcss {
 
 //Port definition
 struct Node_defs {

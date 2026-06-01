@@ -1,5 +1,5 @@
 //#include "jobmanager.hpp"
-#include "../../atomics/node_master.hpp"
+#include <atomics/node_master.hpp>
 //#include<iostream>
 
 namespace FLINK {
@@ -9,7 +9,7 @@ void JobManager_t::deployJob(Callable&& createNodes) noexcept
 {
     uint32_t nNodes { cluster_cfg_.n_nodes_ };
     uint32_t nCores { cluster_cfg_.n_cores_ };
-    std::vector<streamprcs::Node_t<TIME>*> nodes;
+    std::vector<streamprcss::Node_t<TIME>*> nodes;
 
     createNodes(nNodes, nCores, nodes);
 
@@ -21,7 +21,7 @@ void JobManager_t::deployJob(Callable&& createNodes) noexcept
     uint32_t replica{};
     slotId_t slot_id{};
     auto node_iter     = nodes.begin();
-    streamprcs::Node_t<TIME>* node = *node_iter.base();
+    streamprcss::Node_t<TIME>* node = *node_iter.base();
 
     // Assign resource to all operators.
     for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)

@@ -1,6 +1,6 @@
-read-records;100000000
-write-records;100000000
-accumulateBusyTimeMs;67319.00000000000000000000
-mailboxLatencyMs_p95;0.0
+read-records;10000000
+write-records;10000000
+accumulateBusyTimeMs;10022.00000000000000000000
+mailboxLatencyMs_p95;1.0
 mailboxLatencyMs_p99;1.0
-mailboxLatencyMs_stddev;0.18102033471939255
+mailboxLatencyMs_stddev;0.7071067811865476

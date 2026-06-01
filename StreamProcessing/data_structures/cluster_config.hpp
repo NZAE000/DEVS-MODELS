@@ -54,7 +54,7 @@ struct ClusterConfig_t {
 
     using operId_t = std::string;
 
-    explicit ClusterConfig_t()
+    explicit ClusterConfig_t(std::string_view app_n) : app_name{app_n}
     {
         initOperators(ConfigPath_t::oper_path); // It must inizialize first.
         initTopology(ConfigPath_t::topo_path);
@@ -66,6 +66,7 @@ struct ClusterConfig_t {
     }
 
 // Data config
+    std::string                                             app_name{};
     std::map<operId_t, OperatorProperties_t>                operProps_{};
     std::map<operId_t const*, std::vector<operId_t const*>> topology_{};
     operId_t const*                                         begin_op{};
