@@ -7,8 +7,8 @@ from collections import defaultdict, OrderedDict
 
 # Paths
 BASE_DIR = "metrics/nexmark/utilization"
-REAL_DIR = os.path.join(BASE_DIR, "real")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated")
+REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
 
 def read_util_file(path):
     """
@@ -42,15 +42,17 @@ def mean_per_operator(op_values):
     """
     return {op: float(np.mean(vals)) if vals else 0.0 for op, vals in op_values.items()}
 
-def parse_identifier_from_filename(filename, appname, prefix_word):
+def parse_identifier_from_filename(filename, appname):
     """
-    Extrae el identificador después de 'qX-<prefix_word>-' y sin '.txt'
-    Ej:
-        q3-utilization-1-32-1-100000-5000.txt
+    Extract the identifier after 'qX-<prefix_word>-' and without '.txt'
+    f.g:
+           terminated-utilization-real-q3-1-32-1-100000-5000.txt
+        or terminated-utilization-sim-q3-1-32-1-100000-5000.txt
     => '1-32-1-100000-5000'
     """
     base = filename.replace(".txt", "")
-    base = base.replace(f"{prefix_word}-", "")  # remove "utilization-" leaving q3-...
+    base = base.replace("terminated-utilization-real-", "").replace("terminated-utilization-sim-", "")
+    
     # Now remove leading "qN-"
     if base.startswith(appname + "-"):
         ident = base[len(appname)+1:]
@@ -72,8 +74,8 @@ def scenario_key(identifier):
 
 def main():
     if len(sys.argv) < 6:
-        print("Uso: python utilization_plot_real_simulated_by_parallelism.py <app> <nodes> <cores> <events> <arrival>")
-        print("Ejemplo: python utilization_plot_real_simulated_by_parallelism.py q3 1 32 100000 5000")
+        print("Use: python utilization_plot_real_sim_by_parallelism.py <app> <nodes> <cores> <events> <arrival>")
+        print("f.g: python utilization_plot_real_simu_by_parallelism.py q3 1 32 100000 5000")
         return
 
     app     = sys.argv[1]
@@ -86,8 +88,8 @@ def main():
     #print(f" app={app}, nodes={nodes}, cores={cores}, events={events}, arrival={arrival}\n")
 
     # List files
-    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith(app)]
-    sim_files  = [f for f in os.listdir(SIM_DIR)  if f.startswith(app)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-utilization-real-" + app)]
+    sim_files  = [f for f in os.listdir(SIM_DIR)  if f.startswith("terminated-utilization-sim-" + app)]
 
     # Filter by prefix nodes-cores-par-... -> we want different paral levels
     prefix = f"{nodes}-{cores}-"
@@ -95,13 +97,14 @@ def main():
     sim_map  = {}
 
     for f in real_files:
-        ident = parse_identifier_from_filename(f, app, "utilization")
+        print("aca")
+        ident = parse_identifier_from_filename(f, app)
         if ident.startswith(prefix) and ident.endswith(f"{events}-{arrival}"):
             # pattern: nodes-cores-par-events-arrival -> we keep par varying
             real_map[ident] = f
 
     for f in sim_files:
-        ident = parse_identifier_from_filename(f, app, "utilization")
+        ident = parse_identifier_from_filename(f, app)
         if ident.startswith(prefix) and ident.endswith(f"{events}-{arrival}"):
             sim_map[ident] = f
 
@@ -160,7 +163,7 @@ def main():
         real_means = mean_per_operator(real_ops_vals)
         sim_means  = mean_per_operator(sim_ops_vals)
 
-        # operator name sets for this ident
+        # Pperator name sets for this ident
         real_ops = set(real_means.keys())
         sim_ops  = set(sim_means.keys())
 
@@ -178,7 +181,7 @@ def main():
             print("Terminado debido a operadores faltantes.")
             sys.exit(1)
 
-        # initialize operator_set from first ident, and check it remains the same across idents
+        # Initialize operator_set from first ident, and check it remains the same across idents
         if operator_set is None:
             operator_set = set(real_means.keys())
         else:
@@ -290,8 +293,8 @@ def main():
     # ----------------------------------------------------------
     # Export plot to PNG file
     # ----------------------------------------------------------
-    out_dir = os.path.join(BASE_DIR, "graphics-real-sim")
-    out_name = f"utilization-real-sim-{app}-{nodes}-{cores}-{events}-{arrival}.png"
+    out_dir = os.path.join(BASE_DIR, "plot-real-sim/terminated")
+    out_name = f"terminated-utilization-real-sim-{app}-{nodes}-{cores}-{events}-{arrival}.png"
     out_path = os.path.join(out_dir, out_name)
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
 

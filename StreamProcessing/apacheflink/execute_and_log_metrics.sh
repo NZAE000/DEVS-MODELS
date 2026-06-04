@@ -8,13 +8,13 @@ PARALLELISM="$5"
 EVENTS="$6"
 TPS="$7"
 
-if [ $# -ne 6 ]; then
+if [ $# -ne 7 ]; then
     echo "Uso: bash execute_and_log.sh <app> <n_machines> <cores> <taskslots> <parallelism> <events> <tps>"
     exit 1
 fi
 
-THROUGHPUT_ABSPATH="/mnt/c/Users/Cuda/Documents/eliezer/cadmium/DEVS-MODELS/StreamProcessing/metrics/nexmark/throughput/real"
-UTILIZATION_ABSPATH="/mnt/c/Users/Cuda/Documents/eliezer/cadmium/DEVS-MODELS/StreamProcessing/metrics/nexmark/utilization/real"
+THROUGHPUT_ABSPATH="../metrics/nexmark/throughput/real"
+UTILIZATION_ABSPATH="../metrics/nexmark/utilization/real"
 THROUGHPUT_OUTFILE="${APP_NAME}-throughput-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
 UTILIZATION_OUTFILE="${APP_NAME}-utilization-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
 

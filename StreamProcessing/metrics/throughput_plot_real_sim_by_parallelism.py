@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 
 BASE_DIR = "metrics/nexmark/throughput"
-REAL_DIR = os.path.join(BASE_DIR, "real")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated")
+REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
 
 
 def load_data(filepath):
@@ -24,7 +24,7 @@ def load_data(filepath):
 def parse_params(filename, app):
     """
     Convert:
-        q2-throughput-1-32-3-1000000-10000000.txt
+        terminated-throughput-sim-q2-1-32-3-1000000-10000000.txt
     a:
         (app, nodes, cores, paralelismo, events, arrival)
     """
@@ -32,12 +32,12 @@ def parse_params(filename, app):
     parts = name.split("-")
     # parts = [q2, throughput, nodes, cores, paralelismo, events, arrival]
     return (
-        parts[0],                     # app
-        int(parts[2]),                # nodes
-        int(parts[3]),                # cores
-        int(parts[4]),                # parallelism
-        int(parts[5]),                # events
-        int(parts[6])                 # arrival
+        parts[3],                     # app
+        int(parts[4]),                # nodes
+        int(parts[5]),                # cores
+        int(parts[6]),                # parallelism
+        int(parts[7]),                # events
+        int(parts[8])                 # arrival
     )
 
 
@@ -46,7 +46,7 @@ def main():
         print("Use: python throughput_plot_real_simulated_by_parallelism.py <app> <nodes> <cores> <events> <rate>")
         sys.exit(1)
 
-    app = sys.argv[1]
+    app     = sys.argv[1]
     nodes   = int(sys.argv[2])
     cores   = int(sys.argv[3])
     events  = int(sys.argv[4])
@@ -57,15 +57,15 @@ def main():
     # -----------------------------
     real_files = [
         f for f in os.listdir(REAL_DIR)
-        if f.startswith(app)
+        if f.startswith("terminated-throughput-real-" + app)
     ]
 
     real_matches = {}
 
     for f in real_files:
-        (app, m, c, p, e, a) = parse_params(f, app)
+        (app, n, c, p, e, a) = parse_params(f, app)
 
-        if (m == nodes and c == cores and e == events and a == arrival):
+        if (n == nodes and c == cores and e == events and a == arrival):
             real_matches[p] = f  # key = paralelismo
 
     if not real_matches:
@@ -77,7 +77,7 @@ def main():
     # -----------------------------
     sim_files = [
         f for f in os.listdir(SIM_DIR)
-        if f.startswith(app)
+        if f.startswith("terminated-throughput-sim-" + app)
     ]
 
     sim_matches = {}
@@ -97,7 +97,7 @@ def main():
     common_parallelisms = sorted(real_parallelisms & sim_parallelisms)
 
     if not common_parallelisms:
-        print("No hay niveles de paralelismo comunes entre REAL y SIMULATED.")
+        print("There are no common levels of parallelism between REAL and SIMULATED.")
         sys.exit(1)
 
     #print("ℹNiveles de paralelismo usados:", common_parallelisms)
@@ -139,8 +139,8 @@ def main():
     # ----------------------------------------------------------
     # Export plot to PNG file
     # ----------------------------------------------------------
-    out_dir  = os.path.join(BASE_DIR, "graphics-real-sim")
-    out_name = f"throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(events)}-{str(arrival)}.png"
+    out_dir  = os.path.join(BASE_DIR, "plot-real-sim/terminated")
+    out_name = f"terminated-throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(events)}-{str(arrival)}.png"
     out_path = os.path.join(out_dir, out_name)
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.show()

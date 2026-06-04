@@ -8,6 +8,10 @@
 #ifndef _PRODUCER_HPP__
 #define _PRODUCER_HPP__
 
+#ifndef PROD_MOD
+#define PROD_MOD 0 // Define producer transsmition method: 1 has only 1 rate and stop when n requeriments are finished, or 0 has 1 or more rates with time point to change theb next rate.
+#endif
+
 #include <cadmium/modeling/ports.hpp>
 #include <cadmium/modeling/message_bag.hpp> // Used to declare a bag of messages for input or output port.
 #include <limits>
@@ -100,10 +104,11 @@ public:
         return {this->state};
     }
 
-    /*void internal_transition()
+    #if PROD_MOD // Producer has 1 or more rates with time point to change theb next rate.
+    void internal_transition()
     {   
         // Inspect next.
-        next_rate_=current_rate_;
+        next_rate_ = current_rate_;
         ++next_rate_; 
 
         // Should be changed to the following rate?
@@ -121,7 +126,10 @@ public:
                 log_rate<<current_time_<<" "<<0<<"\n";
                 return;
             }
-            else metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state); // Capture metrics!
+             
+            #if LOG_MOD
+            metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state); // Capture metrics!
+            #endif
 
             current_rate_ = next_rate_; // Pass to next rate
             log_rate<<current_time_<<" "<<current_rate_->second<<"\n";
@@ -130,7 +138,7 @@ public:
         
         // Generate time
         int lapse_ps {};
-        do{
+        do {
             lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second)));
         } while (lapse_ps < 0);
         
@@ -159,8 +167,13 @@ public:
         current_time_ += arrival_time_;
 
         ++this->state;
-    }*/
 
+        //#if LOG_MOD
+        //if (this->state % 1000 == 0)
+        //    metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state);
+        //#endif
+    }
+    #else // Producer has only 1 rate and stop when n requeriments are finished.
     void internal_transition()
     {   
         if (this->state >= this->requeriments_-1)
@@ -202,7 +215,13 @@ public:
         current_time_ += arrival_time_;
 
         ++this->state;
+
+        #if LOG_MOD
+        if (this->state % 1000 == 0)
+            metricLogger_.captureMetrics(this->rate_, to_second(current_time_), this->state);
+        #endif
     }
+    #endif
 };
 
 

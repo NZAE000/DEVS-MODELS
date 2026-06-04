@@ -4,9 +4,10 @@ import numpy as np
 import random
 import csv
 
+# Paths
 BASE_DIR = "metrics/nexmark/utilization"
-REAL_DIR = os.path.join(BASE_DIR, "real")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated")
+REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
 
 # -------------------------
 # LOAD
@@ -84,7 +85,7 @@ def compute_spearman(x, y):
 # PARSE
 # -------------------------
 def parse_identifier(filename, appname):
-    base = filename.replace(".txt", "").replace("utilization-", "")
+    base = filename.replace(".txt", "").replace("terminated-utilization-sim-", "").replace("terminated-utilization-real-", "")
     return base[len(appname) + 1:]
 
 
@@ -98,13 +99,13 @@ def scenario_key(identifier):
 # -------------------------
 def main():
     if len(sys.argv) < 2:
-        print("Use: python3 script.py <app>")
+        print("Use: python3 calculate_utilization_statistics_real_sim.py <app>")
         return
 
     appname = sys.argv[1]
 
-    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith(appname)]
-    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith(appname)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-utilization-real-" + appname)]
+    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith("terminated-utilization-sim-" + appname)]
 
     real_ids = {parse_identifier(f, appname): f for f in real_files}
     sim_ids  = {parse_identifier(f, appname): f for f in sim_files}
@@ -329,8 +330,8 @@ def main():
     # -------------------------
     # CSV
     # -------------------------
-    csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim")
-    csv_name = f"utilization-real-sim-statics-{appname}.csv"
+    csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim/terminated")
+    csv_name = f"terminated-utilization-real-sim-statics-{appname}.csv"
     csv_path = os.path.join(csv_dir, csv_name)
 
     with open(csv_path, "w", newline="") as f:

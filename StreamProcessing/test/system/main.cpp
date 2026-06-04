@@ -13,14 +13,13 @@
 
 //Data structures
 #include <data_structures/cluster_config.hpp>
-//#include <data_structures/flink/jobmanager.hpp>
 #include <data_structures/flink/jobmanager.tpp>
 
 //Atomic model headers
 #include <atomics/producer.hpp>
 #include <atomics/node_master.hpp>
 #include <atomics/switch.hpp>
-#include<util/metriclogger.tpp>
+#include <util/metriclogger.tpp>
 
 //C++ libraries
 #include <iostream>
@@ -55,9 +54,9 @@ namespace Cluster_defs {
     struct in : public in_port<Message_t> {};
 }
 
-int main(int arg, char** argv){
-
-    TIME::startDeepView(); // Extend to hrs::mins:secs:mills:micrs::nns:pcs::fms
+int 
+main(int arg, char** argv)
+{
 
     ClusterConfig_t      cluster_cfg   {argv[1]};
     FLINK::JobManager_t  JobManager    {cluster_cfg};
@@ -222,18 +221,22 @@ int main(int arg, char** argv){
     //using logger_top = logger::multilogger<log_state, log_messages, global_time_mes, global_time_sta>;
     //using logger_top = logger::multilogger<log_state, global_time_sta>;
     using logger_top = logger::multilogger<>; // TODO!: Without loggers, too slow for this model!!
-
+    TIME::startDeepView(); // Extend to hrs::mins:secs:mills:micrs::nns:pcs::fms
 
 /************** Runner call ************************/ 
-    dynamic::engine::runner<NDTime, logger_top> r(TOP, {0}); // runner class defined in <cadmium/engine/pdevs_dynamic_runner.hpp>. Init time to 0.
+    dynamic::engine::runner<NDTime, logger_top> r (TOP, {0}); // runner class defined in <cadmium/engine/pdevs_dynamic_runner.hpp>. Init time to 0.
     //r.run_until(NDTime("04:00:00:000"));
-
     TIME finish_time = r.run_until_passivate(); // Run the simulation until all models are passivated.
     
-    // Capture and logg all metrics (throughput system and operator utilizations).
+    // Capture and logg metrics (throughput system and operator utilizations).
     metric_logger.captureMetrics(cluster_cfg.rate_, to_second(finish_time), cluster_cfg.requeriments_);
-    metric_logger.printMetrics();
-    //metric_logger.logMetrics();
-    
+    metric_logger.printMetrics();   
+    #if APPLY_LOG
+        #if LOG_MOD
+            metric_logger.logDynamicMetrics();
+        #else
+            metric_logger.logMetrics();
+        #endif
+    #endif
     return 0;
 }

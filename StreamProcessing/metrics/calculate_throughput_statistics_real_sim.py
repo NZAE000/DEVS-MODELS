@@ -6,8 +6,8 @@ import csv
 
 
 BASE_DIR = "metrics/nexmark/throughput"
-REAL_DIR = os.path.join(BASE_DIR, "real")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated")
+REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
 
 
 def load_data(filepath):
@@ -56,7 +56,7 @@ def compute_accuracy(real, sim):
 
 
 def parse_identifier(filename, appname):
-    base = filename.replace(".txt", "").replace("throughput-", "")
+    base = filename.replace(".txt", "").replace("terminated-throughput-real-", "").replace("terminated-throughput-sim-", "")
     return base[len(appname) + 1:]
 
 
@@ -64,7 +64,7 @@ def print_custom_table(results):
     W_ESC = 26
     W = 12
 
-    # Tabla principal (sin RMSE)
+    # Main table (sin RMSE)
     line1 = (
         f"{'':^{W_ESC}} | "
         f"{'Simulated':^{W*4}} | "
@@ -153,13 +153,13 @@ def scenario_key(identifier):
 
 def main():
     if len(sys.argv) < 2:
-        print("Use: python3 calculate_statistics_real_simulated.py <aplicacion>")
+        print("Use: python3 calculate_statistics_real_sim.py <aplicacion>")
         return
 
     appname = sys.argv[1]
 
-    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith(appname)]
-    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith(appname)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-throughput-real-" + appname)]
+    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith("terminated-throughput-sim-" + appname)]
 
     real_ids = {parse_identifier(f, appname): f for f in real_files}
     sim_ids  = {parse_identifier(f, appname): f for f in sim_files}
@@ -223,8 +223,8 @@ def main():
     # -------------------------
     # CSV
     # -------------------------    
-    csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim")
-    csv_name = f"throughput-real-sim-statics-{appname}.csv"
+    csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim/terminated")
+    csv_name = f"terminated-throughput-real-sim-statics-{appname}.csv"
     csv_path = os.path.join(csv_dir, csv_name)
 
     with open(csv_path, "w", newline="") as csvfile:

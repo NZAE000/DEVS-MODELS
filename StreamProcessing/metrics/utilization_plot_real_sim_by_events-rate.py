@@ -2,9 +2,10 @@ import os
 import sys
 import matplotlib.pyplot as plt
 
+# Paths
 BASE_DIR = "metrics/nexmark/utilization"
-REAL_DIR = os.path.join(BASE_DIR, "real")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated")
+REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
 
 # -------------------- Load Utilization File --------------------
 def load_util_file(path):
@@ -32,17 +33,17 @@ def load_util_file(path):
 # -------------------- Parse Scenario Identifier --------------------
 def parse_identifier(filename, app):
     """
-    Nombre del archivo:
-        q3-utilization-1-32-1-100000-5000.txt
+    File name:
+        terminated-utilization-sim-q3-1-32-1-100000-5000.txt or terminated-utilization-real-q3-1-32-1-100000-5000.txt 
         q<app>-utilization-nodes-cores-par-events-arrival.txt
 
-    Devuelve tuple:
+    Return tuple:
         (nodes, cores, par, events, arrival)
     """
-    base = filename.replace(".txt", "").replace(f"{app}-utilization-", "")
+    base = filename.replace(".txt", "").replace(f"terminated-utilization-sim-{app}-", "").replace(f"terminated-utilization-real-{app}-", "")
     parts = base.split("-")
     if len(parts) != 5:
-        raise ValueError(f"Nombre inválido: {filename}")
+        raise ValueError(f"Invalid name: {filename}")
     nodes, cores, par, events, arrival = parts
     return int(nodes), int(cores), int(par), int(events), int(arrival)
 
@@ -50,14 +51,14 @@ def parse_identifier(filename, app):
 # -------------------- Main --------------------
 def main():
     if len(sys.argv) != 5:
-        print("Uso:")
+        print("Use:")
         print(" python utilization_by_events_rate.py <app> <nodes> <cores> <parallelism>")
         return
 
-    app      = sys.argv[1]
-    nodes    = int(sys.argv[2])
-    cores    = int(sys.argv[3])
-    par      = int(sys.argv[4])
+    app   = sys.argv[1]
+    nodes = int(sys.argv[2])
+    cores = int(sys.argv[3])
+    par   = int(sys.argv[4])
 
     # ---------------------------------------------------------
     # Search files for specific cfg
@@ -66,7 +67,8 @@ def main():
     sim_files  = []
 
     for fname in os.listdir(REAL_DIR):
-        if fname.startswith(f"{app}-utilization-"):
+        if fname.startswith(f"terminated-utilization-real-{app}"):
+            print("aca")
             try:
                 n, c, p, ev, ar = parse_identifier(fname, app)
                 if n == nodes and c == cores and p == par:
@@ -75,7 +77,7 @@ def main():
                 continue
 
     for fname in os.listdir(SIM_DIR):
-        if fname.startswith(f"{app}-utilization-"):
+        if fname.startswith(f"terminated-utilization-sim-{app}"):
             try:
                 n, c, p, ev, ar = parse_identifier(fname, app)
                 if n == nodes and c == cores and p == par:
@@ -84,10 +86,10 @@ def main():
                 continue
 
     if not real_files:
-        print("No se encontraron archivos REAL para esa configuración.")
+        print("No REAL files were found for that configuration.")
         return
     if not sim_files:
-        print("No se encontraron archivos SIMULATED para esa configuración.")
+        print("No SIMULATED files were found for that configuration..")
         return
 
     # Convert to dict by scenary (events, arrival)
@@ -134,9 +136,9 @@ def main():
         sim_ops  = set(sim_runs[0].keys())
 
         if real_ops != sim_ops:
-            print("ERROR: NO coinciden los operadores en escenario events={}, arrival={}".format(ev, ar))
-            print("  Faltan en SIM:", real_ops - sim_ops)
-            print("  Faltan en REAL:", sim_ops - real_ops)
+            print("ERROR: The operators do not match in the scenario events={}, arrival={}".format(ev, ar))
+            print("  Missing from SIM:", real_ops - sim_ops)
+            print("  Missing from REAL:", sim_ops - real_ops)
             return
 
         if operators is None:
@@ -236,8 +238,8 @@ def main():
     # ----------------------------------------------------------
     # Export plot to PNG file
     # ----------------------------------------------------------
-    out_dir  = os.path.join(BASE_DIR, "graphics-real-sim")
-    out_name = f"utilization-real-sim-{app}-{nodes}-{cores}-{par}.png"
+    out_dir  = os.path.join(BASE_DIR, "plot-real-sim/terminated")
+    out_name = f"terminated-utilization-real-sim-{app}-{nodes}-{cores}-{par}.png"
     out_path = os.path.join(out_dir, out_name)
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
     

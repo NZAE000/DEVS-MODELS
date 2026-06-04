@@ -27,3 +27,8 @@ donde:
 ya que por ley de utilizacion:
 	
 	U(P,op) = TP(p) * occupEvent(P,op) / P  = "Througput por el tiempo medio de ocupacion, y dividir por P porque existen P instancias paralelas"
+
+
+q14
+q21
+q22

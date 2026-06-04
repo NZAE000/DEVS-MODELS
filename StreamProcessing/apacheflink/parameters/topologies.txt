@@ -30,3 +30,26 @@ calc10 nexmarkq311writer
 
 q8:
 
+
+
+q14:
+sourcedatagen1 calc2
+calc2 watermarkassigner3
+watermarkassigner3 minibatchassigner4
+minibatchassigner4 calc5
+calc5 nexmarkq146writer
+
+q21:
+sourcedatagen1 calc2
+calc2 watermarkassigner3
+watermarkassigner3 minibatchassigner4
+minibatchassigner4 calc5
+calc5 nexmarkq216writer
+
+q22:
+sourcedatagen1 calc2
+calc2 watermarkassigner3
+watermarkassigner3 minibatchassigner4
+minibatchassigner4 calc5
+calc5 nexmarkq226writer
+

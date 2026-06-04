@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 
 BASE_DIR = "metrics/nexmark/throughput"
-REAL_DIR = os.path.join(BASE_DIR, "real")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated")
+REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
 
 # ---------------------------------------------------------
 # Utilities
@@ -41,12 +41,13 @@ def parse_identifier_event_rate(identifier):
 def parse_identifier(filename, app):
     """
     Extract the primary identifier by removing 'q2-throughput-' and '.txt'
-    F.g:
-        q2-throughput-1-32-3-100000-5000.txt
+    F.g: 
+           terminated-throughput-real-q2-1-32-3-100000-5000.txt
+        or terminated-throughput-sim-q2-1-32-3-100000-5000.txt
     return:
         1-32-3-100000-5000
     """
-    base = filename.replace(".txt", "").replace("throughput-", "")
+    base = filename.replace(".txt", "").replace("terminated-throughput-real-", "").replace("terminated-throughput-sim-", "")
     return base[len(app) + 1:]  # +1 por guion tras 'q2'
 
 
@@ -83,8 +84,8 @@ def main():
     # -----------------------------------------------------
     # Filter files
     # -----------------------------------------------------
-    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith(app)]
-    sim_files  = [f for f in os.listdir(SIM_DIR)  if f.startswith(app)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-throughput-real-" + app)]
+    sim_files  = [f for f in os.listdir(SIM_DIR)  if f.startswith("terminated-throughput-sim-" + app)]
 
     # Identifiers
     real_ids = {}
@@ -98,7 +99,7 @@ def main():
         ident = parse_identifier(f, app)
         if ident.startswith(prefix):
             real_ids[ident] = f
-
+            
     for f in sim_files:
         ident = parse_identifier(f, app)
         if ident.startswith(prefix):
@@ -186,8 +187,8 @@ def main():
     # ----------------------------------------------------------
     # Export plot to PNG file
     # ----------------------------------------------------------
-    out_dir  = os.path.join(BASE_DIR, "graphics-real-sim")
-    out_name = f"throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(par)}.png"
+    out_dir  = os.path.join(BASE_DIR, "plot-real-sim/terminated")
+    out_name = f"terminated-throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(par)}.png"
     out_path = os.path.join(out_dir, out_name)
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.show()

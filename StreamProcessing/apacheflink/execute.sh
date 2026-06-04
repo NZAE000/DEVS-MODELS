@@ -5,6 +5,13 @@ PARALLELISM="$3"
 EVENTS="$4"
 TPS="$5"
 
+
+if [ $# -ne 5 ]; then
+    echo "Uso: bash execute.sh <app> <taskslots> <parallelism> <events> <tps>"
+    exit 1
+fi
+
+
 CPU_LOG="/tmp/cpu_${APP_NAME}_${TASKSLOTS}_${PARALLELISM}_${EVENTS}_${TPS}.log"
 
 # ============================

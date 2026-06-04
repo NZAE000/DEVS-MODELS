@@ -21,6 +21,7 @@ fi
 APP=$(grep '^app:' "$CFG_FILE"    | cut -d':' -f2 | xargs)
 NODES=$(grep '^nodes:' "$CFG_FILE" | cut -d':' -f2 | xargs)
 CORES=$(grep '^cores:' "$CFG_FILE" | cut -d':' -f2 | xargs)
+SLOTS=$(grep '^slots:' "$CFG_FILE" | cut -d':' -f2 | xargs)
 REQS=$(grep '^reqs:' "$CFG_FILE"   | cut -d':' -f2 | xargs)
 RATE=$(grep '^rate:' "$CFG_FILE"   | cut -d':' -f2 | xargs)
 REPEATS=$(grep '^per_exec:' "$CFG_FILE"   | cut -d':' -f2 | xargs)
@@ -44,6 +45,7 @@ echo "========================================"
 echo "Application      : $APP"
 echo "Nodes            : $NODES"
 echo "Cores per node   : $CORES"
+echo "Taskslots        : $SLOTS"
 echo "Requirements     : $REQS"
 echo "Rate             : $RATE"
 echo "Parallelism lvls : ${PARALLEL_LEVELS[*]}"
@@ -69,6 +71,7 @@ for P in "${PARALLEL_LEVELS[@]}"; do
             "$APP" \
             "$NODES" \
             "$CORES" \
+            "$SLOTS" \
             "$P" \
             "$REQS" \
             "$RATE"

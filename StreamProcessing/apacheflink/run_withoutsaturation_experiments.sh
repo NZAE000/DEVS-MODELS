@@ -22,6 +22,7 @@ fi
 APP=$(grep '^app:' "$CFG_FILE"     | cut -d':' -f2 | xargs)
 NODES=$(grep '^nodes:' "$CFG_FILE" | cut -d':' -f2 | xargs)
 CORES=$(grep '^cores:' "$CFG_FILE" | cut -d':' -f2 | xargs)
+SLOTS=$(grep '^slots:' "$CFG_FILE" | cut -d':' -f2 | xargs)
 PER_EXEC=$(grep '^per_exec:' "$CFG_FILE" | cut -d':' -f2 | xargs)
 SLEEP_TIME=$(grep '^sleep:' "$CFG_FILE" | cut -d':' -f2 | xargs)
 
@@ -51,6 +52,7 @@ echo "========================================"
 echo "Application        : $APP"
 echo "Nodes              : $NODES"
 echo "Cores per node     : $CORES"
+echo "Taskslots          : $SLOTS"
 echo "Loads (reqs-rate)  : ${LOADS[*]}"
 echo "Parallelism levels : ${PARALLEL_LEVELS[*]}"
 echo "Runs per config    : $PER_EXEC"
@@ -83,6 +85,7 @@ for LOAD in "${LOADS[@]}"; do
                 "$APP" \
                 "$NODES" \
                 "$CORES" \
+                "$SLOTS" \
                 "$P" \
                 "$REQS" \
                 "$RATE"
