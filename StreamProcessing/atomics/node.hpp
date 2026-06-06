@@ -110,12 +110,14 @@ public:
 
         checkExternalTransitionFromSwitch(mbs); // Check some location message of switch
 
-        std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
-        TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
-        if (this->state.processing_) {
+        std::vector<FLINK::Subtask_t*>& execs_prior    { this->state.taskman_.getPriorityExecutions() };
+        TIME                            lapse_prioriry { std::numeric_limits<TIME>::max()             };
+
+        if (this->state.processing_) 
+        {
             for (auto& subtask : execs_prior)
             {
-                bool recently = bag.size() && bag[0].mssg_id_ == subtask->mssg_id;
+                bool recently = bag.size() && bag[0].mssg_id_ == subtask->mssg_id_;
                 if (subtask->lapse_ >= e && !recently)
                     subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
                 if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
@@ -210,7 +212,7 @@ protected: // Son access (node_master).
         for (auto& subtask : execs_prior){
             if (subtask->lapse_ == lapse_prioriry) 
             {
-                FLINK::operId_t const& oper_id = state.taskman_.getSlot(subtask->slot_id).getOperator(); //getOperator(exec_prior.slot_id);
+                FLINK::operId_t const& oper_id = state.taskman_.getSlot(subtask->slot_id_).getOperator(); //getOperator(exec_prior.slot_id);
                 
                 // Know if send message or not according operator's selectivity probability.
                 double selectivity { jobman_.getOperatorProperties(oper_id).selectivity_ };
@@ -228,7 +230,7 @@ protected: // Son access (node_master).
                         //if (*oper_id_des == "nexmarkq26writer")
                         //    std::cout<<"size: "<<operDestinations.size()<< " oper_id: "<<oper_id_des<<'\n';
                         OperatorLocation_t location = jobman_.getOperLocationLessload(*oper_id_des);
-                        location.mssg_id_ = subtask->mssg_id; // Pass message.
+                        location.mssg_id_ = subtask->mssg_id_; // Pass message.
 
                         // Location in this node? store local pending.
                         if (location.node_id_ == state.id_){

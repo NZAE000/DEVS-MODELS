@@ -12,13 +12,14 @@ JobManager_t::getOperLocationLessload(operId_t const& oper_id) const noexcept
     std::vector<OperatorLocation_t> const& 
     locations = jobMaster_.getLocations(oper_id); // Get all operator's locations ( (node_id, slot_id)...).
     
-    OperatorLocation_t const* loc_less_congested {nullptr};
-    std::vector<OperatorLocation_t const*> free_locs{};
-    std::vector<OperatorLocation_t const*> locs_shorter_queue{};
+    OperatorLocation_t const*               loc_less_congested {nullptr};
+    std::vector<OperatorLocation_t const*>  free_locs{};
+    std::vector<OperatorLocation_t const*>  locs_shorter_queue{};
     free_locs.reserve(locations.size());
     locs_shorter_queue.reserve(locations.size());
 
-    uint32_t shorter_queue { std::numeric_limits<uint32_t>::max() }, n_tuple{};
+    uint32_t shorter_queue { std::numeric_limits<uint32_t>::max() };
+    uint32_t n_tuple       {};
 
     // Detect free slots or shorter tuples queue.
     for (auto const& loc : locations)
@@ -69,13 +70,7 @@ double
 JobManager_t::getTimeExecution(operId_t const& oper_id) const noexcept
 {   
     auto oper_props_iter = cluster_cfg_.operProps_.find(oper_id);
-    //double t_base { oper_props_iter->second.random_->generate() };
-    
-    // Apply model degradation
-    //double t_eff  { t_base * cluster_cfg_.interferency_ * cluster_cfg_.saturation_ * cluster_cfg_.p_inefficiency_ };
-    //return t_eff;
     return oper_props_iter->second.random_time_->generate();
-    //return oper_props_iter->second.distribution();
 }
 
 double 

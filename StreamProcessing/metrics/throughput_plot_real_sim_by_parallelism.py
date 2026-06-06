@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 BASE_DIR = "metrics/nexmark/throughput"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
 
 def load_data(filepath):
@@ -43,7 +43,7 @@ def parse_params(filename, app):
 
 def main():
     if len(sys.argv) < 6:
-        print("Use: python throughput_plot_real_simulated_by_parallelism.py <app> <nodes> <cores> <events> <rate>")
+        print("Use: python throughput_plot_real_sim_by_parallelism.py <app> <nodes> <cores> <events> <rate>")
         sys.exit(1)
 
     app     = sys.argv[1]

@@ -230,7 +230,6 @@ main(int arg, char** argv)
     
     // Capture and logg metrics (throughput system and operator utilizations).
     metric_logger.captureMetrics(cluster_cfg.rate_, to_second(finish_time), cluster_cfg.requeriments_);
-    metric_logger.printMetrics();   
     #if APPLY_LOG
         #if LOG_MOD
             metric_logger.logDynamicMetrics();
@@ -238,5 +237,7 @@ main(int arg, char** argv)
             metric_logger.logMetrics();
         #endif
     #endif
+    //metric_logger.printMetrics();   
+
     return 0;
 }

@@ -16016,9 +16016,288 @@ parecido a lo siguiente
 
 lo mismo en el eje x para la grafica de utilizacaiones. 
 En este caso de tener un rate, esperaba ver un solo tramo desde 0M a 1 M tanto en eje X como en Y en la graica del throughput, y lo mismo en el eje X para el grafico de utilizaciones.
+Te paso el script del throughput para que veas el asunto:
+
+
+Vale.  Ahora, necesito hcaer algo similar pero con los datos del sistema real de apache flink, y para ello, necesito antes medir y escribir las métricas 
+(cada 5 seg) mientras una aplicacios de apache flink se ejecuta, osea métricas dinámicas que cambian en el tiempo como en los casos anteriores.
+Para ello, he escrito un script que tiene ya la estructura inicial:
+
+#!/bin/bash
+
+APP_NAME="$1"
+NUM_MACHINES="$2"
+NUM_CORES="$3"
+TASKSLOTS="$4"
+PARALLELISM="$5"
+EVENTS="$6"
+TPS="$7"
+
+if [ $# -ne 7 ]; then
+    echo "Use: bash execute_and_log_dynamic_metrics.sh <app> <n_machines> <cores> <taskslots> <parallelism> <events> <tps>"
+    exit 1
+fi
+
+THROUGHPUT_PATH="../metrics/nexmark/throughput/real/dynamic"
+UTILIZATION_PATH="../metrics/nexmark/utilization/real/dynamic"
+CPU_UTIL_PATH="../metrics/nexmark/cpu_util/real/dynamic"
+THROUGHPUT_OUTFILE="dynamic-throughput-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}.txt"
+UTILIZATION_OUTFILE="dynamic-utilization-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}.txt"
+CPU_UTIL_OUTFILE="dynamic-cpu-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}.txt"
+CPU_LOG="/tmp/cpu_${APP_NAME}_${TASKSLOTS}_${PARALLELISM}_${EVENTS}_${TPS}.log"
+
+# ============================
+# Update flink parameters
+# ============================
+bash update_flink_cfg.sh $TASKSLOTS $PARALLELISM && bash update_nexmark_cfg.sh $EVENTS $TPS
+
+# ============================
+# Stop and init
+# ============================
+bash stop.sh && bash start.sh
+
+# ============================
+# Execute app
+# ============================
+bash run-query.sh $APP_NAME
+
+
+Que necesito:
+	
+	- Antes de "Update flink parameters", necesito:
+		- El archivo 'THROUGHPUT_OUTFILE' se escriba el rate (TPS),  con el siguiente formato: 'rate:', porque después de los ':' iran todas las mediciones tiempo y throughput, entonces el formato
+		es: 'rate:time1-throughput1 time2-throughput2 time3-throughput3 ... timeN-throughputN'
+		- Lo mismo para el archivo 'CPU_UTIL_OUTFILE' con el formato 'rate:', ya que luego iran todas las mediciones de tiempo y cpu, con el formato
+		'time1-cpu_util1 time2-cpu_util2 time3-cpu_util3 ... timeN-cpu_utilN'
+		- En el archivo 'UTILIZATION_OUTFILE' tambien escribir el rate,  pero sin ':', e inmediatamente un salto de linea, porque luego iran las mediciones de utilizacion de los operadores,
+		entonce el formato es:
+
+		rate
+		op1:[util1 util2 .. utilN]
+		op2:[util1 util2 .. utilN]
+		opN:[util1 util2 .. utilN]
+
+Por ejemplo:
+
+1000000 
+sourcedatagen1:[0.984395 0.987178 0.991426 0.993573 0.99486 0.995686 0.996311 0.996786 0.997132 0.99743 0.997646 0.997833 0.998013 0.998156 0.998286 0.998387 0.99847 0.998565 0.998645 0.998713 0.998775 0.998834 0.998885 0.998933 0.998969 0.999008 0.99905 0.999084 0.999112 0.999145 0.999173 0.999195 0.999218 0.999243 0.999267 0.999283 0.999306 0.999301 0.999343 0.999353 0.999373 0.999388 0.999402 0.999415 0.99943 0.999438 0.999451 0.999466 0.999468 0.999487 0.999496 0.999506 0.999515 0.999522 0.999533 0.999537 0.999539 0.999558 0.999561 0.999572 0.999578 0.999585 0.999591 0.999597 0.999606 0.999609 0.999617 0.999622 0.999628 0.999631 0.999636 0.999639 0.999648 0.999651 0.999656 0.999663 0.999667 0.999671 0.999674 0.999678 0.999681 0.999687 0.99969 0.999694 0.999699 0.9997 0.999704 0.999706 0.999712 0.999715 0.999718 0.99972 0.999724 0.999727 0.99973 0.999731 0.999735 0.999736 0.999741 0.999743 ]
+calc2:[0.428655 0.429888 0.431745 0.432684 0.433246 0.433608 0.433881 0.434088 0.434239 0.43437 0.434464 0.434546 0.434625 0.434688 0.434744 0.434788 0.434825 0.434866 0.434901 0.434931 0.434958 0.434984 0.435006 0.435027 0.435043 0.43506 0.435078 0.435093 0.435105 0.43512 0.435132 0.435142 0.435152 0.435162 0.435173 0.43518 0.43519 0.435188 0.435206 0.435211 0.43522 0.435226 0.435232 0.435238 0.435244 0.435248 0.435253 0.43526 0.435261 0.435269 0.435273 0.435277 0.435281 0.435285 0.435289 0.435291 0.435292 0.4353 0.435302 0.435307 0.435309 0.435312 0.435315 0.435318 0.435321 0.435323 0.435326 0.435328 0.435331 0.435332 0.435334 0.435336 0.43534 0.435341 0.435343 0.435346 0.435348 0.43535 0.435351 0.435353 0.435354 0.435357 0.435358 0.43536 0.435362 0.435362 0.435364 0.435365 0.435368 0.435369 0.43537 0.435371 0.435373 0.435374 0.435376 0.435376 0.435378 0.435378 0.43538 0.435381 ]
+watermarkassigner3:[0.268498 0.269271 0.270434 0.271022 0.271369 0.2716 0.271771 0.271898 0.271996 0.272078 0.272135 0.272188 0.272238 0.272277 0.272312 0.27234 0.272363 0.272387 0.272411 0.272428 0.272446 0.272461 0.272475 0.272488 0.272499 0.27251 0.272521 0.272531 0.272537 0.272547 0.272554 0.272561 0.272568 0.272574 0.27258 0.272585 0.272592 0.27259 0.272601 0.272604 0.27261 0.272614 0.272618 0.272621 0.272625 0.272628 0.272631 0.272635 0.272636 0.272641 0.272643 0.272646 0.272648 0.272651 0.272654 0.272655 0.272655 0.27266 0.272662 0.272665 0.272666 0.272668 0.272669 0.272671 0.272673 0.272675 0.272677 0.272678 0.27268 0.272681 0.272682 0.272683 0.272685 0.272686 0.272687 0.272689 0.27269 0.272691 0.272692 0.272693 0.272694 0.272696 0.272696 0.272698 0.272699 0.272699 0.2727 0.272701 0.272703 0.272703 0.272704 0.272705 0.272706 0.272707 0.272707 0.272708 0.272709 0.272709 0.272711 0.272711 ]
+minibatchassigner4:[0.258292 0.259035 0.260154 0.260713 0.261053 0.261276 0.261437 0.261563 0.261657 0.261736 0.26179 0.26184 0.261889 0.261927 0.26196 0.261988 0.26201 0.262033 0.262055 0.262073 0.26209 0.262104 0.262118 0.26213 0.262141 0.262151 0.262162 0.262171 0.262178 0.262187 0.262194 0.262201 0.262207 0.262212 0.262219 0.262223 0.26223 0.262229 0.262239 0.262242 0.262248 0.262252 0.262255 0.262259 0.262262 0.262265 0.262268 0.262271 0.262273 0.262277 0.262279 0.262282 0.262284 0.262287 0.262289 0.262291 0.262291 0.262296 0.262297 0.2623 0.262301 0.262303 0.262305 0.262306 0.262308 0.26231 0.262312 0.262313 0.262314 0.262316 0.262317 0.262318 0.26232 0.262321 0.262322 0.262324 0.262325 0.262326 0.262327 0.262328 0.262328 0.26233 0.262331 0.262332 0.262333 0.262333 0.262335 0.262335 0.262337 0.262337 0.262338 0.262339 0.26234 0.262341 0.262341 0.262342 0.262343 0.262343 0.262344 0.262345 ]
+calc5:[0.325188 0.326139 0.327554 0.328269 0.328697 0.328972 0.32918 0.329339 0.329454 0.329556 0.329625 0.329687 0.329747 0.329795 0.329838 0.329872 0.329899 0.329931 0.329958 0.32998 0.330001 0.33002 0.330037 0.330053 0.330065 0.330078 0.330092 0.330104 0.330113 0.330124 0.330133 0.330141 0.330148 0.330157 0.330165 0.33017 0.330178 0.330176 0.33019 0.330193 0.3302 0.330205 0.33021 0.330215 0.330219 0.330222 0.330226 0.330231 0.330232 0.330238 0.330241 0.330244 0.330247 0.33025 0.330253 0.330255 0.330255 0.330262 0.330263 0.330266 0.330268 0.330271 0.330273 0.330275 0.330277 0.330279 0.330281 0.330283 0.330285 0.330286 0.330288 0.330289 0.330292 0.330293 0.330294 0.330296 0.330298 0.330299 0.3303 0.330301 0.330302 0.330305 0.330306 0.330307 0.330308 0.330309 0.33031 0.330311 0.330313 0.330314 0.330315 0.330316 0.330317 0.330318 0.330319 0.330319 0.330321 0.330321 0.330322 0.330324 ]
+nexmarkq146writer:[0.0477723 0.046706 0.0470118 0.0474823 0.0476728 0.0476733 0.0477169 0.0478553 0.0478802 0.0478437 0.047951 0.0480016 0.0479196 0.0479118 0.0479357 0.0479726 0.0480151 0.048054 0.0481357 0.0481847 0.0480912 0.048089 0.0480305 0.0480806 0.0481076 0.0480669 0.0480905 0.0481124 0.0480599 0.0480543 0.0480536 0.0480613 0.0480585 0.0480693 0.0481107 0.0481076 0.0480984 0.0481106 0.0480863 0.0480818 0.0481143 0.0480834 0.0481487 0.0481517 0.048159 0.0481764 0.0481438 0.0481305 0.0481472 0.0481603 0.0481537 0.0481879 0.0481529 0.0481476 0.0481533 0.0481551 0.0481362 0.0481281 0.0481087 0.0481112 0.0481175 0.048143 0.0481275 0.0481333 0.0481429 0.0481541 0.0481554 0.0481553 0.0481379 0.0481572 0.0481656 0.0481628 0.0481345 0.0481413 0.0481412 0.0481236 0.048111 0.0481151 0.0481018 0.0480935 0.0480832 0.048091 0.0480784 0.0480457 0.0480342 0.0480298 0.0480447 0.0480351 0.0480472 0.0480399 0.0480535 0.0480549 0.0480531 0.0480319 0.0480371 0.0480257 0.0480162 0.0480197 0.0480228 0.0480213 ]
+		
+	- Despues, necesito que la ejecución "bash run-query.sh $APP_NAME" se ejecute en segundo plano, para luego en la siguente linea:
+		- Antes de empezar a medir, necesito esperar a que la aplicación se ejecute, y para ello, necesito saber en que estado esta la aplicación,
+		mediante el siguiente comando:  bash get_query.sh $(bash get_job_id.sh) | jq -r '.state'. 
+		Al inicio, puede tener valor 'null' o 'INITIALIZING', entonces la idea es mediante un blucle, que use el comando y se salga hasta que el estado sea 'RUNNING'.
+		- Después, necesito medir las métricas con un blucle, cada 5s, hasta que el estado del la aplicación termine, es decir que mida hasta que el estado llegue a 'FINISHED'.
+		- Dentro del bucle, necesito medir y registrar (nota: los scripts .sh que se muestran ya estan implementados):
+
+			- EL throughput actual, usando 2 comando para su calculo: 
+				- Para el tiempo actual acumulado:  ACCUM_TIME=$(bash get_query.sh $(bash get_job_id.sh) | jq -r '.duration')
+				- Para la cantidad actual de requerimientos: 	
+
+				for ((i=0; i<PARALLELISM; i++)); do
+        					req=$(bash get_suboperator_metrics.sh source $i | jq '.metrics["write-records"]')
+    					total_req=$(( total_req + req ))
+  				done
+
+				El tiempo necesito pasarlo a segundos, ya que esta en ms.
+				Necesito que ese valor de tiempo(s) y throughput (req/s) se almacene como una tupla (timei, throughputi) en una lista,
+				para cuando se termine la ejecucion, la lista se escriba en el archivo THROUGHPUT_OUTFILE
+				(recordar que el formato en ese archivo es 'rate:time1-throughput1 time2-throughput2 time3-throughput3 ... timeN-throughputN')
+
+			- Luego, las utilizcaiones de cada opeador, con el siguiente pseudo-comando:
+
+				Con el comando 'bash get_operator_names.sh', me duevuelve los nombres de todos los operadores en vertical, por ejemplo:
+					sourcedatagen1
+					calc2
+					watermarkassigner3
+					minibatchassigner4
+					calc5
+					nexmarkq146writer
+			
+				Necesito almacenarlos en una lista: [opername1, opername2, opernameN], y con un bucle, obtener el id para la obtencion de metricas para el calculo de utilizacion:
+				
+				for opername in [opername1, opername2, opernameN]:
+					id_op=$(bash get_oper_id.sh opername)		
+					
+				  	for ((i=0; i<PARALLELISM; i++)); do
+    						METRICS=$(bash get_suboperator_metrics.sh $id_op $i)
+    						busy=$(echo "$METRICS" | jq '.metrics["accumulated-busy-time"] // 0')
+    						total_acum_busy=$(echo "$total_acum_busy + $busy" | bc -l)
+  					done
+					ACUM_BUSY_TIME=$(echo "$total_acum_busy / 1000.0" | bc -l)  # To second.
+    					BUSY_TIME=$(echo "$ACUM_BUSY_TIME / $PARALLELISM" | bc -l)  # Avg
+    					UTILIZATION=$(echo "($BUSY_TIME) / $ACCUM_TIME" | bc -l)
+				
+				Entonces,  necesito una estructua mapa el cual se vayan almacenando todos los valores de UTILIZATION por clave de opername,
+				para cuando se temrine la ejecucion, el mapa se escriba en el archivo UTILIZATION_OUTFILE. Recordar que el formato es:
+						
+							rate
+							op1:[util1 util2 .. utilN]
+							op2:[util1 util2 .. utilN]
+							opN:[util1 util2 .. utilN]
+
+			- Y por ultimo, la metrica de utilizacion de cpu, obteniendo las utilizacines de cada core con el comando: mpstat -P ALL > "$CPU_LOG",
+			donde el formato CPU_LOG es como el siguiente ejemplo:
+
+			Linux 6.6.87.2-microsoft-standard-WSL2 (Bucefalo)       06/04/26        _x86_64_        (32 CPU)
+
+			03:00:43     CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+			03:00:43     all    0.81    0.00    0.45    0.01    0.00    0.05    0.00    0.00    0.00   98.68
+			03:00:43       0    0.50    0.00    0.90    0.02    0.00    1.05    0.00    0.00    0.00   97.53
+			03:00:43       1    0.78    0.00    0.31    0.04    0.00    0.28    0.00    0.00    0.00   98.58
+			03:00:43       2    0.86    0.00    0.63    0.02    0.00    0.06    0.00    0.00    0.00   98.43
+			03:00:43       3    0.62    0.00    0.25    0.04    0.00    0.06    0.00    0.00    0.00   99.03
+			03:00:43       4    0.84    0.00    0.62    0.02    0.00    0.02    0.00    0.00    0.00   98.50
+			03:00:43       5    0.65    0.00    0.26    0.05    0.00    0.02    0.00    0.00    0.00   99.03
+			03:00:43       6    0.96    0.00    0.64    0.02    0.00    0.01    0.00    0.00    0.00   98.38
+			03:00:43       7    0.67    0.00    0.25    0.05    0.00    0.01    0.00    0.00    0.00   99.02
+			03:00:43       8    0.93    0.00    0.63    0.01    0.00    0.00    0.00    0.00    0.00   98.42
+			03:00:43       9    0.69    0.00    0.25    0.00    0.00    0.00    0.00    0.00    0.00   99.05
+			03:00:43      10    0.96    0.00    0.63    0.01    0.00    0.00    0.00    0.00    0.00   98.40
+			03:00:43      11    0.73    0.00    0.23    0.00    0.00    0.00    0.00    0.00    0.00   99.03
+			03:00:43      12    0.95    0.00    0.63    0.01    0.00    0.00    0.00    0.00    0.00   98.41
+			03:00:43      13    0.70    0.00    0.24    0.00    0.00    0.00    0.00    0.00    0.00   99.06
+			03:00:43      14    0.98    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.37
+			03:00:43      15    0.76    0.00    0.25    0.00    0.00    0.00    0.00    0.00    0.00   98.99
+			03:00:43      16    0.94    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.41
+			03:00:43      17    0.70    0.00    0.25    0.00    0.00    0.00    0.00    0.00    0.00   99.05
+			03:00:43      18    0.91    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.44
+			03:00:43      19    0.70    0.00    0.24    0.00    0.00    0.00    0.00    0.00    0.00   99.06
+			03:00:43      20    0.88    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.47
+			03:00:43      21    0.63    0.00    0.25    0.00    0.00    0.00    0.00    0.00    0.00   99.12
+			03:00:43      22    0.91    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.44
+			03:00:43      23    0.78    0.00    0.24    0.00    0.00    0.00    0.00    0.00    0.00   98.98
+			03:00:43      24    0.96    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.39
+			03:00:43      25    0.76    0.00    0.24    0.00    0.00    0.00    0.00    0.00    0.00   99.00
+			03:00:43      26    0.94    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.40
+			03:00:43      27    0.77    0.00    0.25    0.00    0.00    0.00    0.00    0.00    0.00   98.98
+			03:00:43      28    0.99    0.00    0.64    0.01    0.00    0.00    0.00    0.00    0.00   98.36
+			03:00:43      29    0.84    0.00    0.24    0.00    0.00    0.00    0.00    0.00    0.00   98.92
+			03:00:43      30    0.89    0.00    0.63    0.01    0.00    0.00    0.00    0.00    0.00   98.47
+			03:00:43      31    0.66    0.00    0.23    0.00    0.00    0.00    0.00    0.00    0.00   99.11
+
+			Entonces, en ese tramo, necesito sacar el promedo de utilizacion de los cores es decir, 
+			promediar los valores de la columma %idle, pero restarlos con 100, para obtener el valor del porcentaje ocupado, sumarlos, y dividirlos por la cantida de cores.
+			Ese valor de utilizcaion, lamcenarlo como una tupla (timei,cpu_utili), donde timei es el valor calculado y almacenado en ACCUM_TIME.
+
+Construyeme el script .sh con todo lo indicado.
 
 
 
+Mejor que la version anterior, pero creo que hay un problama con la curva del throughput ideal: supongameos que las cantidad de tasas de arribo usadas son: 
+
+			1M,   2M,  3M, 4M, 5M
+	=> ideal:	1M, 2M, 3M, 4M, 5M
+
+pero me lo mustra como: 1M, 1M, 2M, 3M, 5M
+
+e incluso si uso las tasas:   1M, 2M, 4M, 6M
+		    => idal:  1M, 2M, 4M, 6M
+
+pero me lo muestra como  1M, 1M, 2M, 4M, 6M
+te paso la funcion y dime donde correjir:
+
+
+Vale, ahora necesitop hace lo mismo para el script de python del grafico de utilizaciones: Sin embargo, como no tengo el tiempo,
+quiero que sea como 'periodo de tiempo' desde 0 a 1 (noramlizado), por ende:
+
+	- Quiero que el eje X sea periodo de tiempo y que tenga las etiquetas 0, 0.2, 0.4, 0.6, 0.8, 1
+	- y mantener las tasasa de arribo debajo como se esta haciendo
+
+Te paso la funcion para que lo modifiques:
 
 
 
+Super, todo okey. Ahora, necesito un script en python que grafique la utilizacion de cpu a lo largo del tiempo. Recordando que el formato del archivo es: 'rate:time1,cpuutil1 time2,cpuutil2 time3,cpuutil3 ... timeN,cpuutilN'.
+Por ejemplo:
+
+1000000:3.338000,1.418125 4.340000,1.418125 5.343000,1.418125 6.351000,1.418125 7.357000,1.418125 8.361000,1.418125
+
+Necesito que la grafica siga la misma idea:
+
+	- Eje X el tiempo acumulado, y debajo la tasa centrada
+	- Eje Y la utilizaion de cpu, desde 0 a 100
+
+La ruta del achivo es:
+
+filename = (
+        f"metrics/nexmark/cpu_util/real/dynamic/dynamic-cpu-real-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+
+
+Todo okey. Tengo los script tanto para graficar throughput. utilizacion y cpu a lo largo del tiempo. 
+Que neecsito, pues un script en phthon para graficar el throughput dynamico del sistema real vs simulado.
+Ambos archvos siguen el mismo formato: 'rate:time1,through1 time2,through2 ... timeN through N'.
+Las rutas de los archivos son:
+
+filename_real = (
+        f"metrics/nexmark/throughput/real/dynamic/dynamic-throughput-real-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+filename_sim = (
+        f"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+Manten la mismo idea de la curva de throughput ideal, el tiempo en eje X y debajo las tasas centradas.
+NOTA: 
+	- Verifica que ambos archivos contengan las mismas tasas
+	- Ten en cuenta que los tiempos no son perfectos, puede diferir entre inicio y fin, pero estan en un perido casi identico.
+	- Tambien, la cantidad de datos tamien son distintos, ya que probablemente las cantidad de deatos en el simulado tengan mas que en el real, o viceversa.
+
+
+
+Super, ahora necesito un script en python para las utilizaciones real vs simulated a lo largo del perido de tiempo. Ambos archivos tienen el mismo formato:
+
+		rate
+		op1:[util1 util2 .. utilN]
+		op2:[util1 util2 .. utilN]
+		opN:[util1 util2 .. utilN]
+
+Las rutas estan en:
+
+    filename_real = (
+        f"metrics/nexmark/utilization/real/dynamic/dynamic-utilization-real-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+    filename_sim = (
+        f"metrics/nexmark/utilization/sim/dynamic/dynamic-utilization-sim-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+
+Recuerda que en el eje x va el periodo desde 0 hasta 1: 0, 0.2, 0.4, 0.6, 0.8, 1, y debajo las tasas centradas.
+NOTA:
+	- Verifica que ambos archivos contengan las mismas tasas y la misma cantida de oepradores con sus mismos nombres
+	- Tambien, la cantidad de datos tamien son distintos, ya que probablemente las cantidad de detos en el simulado tengan mas que en el real, o viceversa.
+
+
+curl -s "${FLINK_URL}/jobs/${JOB_ID}/vertices/${OPER_ID}/subtasks/${i} | jq '.metrics["write-records"]'
+
+
+Hola, ya sabes que estoy implementando un simulador para plataformas de stream processing. mI problemas es que cuando la cantidad de requerimentios es demaciado grande, el simulador demora de manear no lineal, sino creo que exponencial, y cero que ya detecte el problema: 
+
+tengo una siguiente estructura:
+
+std::map<coreId_t, std::vector<Subtask_t>>  exec_buffers_;           // Cores here!.
+
+
+perteneciente a la calse taskmanager, donde se almacenan todas las subtareas de cada core.
+La clase, al llamar al constructor, llamo a reserve de 1000000 de cada vector de sibtareas para tener elespacio suficiente y que no hallan reservas
+en medio de la ejecucion. Sin embargo, al momento de elimnar las ejecuciones prioritarias, es decir las que estan al inicio del vector:
+
+buffer.erase(buffer.begin()); // Very slow !!
+
+
+eso esta matando la optimizacion de tiempo porque si hay muchos elemenos, debe mover todos los elementos.
+
+Mi idea es amntener laas ejecucines prioridades siempre al final del vector, o, usar otra estructura, por ejempo una pila,
+pero nose si la pila seria eficiente porque nose como es su estructura interna.

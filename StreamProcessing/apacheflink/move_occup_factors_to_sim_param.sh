@@ -1,15 +1,15 @@
 #!/bin/bash
 
 ###############################################################################
-# generate_factor_params.sh
+# move_occup_factors_to_sim_param.sh
 #
 # Uso:
 #
-#   ./generate_factor_params.sh <app> <parallelism>
+#   ./move_occup_factors_to_sim_param.sh <app> <parallelism>
 #
 # Ejemplo:
 #
-#   ./generate_factor_params.sh q3 16
+#   ./move_occup_factors_to_sim_param.sh q3 16
 #
 ###############################################################################
 

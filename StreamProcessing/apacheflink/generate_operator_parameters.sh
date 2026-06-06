@@ -13,31 +13,30 @@ OPERLIST_DIR="operators/operators_list.txt"
 
 OUTPUT_PROP_FILE="../input_data/operator.txt"
 OUTPUT_TOPO_FILE="../input_data/topology.txt"
+OUTPUT_DEG_FILE="../input_data/degradation.txt"
+OUTPUT_OCCUP_FILE="../input_data/extraoccupation.txt"
 
 SCALE=1000000000   # ms → ps
 
 # Clean outputs
 > "$OUTPUT_PROP_FILE"
 > "$OUTPUT_TOPO_FILE"
+> "$OUTPUT_DEG_FILE"
+> "$OUTPUT_OCCUP_FILE"
+
+# Write degradation factors by default.
+printf "%d %d %d %d %f\n" "0" "0" "0" "0" "1.0" >> "$OUTPUT_DEG_FILE"
+
 
 echo "[INFO] Generating operator's parameters..."
 
 #######################################################################
 # 1. GENERAR operator.txt
 #######################################################################
-
 while IFS=';' read -r OPER_ID OPER_NAME PARALLELISM NEXTS SHIP_STRATEGY; do
 
     FILE="$METRICS_DIR"/"$OPER_NAME".txt
     echo "[INFO] Processing $OPER_NAME ..."
-
-    #num_records_in=$(grep "numRecordsIn;" "$FILE" | cut -d';' -f2)
-    #num_records_out=$(grep "numRecordsOut;" "$FILE" | cut -d';' -f2)
-    #SELECTIVITY=1.0
-#
-    #if [[ "$num_records_out" != "0.0" && "$num_records_in > 0" ]]; then
-    #    SELECTIVITY=$(echo "$num_records_out / $num_records_in" | bc -l)
-    #fi
 
     read_records=$(grep "read-records;" "$FILE" | cut -d';' -f2)
     write_records=$(grep "write-records;" "$FILE" | cut -d';' -f2)
@@ -46,6 +45,9 @@ while IFS=';' read -r OPER_ID OPER_NAME PARALLELISM NEXTS SHIP_STRATEGY; do
     if [[ "$write_records" != "0" && "$read_records > 0" ]]; then
         SELECTIVITY=$(echo "$write_records / $read_records" | bc -l)
     fi
+
+    # Write occupation factor inemdiatly by default.
+    printf "%-20s %f\n" "$OPER_NAME" "1.0" >> "$OUTPUT_OCCUP_FILE"
 
     busy_time_ps=$(echo "$(grep "accumulateBusyTimeMs;" "$FILE" | cut -d';' -f2) * $SCALE" | bc -l)
     stddev_ps=$(echo "$(grep "mailboxLatencyMs_stddev;" "$FILE" | cut -d';' -f2) * $SCALE" | bc -l)
@@ -114,6 +116,7 @@ while IFS=';' read -r OPER_ID OPER_NAME PARALLELISM NEXTS SHIP_STRATEGY; do
         "$OPER_NAME" "$PARALLELISM" "$DIST" "$ARGS" "$SHIP_STRATEGY" "$SELECTIVITY" \
         >> "$OUTPUT_PROP_FILE"
 
+
 done < "$OPERLIST_DIR"
 
 echo "[SUCCESS] operator.txt generated."
@@ -121,12 +124,10 @@ echo "[SUCCESS] operator.txt generated."
 #######################################################################
 # 2. GENERAR topology.txt usando SOLO operators_list.txt
 #######################################################################
-
 echo "[INFO] Generating topology from operators_list.txt..."
 
 # operators_list.txt ya está en orden source→sink
 # Formato: ID ; NAME ; PAR ; NEXT1-NEXT2 ; SHIP
-
 while IFS=';' read -r ID NAME PAR NEXTS SHIP; do
 
     # NEXTS puede ser: "0" o "A-B-C"

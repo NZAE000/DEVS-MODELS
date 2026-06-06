@@ -9,14 +9,14 @@ EVENTS="$6"
 TPS="$7"
 
 if [ $# -ne 7 ]; then
-    echo "Uso: bash execute_and_log.sh <app> <n_machines> <cores> <taskslots> <parallelism> <events> <tps>"
+    echo "Use: bash execute_and_log_metrics.sh <app> <n_machines> <cores> <taskslots> <parallelism> <events> <tps>"
     exit 1
 fi
 
-THROUGHPUT_ABSPATH="../metrics/nexmark/throughput/real"
-UTILIZATION_ABSPATH="../metrics/nexmark/utilization/real"
-THROUGHPUT_OUTFILE="${APP_NAME}-throughput-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
-UTILIZATION_OUTFILE="${APP_NAME}-utilization-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
+THROUGHPUT_PATH="../metrics/nexmark/throughput/real/terminated"
+UTILIZATION_PATH="../metrics/nexmark/utilization/real/terminated"
+THROUGHPUT_OUTFILE="terminated-throughput-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
+UTILIZATION_OUTFILE="terminated-utilization-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
 
 # ============================
 # Execute app
@@ -43,7 +43,7 @@ THROUGHPUT=$(echo "$EVENTS / $FINISH_TIME" | bc -l)
 # ============================
 # Store f_time and throughbput
 # ============================
-printf "%.4f %.4f\n" "$FINISH_TIME" "$THROUGHPUT" >> "$THROUGHPUT_ABSPATH/$THROUGHPUT_OUTFILE"
+printf "%.4f %.4f\n" "$FINISH_TIME" "$THROUGHPUT" >> "$THROUGHPUT_PATH/$THROUGHPUT_OUTFILE"
 
 # =======================================================
 # Obtain metrics per operator to calculate utilization
@@ -78,14 +78,14 @@ while IFS=';' read -r OPER_ID RAW_NAME PAR; do
     
     # Store in file.
     #printf "%-25s %-15s %-15.4f %-15.4f %-15s\n" "$NAME" "$PAR" "$ACUM_BUSY_TIME" "$BUSY_TIME" "$UTILIZATION"
-    printf "%s:%s;" "$NAME" "$UTILIZATION" >> "$UTILIZATION_ABSPATH/$UTILIZATION_OUTFILE"
+    printf "%s:%s;" "$NAME" "$UTILIZATION" >> "$UTILIZATION_PATH/$UTILIZATION_OUTFILE"
 
 done < <(jq -r '.vertices[] | "\(.id);\(.name);\(.parallelism)"' "$PLAN_JSON")
-printf "\n" >> "$UTILIZATION_ABSPATH/$UTILIZATION_OUTFILE"
+printf "\n" >> "$UTILIZATION_PATH/$UTILIZATION_OUTFILE"
 #echo "Total time: $TOTAL_ACUM_BUSY_TIME" 
 
 rm $PLAN_JSON
 
 printf "\nRecords added: \n" # %.4f s %.4f req/s\n" "$FINISH_TIME" "$THROUGHPUT"
-printf "\t$THROUGHPUT_ABSPATH/$THROUGHPUT_OUTFILE\n\t$UTILIZATION_ABSPATH/$UTILIZATION_OUTFILE\n"
+printf "\t$THROUGHPUT_PATH/$THROUGHPUT_OUTFILE\n\t$UTILIZATION_PATH/$UTILIZATION_OUTFILE\n"
 

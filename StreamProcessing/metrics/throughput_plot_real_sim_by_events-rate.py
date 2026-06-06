@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 BASE_DIR = "metrics/nexmark/throughput"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
 # ---------------------------------------------------------
 # Utilities
@@ -68,9 +68,9 @@ def sci_not(n):
 def main():
     if len(sys.argv) < 5:
         print("Use:")
-        print("  python throughput_plot_real_simulated_by_events-rate.py <app> <nodes> <cores> <parallelism>")
+        print("  python throughput_plot_real_sim_by_events-rate.py <app> <nodes> <cores> <parallelism>")
         print("Example:")
-        print("  python throughput_plot_real_simulated_by_events-rate.py q2 1 32 3")
+        print("  python throughput_plot_real_sim_by_events-rate.py q2 1 32 3")
         return
 
     app   = sys.argv[1]
@@ -111,7 +111,7 @@ def main():
     common_ids = sorted(set(real_ids.keys()) & set(sim_ids.keys()), key=scenario_key_evt_rate)
 
     if not common_ids:
-        print("There are no common real/simulated scenarios for this configuration.")
+        print("There are no common real/sim scenarios for this configuration.")
         return
 
     #print("Scenarios found (event-rate):")

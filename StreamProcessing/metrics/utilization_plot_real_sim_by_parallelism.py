@@ -8,13 +8,13 @@ from collections import defaultdict, OrderedDict
 # Paths
 BASE_DIR = "metrics/nexmark/utilization"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
 def read_util_file(path):
     """
-    Lee un archivo de utilization con líneas del tipo:
+    Read a utilization file with lines of the type:
       operA:0.123;operB:0.456;...;
-    Devuelve: dict operador -> lista de valores (una lista por cada línea)
+    Return: dict operador -> list of values ​​(one list per line)
     """
     op_values = defaultdict(list)
     with open(path, "r") as f:
@@ -38,7 +38,7 @@ def read_util_file(path):
 def mean_per_operator(op_values):
     """
     op_values: dict operator -> [v1, v2, ...]
-    devuelve dict operator -> mean(v)
+    return dict operator -> mean(v)
     """
     return {op: float(np.mean(vals)) if vals else 0.0 for op, vals in op_values.items()}
 
@@ -84,7 +84,7 @@ def main():
     events  = sys.argv[4]
     arrival = sys.argv[5]
 
-    #print(f"\nComparando utilization real vs simulated para:")
+    #print(f"\nComparando utilization real vs sim para:")
     #print(f" app={app}, nodes={nodes}, cores={cores}, events={events}, arrival={arrival}\n")
 
     # List files
@@ -109,10 +109,10 @@ def main():
             sim_map[ident] = f
 
     if not real_map:
-        print("No se encontraron archivos REAL para esa configuración.")
+        print("No REAL files were found for that configuration.")
         return
     if not sim_map:
-        print("No se encontraron archivos SIMULATED para esa configuración.")
+        print("No SIMULATED files were found for that configuration..")
         return
 
     # Check parallelism levels presence in both sides
@@ -126,17 +126,17 @@ def main():
     missing_in_real = sorted(list(sim_set - real_set), key=lambda x: int(x.split('-')[2]))
 
     if missing_in_sim:
-        print("ERROR: faltan niveles de paralelismo en SIMULATED para esta configuración:")
+        print("ERROR: SIMULATED lacks parallelism levels for this configuration:")
         for m in missing_in_sim:
             print("  -", m)
-        print("Terminado.")
+        print("Terminated.")
         sys.exit(1)
 
     if missing_in_real:
-        print("ERROR: faltan niveles de paralelismo en REAL para esta configuración:")
+        print("ERROR: There are no REAL parallelism levels for this configuration:")
         for m in missing_in_real:
             print("  -", m)
-        print("Terminado.")
+        print("Terminated.")
         sys.exit(1)
 
     # Use sorted parallelism levels (by integer value of 'par')
@@ -171,14 +171,14 @@ def main():
             missing_ops_in_sim = sorted(list(real_ops - sim_ops))
             missing_ops_in_real = sorted(list(sim_ops - real_ops))
             if missing_ops_in_sim:
-                print(f"ERROR: Para escenario {ident}, faltan operadores en SIMULATED:")
+                print(f"ERROR: For scenario {ident}, operators are missing in SIM:")
                 for op in missing_ops_in_sim:
                     print("   -", op)
             if missing_ops_in_real:
-                print(f"ERROR: Para escenario {ident}, faltan operadores en REAL:")
+                print(f"ERROR: For scenario {ident}, operators are missing in REAL:")
                 for op in missing_ops_in_real:
                     print("   -", op)
-            print("Terminado debido a operadores faltantes.")
+            print("Terminated due to missing operators.")
             sys.exit(1)
 
         # Initialize operator_set from first ident, and check it remains the same across idents
@@ -189,12 +189,12 @@ def main():
                 # find where it differs
                 diff1 = operator_set - set(real_means.keys())
                 diff2 = set(real_means.keys()) - operator_set
-                print(f"ERROR: El conjunto de operadores cambió en {ident}.")
+                print(f"ERROR: The operator set changed in {ident}.")
                 if diff1:
-                    print("  Faltan operadores (antes presentes):", diff1)
+                    print("  Missing operators (previously present):", diff1)
                 if diff2:
-                    print("  Nuevos operadores aparecieron:", diff2)
-                print("Terminado.")
+                    print("  New operators appeared:", diff2)
+                print("Terminated.")
                 sys.exit(1)
 
         real_stats[ident] = real_means

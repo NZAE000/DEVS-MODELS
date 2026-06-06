@@ -1,0 +1,2 @@
+sourcedatagen1:0.999972;calc2:0.647089;watermarkassigner3:0.413848;minibatchassigner4:0.428736;calc5:0.51003;nexmarkq146writer:0.0612403;
+sourcedatagen1:0.999974;calc2:0.660881;watermarkassigner3:0.438806;minibatchassigner4:0.41883;calc5:0.521101;nexmarkq146writer:0.0621844;

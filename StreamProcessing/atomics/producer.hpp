@@ -46,16 +46,18 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     using const_iter = typename std::map<TIME, double>::const_iterator;
 
     MLogger_t<double>&             metricLogger_;
-    myrandom::Uniform_t            uni_distr_{0, 1};
-    uint32_t                       requeriments_{};
-    double                         rate_{};
+    myrandom::Uniform_t            uni_distr_       {0, 1};
+    uint32_t                       requeriments_    {};
+    double                         rate_            {};
     std::map<TIME, double> const&  arrivalRates_;
-    TIME                           arrival_time_ {0};
-    TIME                           current_time_ {0};
+    TIME                           arrival_time_    {0};
+    TIME                           current_time_    {0};
     const_iter                     current_rate_;
     const_iter                     next_rate_;
-    bool                           generating_ {true};
+    bool                           generating_      {true};
     std::ofstream                  log_rate;
+    uint32_t                       accum_sent_rec_source_{};
+    uint32_t                       reqs_to_captute_ {1};
 
     // Exponential distribution
     [[nodiscard]] double 
@@ -168,10 +170,10 @@ public:
 
         ++this->state;
 
-        //#if LOG_MOD
-        //if (this->state % 1000 == 0)
-        //    metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state);
-        //#endif
+        #if LOG_MOD
+        if (this->state % 100 == 0)
+            metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state);
+        #endif
     }
     #else // Producer has only 1 rate and stop when n requeriments are finished.
     void internal_transition()
@@ -215,17 +217,26 @@ public:
         current_time_ += arrival_time_;
 
         ++this->state;
-
+        
         #if LOG_MOD
-        if (this->state % 1000 == 0)
-            metricLogger_.captureMetrics(this->rate_, to_second(current_time_), this->state);
+        if (this->state % reqs_to_captute_ == 0)
+        {
+            ClusterConfig_t::operId_t const& source_oper_id = *this->metricLogger_.getClusterCFG().begin_op;
+            uint32_t sent_rec_accum = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].sent_records_accum_;
+            //if (sent_rec_accum != this->accum_sent_rec_source_)
+            //{
+                this->accum_sent_rec_source_ = sent_rec_accum;
+                metricLogger_.captureMetrics(this->rate_, to_second(current_time_), sent_rec_accum);
+
+                if (this->state < 200) reqs_to_captute_ += 2;
+                else                   reqs_to_captute_ += 500;
+        }
         #endif
     }
     #endif
 };
 
-
-} // namespace streeamprcs
+} // namespace streeamprcss
 
 #endif // _PRODUCER_HPP__
 

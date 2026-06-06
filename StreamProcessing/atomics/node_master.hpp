@@ -73,12 +73,13 @@ public:
         }
         else if (this->state.taskman_.pendingExecutions())
         {
-            std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
-            TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
-            if (this->state.processing_) {
+            std::vector<FLINK::Subtask_t*>& execs_prior    { this->state.taskman_.getPriorityExecutions() };
+            TIME                            lapse_prioriry { std::numeric_limits<TIME>::max()             };
+            if (this->state.processing_) 
+            {
                 for (auto& subtask : execs_prior)
                 {
-                    bool recently = (prod_bag.size() && prod_bag[0].id_ == subtask->mssg_id) || (bag.size() && bag[0].mssg_id_ == subtask->mssg_id);
+                    bool recently = (prod_bag.size() && prod_bag[0].id_ == subtask->mssg_id_) || (bag.size() && bag[0].mssg_id_ == subtask->mssg_id_);
                     if (subtask->lapse_ >= e && !recently){
                         subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
                     }
@@ -132,7 +133,7 @@ private:
         // get_messages<>: to get the message bag from the port (in this case input port).
         // Uses a template parameter for the port we want to access, in this case, the 'in' port, defined by typename NodeMaster_defs::in.
         vector<Message_t> 
-        bag_in_port_src = get_messages<typename Node_defs::in_source>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
+        bag_in_port_src = get_messages<typename Node_defs::in_source>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<Message_t>) for us).
         auto size_bag { bag_in_port_src.size() };
         if (size_bag > 1) assert(false && "One message at a time");
 

@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 # Paths
 BASE_DIR = "metrics/nexmark/utilization"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
 # -------------------- Load Utilization File --------------------
 def load_util_file(path):
     """
-    Lee líneas:   op1:val1;op2:val2;...
-    Devuelve lista de dicts: [{op: val, ...}, ...]
+    Read lines:   op1:val1;op2:val2;...
+    Returns a list of dicts: [{op: val, ...}, ...]
     """
     results = []
     with open(path, "r") as f:
@@ -107,9 +107,9 @@ def main():
         missing_in_real = sim_scen - real_scen
 
         if missing_in_sim:
-            print("ERROR: faltan escenarios EN SIMULATED:", missing_in_sim)
+            print("ERROR: scenarios are missing in SIMULATED:", missing_in_sim)
         if missing_in_real:
-            print("ERROR: faltan escenarios EN REAL:", missing_in_real)
+            print("ERROR: scenarios are missing in REAL:", missing_in_real)
         return
 
     # Order scenaries by arrival rate (smallest to largest)

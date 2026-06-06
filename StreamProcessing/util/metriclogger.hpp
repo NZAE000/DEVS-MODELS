@@ -87,11 +87,11 @@ namespace streamprcss {
         std::map<rate_t,            uint32_t>                        captures_       {};
 
         #if LOG_MOD
-        inline static constexpr char const* DYNAMIC_THROUGHPUT_BASE_PATH     {"metrics/nexmark/throughput/simulated/dynamic/dynamic-throughput-sim-"};
-        inline static constexpr char const* DYNAMIC_UTILIZATION_BASE_PATH    {"metrics/nexmark/utilization/simulated/dynamic/dynamic-utilization-sim-"};
+        inline static constexpr char const* DYNAMIC_THROUGHPUT_BASE_PATH     {"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"};
+        inline static constexpr char const* DYNAMIC_UTILIZATION_BASE_PATH    {"metrics/nexmark/utilization/sim/dynamic/dynamic-utilization-sim-"};
         #else
-        inline static constexpr char const* TERMINATED_THROUGHPUT_BASE_PATH  {"metrics/nexmark/throughput/simulated/terminated/terminated-throughput-sim-"};
-        inline static constexpr char const* TERMINATED_UTILIZATION_BASE_PATH {"metrics/nexmark/utilization/simulated/terminated/terminated-utilization-sim-"};
+        inline static constexpr char const* TERMINATED_THROUGHPUT_BASE_PATH  {"metrics/nexmark/throughput/sim/terminated/terminated-throughput-sim-"};
+        inline static constexpr char const* TERMINATED_UTILIZATION_BASE_PATH {"metrics/nexmark/utilization/sim/terminated/terminated-utilization-sim-"};
         #endif
         inline static constexpr std::size_t MAX_NUM_METRICS { 100000000 };
         inline static constexpr double PS_TO_S              { 1e12      };

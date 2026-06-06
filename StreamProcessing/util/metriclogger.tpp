@@ -172,7 +172,7 @@ namespace streamprcss {
             out_throughput_result << static_cast<uint32_t>(rate * PS_TO_S)  <<':'; // req/ps to res/s.
             for (auto const& sysmetric : sys_metrics) 
             {
-                out_throughput_result << sysmetric.elapsed_time_ <<'-'<< sysmetric.throughput_<<' ';
+                out_throughput_result << sysmetric.elapsed_time_ <<','<< sysmetric.throughput_<<' ';
             }
             out_throughput_result << '\n';
         }

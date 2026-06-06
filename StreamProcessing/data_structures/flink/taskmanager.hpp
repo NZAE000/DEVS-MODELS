@@ -8,24 +8,12 @@
 #include<iostream>
 #include<string>
 #include<map>
+#include "executionbuffer.hpp"
 #include "taskslot.hpp"
 #include "../operator_location.hpp"
 
-//Time class header
-#include <NDTime.hpp>
-using TIME = NDTime;
 
 namespace FLINK {
-
-struct Subtask_t {
-
-    Subtask_t(mssgId_t mssgid, slotId_t sid, TIME const& time)
-    : mssg_id{mssgid}, slot_id{sid}, lapse_{time} {}
-
-    mssgId_t mssg_id;
-    slotId_t slot_id;
-    TIME     lapse_;
-};
 
 
 struct JobManager_t; // Forward declaration
@@ -36,9 +24,9 @@ struct TaskManager_t {
     : n_cores_{n_cores} 
     {
         //std::cout<<"NCORES: "<<n_cores<<"\n";
-        for (coreId_t i=0; i<n_cores; ++i) 
-            exec_buffers[i].reserve(1000);
-
+        for (coreId_t i=0; i < n_cores; ++i) 
+            exec_buffers_.insert({i, ExecutionBuffer_t(SUBTASKS_CAPACITY)});
+ 
         priority_execs_.reserve(n_cores);
         slots_used_.reserve(n_cores);
     }
@@ -55,18 +43,20 @@ struct TaskManager_t {
     std::size_t                             pendingExecutions()                       const noexcept;
     std::size_t                             executing()                               const noexcept;
     auto const&                             getExecBuffers()                          const noexcept 
-    { return exec_buffers; }
+    { return exec_buffers_; }
 
 private:
     void createSubTask(JobManager_t&, TaskSlot_t&, mssgId_t, slotId_t) noexcept;
 
-    std::map<coreId_t, std::vector<Subtask_t>>  exec_buffers;           // Cores here!.
-    std::map<slotId_t, TaskSlot_t>              taskslots_;            // Slots here!. 
-    mutable std::vector<Subtask_t*>             priority_execs_;
-            std::vector<slotId_t>               slots_used_;
-    coreId_t                                    n_cores_{1};
-    slotId_t                                    next_slot_id_ {0};
-    mutable std::size_t                         current_execs_{0};
+    std::map<coreId_t, ExecutionBuffer_t>  exec_buffers_;           // Cores here!.
+    std::map<slotId_t, TaskSlot_t>         taskslots_;             // Slots here!. 
+    mutable std::vector<Subtask_t*>        priority_execs_;
+            std::vector<slotId_t>          slots_used_;
+    coreId_t                               n_cores_{1};
+    slotId_t                               next_slot_id_ {0};
+    mutable std::size_t                    current_execs_{0};
+
+    inline static constexpr std::size_t    SUBTASKS_CAPACITY {10000000};
 };
 
 } // namespace FLINK

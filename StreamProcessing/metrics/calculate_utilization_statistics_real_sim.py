@@ -7,7 +7,7 @@ import csv
 # Paths
 BASE_DIR = "metrics/nexmark/utilization"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
 # -------------------------
 # LOAD
@@ -429,7 +429,7 @@ def main():
 
         writer.writerow(row)
 
-    print(f"\nCSV generado: {csv_path}\n")
+    print(f"\nCSV generated to: {csv_path}\n")
 
 
 if __name__ == "__main__":

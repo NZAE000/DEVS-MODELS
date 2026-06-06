@@ -7,7 +7,7 @@ import csv
 
 BASE_DIR = "metrics/nexmark/throughput"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "simulated/terminated")
+SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
 
 def load_data(filepath):
@@ -42,7 +42,7 @@ def compute_rmse(r, s):
 
 def compute_accuracy(real, sim):
     """
-    Accuracy = 1 − |real − simulated| / real
+    Accuracy = 1 − |real − sim| / real
     Y limitada a máximo 1.0 (100%)
     """
     real = float(real)
@@ -270,7 +270,7 @@ def main():
                 f"{row[4]:.6f}".replace('.', ',')
             ])
 
-    print(f"\nCSV generado: {csv_path}\n")
+    print(f"\nCSV generated to: {csv_path}\n")
 
 
 if __name__ == "__main__":
