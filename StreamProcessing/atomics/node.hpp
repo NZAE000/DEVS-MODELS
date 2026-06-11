@@ -54,7 +54,7 @@ public:
         state_type(uint32_t n_cores) 
         : taskman_{n_cores} {}
 
-        FLINK::nodeId_t              id_ {nextID++};
+        FLINK::nodeId_t              id_ {NEXT_ID_++};
         bool                         processing_{false};
         mutable FLINK::TaskManager_t taskman_{1};
     };
@@ -71,7 +71,7 @@ public:
         // Terminate what was executed.
         std::vector<FLINK::slotId_t> const& slot_ids_used { state.taskman_.terminatePriorityExecutions() };
         
-        // Before, schedule pending requeriments (if there are pending). 
+        // Before, schedule internal pending requeriments (if there are pending). 
         for (auto& location : this->internal_pendings_){
             state.taskman_.scheduleExec(location.mssg_id_, location.slot_id_, jobman_);
         } internal_pendings_.clear(); // Clear pendings.
@@ -85,11 +85,11 @@ public:
         // Is there some pending execution? get his execution time and set processing to active.
         if (state.taskman_.pendingExecutions())
         {            
-            std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
+            std::vector<FLINK::ActiveSubtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
             TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
 
-            for (auto& subtask : execs_prior)
-                if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
+            for (auto& a_subtask : execs_prior)
+                if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
 
             this->lapse_time_       = lapse_prioriry;  // Update lapse.
             this->state.processing_ = true;
@@ -110,13 +110,14 @@ public:
 
         checkExternalTransitionFromSwitch(mbs); // Check some location message of switch
 
-        std::vector<FLINK::Subtask_t*>& execs_prior    { this->state.taskman_.getPriorityExecutions() };
-        TIME                            lapse_prioriry { std::numeric_limits<TIME>::max()             };
+        std::vector<FLINK::ActiveSubtask_t*>& execs_prior    { this->state.taskman_.getPriorityExecutions() };
+        TIME                                  lapse_prioriry { std::numeric_limits<TIME>::max()             };
 
         if (this->state.processing_) 
         {
-            for (auto& subtask : execs_prior)
-            {
+            for (auto& a_subtask : execs_prior)
+            {   
+                auto* subtask { a_subtask->subtask_ };
                 bool recently = bag.size() && bag[0].mssg_id_ == subtask->mssg_id_;
                 if (subtask->lapse_ >= e && !recently)
                     subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
@@ -124,8 +125,8 @@ public:
             }
         }
         else {
-            for (auto& subtask : execs_prior)
-                if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
+            for (auto& a_subtask : execs_prior)
+                if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
             state.processing_ = true;
         }      
         lapse_time_ = lapse_prioriry;
@@ -190,7 +191,7 @@ protected: // Son access (node_master).
         bag_in_port = get_messages<typename Node_defs::in>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
         
         auto size_bag { bag_in_port.size() };
-        if (size_bag > 1) assert(false && "One message at a time");
+        if (size_bag > 1) assert(false && "[Node]: One message at a time");
         
         if (size_bag) {
             auto const [mssg_id, _, slot_id] = *bag_in_port.begin();
@@ -202,39 +203,39 @@ protected: // Son access (node_master).
     void searchNextOperatorDestinations(vector<OperatorLocation_t>& bag_out_port) const
     {
         // Find less lapse execution.
-        std::vector<FLINK::Subtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
-        TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
-        for (auto& subtask : execs_prior){
-            if (subtask->lapse_ < lapse_prioriry) lapse_prioriry = subtask->lapse_;
+        std::vector<FLINK::ActiveSubtask_t*>& execs_prior     { this->state.taskman_.getPriorityExecutions()  };
+        TIME                                  lapse_prioriry  { std::numeric_limits<TIME>::max()              };
+        for (auto& a_subtask : execs_prior){
+            if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
         }
         
         // Then get the operator that was running for get their next destinations.
-        for (auto& subtask : execs_prior){
-            if (subtask->lapse_ == lapse_prioriry) 
+        for (auto& a_subtask : execs_prior){
+            if (a_subtask->subtask_->lapse_ == lapse_prioriry) 
             {
-                FLINK::operId_t const& oper_id = state.taskman_.getSlot(subtask->slot_id_).getOperator(); //getOperator(exec_prior.slot_id);
+                FLINK::operId_t const& oper_id = state.taskman_.getSlot(a_subtask->subtask_->slot_id_).getOperator(); //getOperator(exec_prior.slot_id);
                 
                 // Know if send message or not according operator's selectivity probability.
-                double selectivity { jobman_.getOperatorProperties(oper_id).selectivity_ };
+                double selectivity { this->jobman_.getOperatorProperties(oper_id).selectivity_ };
                 if (selectivity < 1.0 && unidistr_.generate() > selectivity) continue; // Don't send mensaje to destination.
                 
-                if (!jobman_.lastOperator(oper_id)) // Haven't reached the last operator?
+                if (!this->jobman_.lastOperator(oper_id)) // Haven't reached the last operator?
                 {
                     this->jobman_.accumSentRecords(oper_id, 1); // Accumulate send messages.
                     
-                    vector<FLINK::operId_t const*> const& 
-                    operDestinations = jobman_.getOperatorDestinations(oper_id);
+                    vector<FLINK::operId_t> const& 
+                    operDestinations = this->jobman_.getOperatorDestinations(oper_id);
                     
                     // Get balanced destiny locations for each destiny opeartor.
-                    for (auto const* oper_id_des : operDestinations) {
+                    for (auto const oper_id_des : operDestinations) {
                         //if (*oper_id_des == "nexmarkq26writer")
                         //    std::cout<<"size: "<<operDestinations.size()<< " oper_id: "<<oper_id_des<<'\n';
-                        OperatorLocation_t location = jobman_.getOperLocationLessload(*oper_id_des);
-                        location.mssg_id_ = subtask->mssg_id_; // Pass message.
+                        OperatorLocation_t location = this->jobman_.getOperLocationLessload(oper_id_des);
+                        location.mssg_id_           = a_subtask->subtask_->mssg_id_; // Pass message.
 
                         // Location in this node? store local pending.
                         if (location.node_id_ == state.id_){
-                            //state.taskman_.scheduleExec(location.mssg_id, location.slot_id, jobman_);
+                            //state.taskman_.scheduleExec(location.mssg_id, location.slot_id, this->jobman_);
                             internal_pendings_.emplace_back(location);
                         }
                         else { // The operator is in other node.
@@ -253,13 +254,12 @@ protected: // Son access (node_master).
 
     //const TIME exec_time_{0,0,0,0,5}; // Excecution time
 protected:
-    TIME                    lapse_time_{0}; // Time left until next departure.
-    FLINK::JobManager_t&    jobman_;
-
+    TIME                                lapse_time_ {0}; // Time left until next departure.
+    FLINK::JobManager_t&                jobman_;
 private:
-    inline static FLINK::nodeId_t       nextID {0};
-    mutable vector<OperatorLocation_t>  internal_pendings_{}; 
-    mutable myrandom::Uniform_t         unidistr_{0.0, 1.0};
+    inline static FLINK::nodeId_t       NEXT_ID_            {0};
+    mutable vector<OperatorLocation_t>  internal_pendings_  {}; 
+    mutable myrandom::Uniform_t         unidistr_           {0.0, 1.0};
 };
 
 } // namespace streamprcs

@@ -263,20 +263,20 @@ private:
         //lapse_us     %= 1'000;
 
         // Descompose time
-        int lapse_ns { static_cast<int>(uniform_distr_.generate()) }; // Uniform distribution send time.
-        int lapse_hr  = lapse_ns / 3'600'000'000'000;  // 3.6e12
-        lapse_ns     %= 3'600'000'000'000;
-        int lapse_min = lapse_ns / 60'000'000'000;      // 6e10
-        lapse_ns     %= 60'000'000'000;
-        int lapse_s   = lapse_ns / 1'000'000'000;       // 1e9
-        lapse_ns     %= 1'000'000'000;
-        int lapse_ms  = lapse_ns / 1'000'000;           // 1e6
-        lapse_ns     %= 1'000'000;
-        int lapse_us  = lapse_ns / 1'000;               // 1e3
-        lapse_ns     %= 1'000;
+        //int lapse_ns { static_cast<int>(uniform_distr_.generate()) }; // Uniform distribution send time.
+        //int lapse_hr  = lapse_ns / 3'600'000'000'000;  // 3.6e12
+        //lapse_ns     %= 3'600'000'000'000;
+        //int lapse_min = lapse_ns / 60'000'000'000;      // 6e10
+        //lapse_ns     %= 60'000'000'000;
+        //int lapse_s   = lapse_ns / 1'000'000'000;       // 1e9
+        //lapse_ns     %= 1'000'000'000;
+        //int lapse_ms  = lapse_ns / 1'000'000;           // 1e6
+        //lapse_ns     %= 1'000'000;
+        //int lapse_us  = lapse_ns / 1'000;               // 1e3
+        //lapse_ns     %= 1'000;
         
-        //send_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
-        send_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us,lapse_ns}; // hrs::mins:secs:mills:micrs::(nns):pcs::fms
+        //send_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us,lapse_ns}; // hrs::mins:secs:mills:micrs::(nns):pcs::fms
+        send_time_ = uniform_distr_.generate();
         state.transmitting_ = true;
     }
 };

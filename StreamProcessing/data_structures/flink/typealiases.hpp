@@ -14,6 +14,6 @@ using mssgId_t = uint32_t;
 using nodeId_t = uint32_t;
 using coreId_t = uint32_t;
 using slotId_t = uint32_t;
-using operId_t = std::string;
+using operId_t = uint32_t;
     
 } // namespace FLINK

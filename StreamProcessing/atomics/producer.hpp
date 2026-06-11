@@ -63,22 +63,27 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     [[nodiscard]] double 
     expo_distr(double rd, double lambda) const noexcept { return -(1/lambda)*std::log(1-rd); }
 
-    double to_second(TIME const& time)
-    {
-        
-        return static_cast<double>(
-            time.getHours()         *  3600 +
-            time.getMinutes()       *    60 +
-            time.getSeconds()       *     1 +
-            time.getMilliseconds()  *  1e-3 +
-            time.getMicroseconds()  *  1e-6 +
-            time.getNanoseconds()   *  1e-9 +
-            time.getPicoseconds()   * 1e-12 +
-            time.getFemtoseconds()  * 1e-15
-        );
-    }
+    //double to_second(TIME const& time)
+    //{
+    //    
+    //    return static_cast<double>(
+    //        time.getHours()         *  3600 +
+    //        time.getMinutes()       *    60 +
+    //        time.getSeconds()       *     1 +
+    //        time.getMilliseconds()  *  1e-3 +
+    //        time.getMicroseconds()  *  1e-6 +
+    //        time.getNanoseconds()   *  1e-9 +
+    //        time.getPicoseconds()   * 1e-12 +
+    //        time.getFemtoseconds()  * 1e-15
+    //    );
+    //}
 
 public:
+
+    [[nodiscard]] static constexpr double to_second(TIME const& time)
+    {
+        return time * 1e-12;
+    }
 
     Producer_t() {};
 
@@ -130,7 +135,7 @@ public:
             }
              
             #if LOG_MOD
-            metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state); // Capture metrics!
+            metricLogger_.captureMetrics(current_rate_->second, current_time_, to_second(current_time_), this->state); // Capture metrics!
             #endif
 
             current_rate_ = next_rate_; // Pass to next rate
@@ -139,40 +144,41 @@ public:
         }
         
         // Generate time
-        int lapse_ps {};
+        TIME lapse_ps {};
         do {
-            lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second)));
+            //lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second)));
+            lapse_ps = expo_distr(uni_distr_.generate(), current_rate_->second);
         } while (lapse_ps < 0);
         
         // Descompose time
-        int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
-        lapse_ps    %=  3'600'000'000'000'000;
-
-        int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
-        lapse_ps     %= 60'000'000'000'000;
-
-        int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
-        lapse_ps   %= 1'000'000'000'000;
-
-        int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
-        lapse_ps    %= 1'000'000'000;
-
-        int lapse_us = lapse_ps / 1'000'000;              // 1e6
-        lapse_ps    %= 1'000'000;
-
-        int lapse_ns = lapse_ps / 1'000;                  // 1e3
-        lapse_ps    %= 1'000;
+        //int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
+        //lapse_ps    %=  3'600'000'000'000'000;
+//
+        //int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
+        //lapse_ps     %= 60'000'000'000'000;
+//
+        //int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
+        //lapse_ps   %= 1'000'000'000'000;
+//
+        //int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
+        //lapse_ps    %= 1'000'000'000;
+//
+        //int lapse_us = lapse_ps / 1'000'000;              // 1e6
+        //lapse_ps    %= 1'000'000;
+//
+        //int lapse_ns = lapse_ps / 1'000;                  // 1e3
+        //lapse_ps    %= 1'000;
 
         //std::cout<<"lapse: "<<lapse<<"\n";
         //std::cout<<"prod: hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<" ns: "<<lapse_ns<<" ps: "<<lapse_ps<<"\n";
-        arrival_time_ = {lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
+        arrival_time_ = lapse_ps;//{lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
         current_time_ += arrival_time_;
 
         ++this->state;
 
         #if LOG_MOD
         if (this->state % 100 == 0)
-            metricLogger_.captureMetrics(current_rate_->second, to_second(current_time_), this->state);
+            metricLogger_.captureMetrics(current_rate_->second, current_time_, to_second(current_time_), this->state);
         #endif
     }
     #else // Producer has only 1 rate and stop when n requeriments are finished.
@@ -186,34 +192,35 @@ public:
         }
 
         // Generate time
-        int lapse_ps {};
+        TIME lapse_ps {};
         do{
-            lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), this->rate_)));
+            //lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), this->rate_)));
+            lapse_ps = expo_distr(uni_distr_.generate(), this->rate_);
         } while (lapse_ps < 0);
         
         // Descompose time
-        int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
-        lapse_ps    %=  3'600'000'000'000'000;
-
-        int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
-        lapse_ps     %= 60'000'000'000'000;
-
-        int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
-        lapse_ps   %= 1'000'000'000'000;
-
-        int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
-        lapse_ps    %= 1'000'000'000;
-
-        int lapse_us = lapse_ps / 1'000'000;              // 1e6
-        lapse_ps    %= 1'000'000;
-
-        int lapse_ns = lapse_ps / 1'000;                  // 1e3
-        lapse_ps    %= 1'000;
+        //int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
+        //lapse_ps    %=  3'600'000'000'000'000;
+//
+        //int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
+        //lapse_ps     %= 60'000'000'000'000;
+//
+        //int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
+        //lapse_ps   %= 1'000'000'000'000;
+//
+        //int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
+        //lapse_ps    %= 1'000'000'000;
+//
+        //int lapse_us = lapse_ps / 1'000'000;              // 1e6
+        //lapse_ps    %= 1'000'000;
+//
+        //int lapse_ns = lapse_ps / 1'000;                  // 1e3
+        //lapse_ps    %= 1'000;
 
         //std::cout<<"lapse: "<<lapse<<"\n";
         //std::cout<<"prod: hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<" ns: "<<lapse_ns<<" ps: "<<lapse_ps<<"\n";
         //arrival_time_ = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us}; // hrs::mins:secs:mills:(micrs)::nns:pcs::fms
-        arrival_time_ = {lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
+        arrival_time_ = lapse_ps;//{lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
         current_time_ += arrival_time_;
 
         ++this->state;
@@ -221,8 +228,8 @@ public:
         #if LOG_MOD
         if (this->state % reqs_to_captute_ == 0)
         {
-            ClusterConfig_t::operId_t const& source_oper_id = *this->metricLogger_.getClusterCFG().begin_op;
-            uint32_t sent_rec_accum = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].sent_records_accum_;
+            ClusterConfig_t::operId_t source_oper_id = this->metricLogger_.getClusterCFG().begin_op_;
+            uint32_t sent_rec_accum                  = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].sent_records_accum_;
             //if (sent_rec_accum != this->accum_sent_rec_source_)
             //{
                 this->accum_sent_rec_source_ = sent_rec_accum;

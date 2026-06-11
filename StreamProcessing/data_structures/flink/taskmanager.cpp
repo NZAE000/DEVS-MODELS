@@ -12,7 +12,7 @@
 namespace FLINK {
 
 [[nodiscard]] slotId_t 
-TaskManager_t::reserveSlot(operId_t const& oper_id) noexcept
+TaskManager_t::reserveSlot(operId_t const oper_id) noexcept
 {
     auto pair = taskslots_.insert(std::pair<slotId_t, operId_t const&>(next_slot_id_++, oper_id));
     return pair.first->first;
@@ -31,7 +31,7 @@ TaskManager_t::getSlot(slotId_t id) noexcept
     return *const_cast<TaskSlot_t*>(&slot);
 }
 
-std::map<slotId_t, TaskSlot_t> const&
+std::unordered_map<slotId_t, TaskSlot_t> const&
 TaskManager_t::getSlots() const noexcept
 {
     return taskslots_;
@@ -62,9 +62,9 @@ TaskManager_t::checkQueuedExecution(slotId_t slot_id, JobManager_t& jobMan) noex
 void 
 TaskManager_t::createSubTask(JobManager_t& jobMan, TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_id) noexcept 
 {    
-    operId_t const& operid            { slot.getOperator() };
-    double          exec_lapse        {};
-    double          prod_improd_lapse {}; // Productive + Improductive time.
+    operId_t const& operid     { slot.getOperator() };
+    TIME     exec_lapse        {};
+    TIME     prod_improd_lapse {}; // Productive + Improductive time.
     
     do {
         exec_lapse        = jobMan.getTimeExecution(operid);            // Get avg time excecution of some distribution.
@@ -74,112 +74,108 @@ TaskManager_t::createSubTask(JobManager_t& jobMan, TaskSlot_t& slot, mssgId_t ms
 
     // Accumulate operator busy time (to sec).
     jobMan.accumBusyTime(operid, exec_lapse / 1000000000000);
-    //jobMan.getOperatorProperties(operid).accum_busy_time_ += (prod_improd_lapse / 1000000000000); // to sec.
-    //if (operid == "sourcedatagen1")
-    //    std::cout<<operid<<", slot: "<<slot_id<<", acumm: "<<jobMan.getOperatorProperties(operid).accum_busy_time_ <<'\n';
-
-    // Time with degradation.
-    int lapse_ps { static_cast<int>(std::round(prod_improd_lapse)) };
-
-    // Descompose time
-    int lapse_hr  = lapse_ps / 3'600'000'000'000'000;   // 3.6e15
-    lapse_ps     %=  3'600'000'000'000'000;
-    int lapse_min = lapse_ps / 60'000'000'000'000;      // 6e13
-    lapse_ps     %= 60'000'000'000'000;
-    int lapse_s   = lapse_ps / 1'000'000'000'000;       // 1e12
-    lapse_ps     %= 1'000'000'000'000;
-    int lapse_ms  = lapse_ps / 1'000'000'000;           // 1e9
-    lapse_ps     %= 1'000'000'000;
-    int lapse_us  = lapse_ps / 1'000'000;               // 1e6
-    lapse_ps     %= 1'000'000;
-    int lapse_ns  = lapse_ps / 1'000;                   // 1e3
-    lapse_ps     %= 1'000;
-
-    //std::cout<<"Lapse: "<< lapse_ps <<", hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<" ns: "<<lapse_ns<<" ps: "<<lapse_ps<<"\n";
-    TIME timeExec = {lapse_hr,lapse_min,lapse_s,lapse_ms,lapse_us,lapse_ns,lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
     
-    ExecutionBuffer_t*      bufferLessCongestion { nullptr };
-    uint32_t                id_core_select       { 0 };
-    std::size_t             n_exec_less          { std::numeric_limits<uint32_t>::max() };
-
     // Search core buffer with less congestion.
-    for (auto& [id_core, buffer] : this->exec_buffers_)
+    ExecutionBuffer_t* less_loaded_buff { nullptr };
+    std::size_t        n_exec_less      { std::numeric_limits<uint32_t>::max() };
+    coreId_t           core_id_select   {};
+    for (coreId_t core_id=0; core_id < this->n_cores_; ++core_id)
     {
-        auto n_exec { buffer.size() };
+        auto& buffer { this->exec_buffers_[core_id] };
+        auto n_exec  { buffer.size() };
         if (n_exec <= n_exec_less) 
         {
-            n_exec_less          = n_exec;
-            bufferLessCongestion = &buffer;
-            id_core_select       = id_core;
+            n_exec_less      = n_exec;
+            less_loaded_buff = &buffer;
+            core_id_select   = core_id;
         }
     }
 
-    // Add execution to buffer.
-    bufferLessCongestion->emplace({mssg_id, slot_id, timeExec});
+    // Add subtask to less loaded buffer.
+    less_loaded_buff->emplace({mssg_id, slot_id, prod_improd_lapse});
     slot.setUsing(true);
+    ++this->pending_execs_; // Update!
 
-    // Slot added recently is priority? set active in execution.
-    for (auto& priority_exec : getPriorityExecutions()){
-        if (priority_exec->slot_id_ == slot_id){           
-            slot.setActive(true);                         
-            break;
-        }
+    // Slot added recently is priority? Set active in execution.
+    if (less_loaded_buff->size() == 1)
+    {
+        slot.setActive(true);
+        less_loaded_buff->activateSubtask(core_id_select, this->priority_execs_.size());    // Activate the subprocess with stored core id and position index.
+        this->priority_execs_.emplace_back(&less_loaded_buff->getActiveSubtask());          // Add active subtask to priorities.
+        ++this->current_execs_; // Update!
     }
 }
 
-std::vector<Subtask_t*>& 
+std::vector<ActiveSubtask_t*>& 
 TaskManager_t::getPriorityExecutions() noexcept
 {
-    this->priority_execs_.clear(); // Keep capacity.
-    for (auto& [id_core, buffer] : this->exec_buffers_)
-    {
-        if (!buffer.empty())
-            this->priority_execs_.push_back(&buffer.front()); // Collect priority executions.
-    }
     return this->priority_execs_;
 }
-
 
 std::vector<slotId_t> const&
 TaskManager_t::terminatePriorityExecutions() noexcept
 {
-    this->slots_used_.clear(); // Keep capacity.
-    TIME                     less_exec_time { std::numeric_limits<TIME>::max() };
-    std::vector<Subtask_t*>& priority_execs { getPriorityExecutions()          };
+    //std::cout<<"aca\n";
+    TIME less_exec_time {std::numeric_limits<TIME>::max()};
+    TIME lapse          {};
 
     // Detect subtask with less exec time.
-    for (auto& subtask_prior : priority_execs){
-        if (subtask_prior->lapse_ < less_exec_time)
-            less_exec_time = subtask_prior->lapse_;
-    }
-    //std::cout<<"prior execs: "<<priority_execs.size()<<'\n';
-
-    // CORE PARALLELISM: Subtract the least amount of time from priority executions and eliminate what remains at 0.
-    TIME t_zero {0};
-    for (auto& [_, buffer] : this->exec_buffers_){
+    for (auto const& buffer : this->exec_buffers_){   
         if ( !buffer.empty() )
         {
-            // Subtract shortest time execution.
-            Subtask_t& subtask { buffer.front() };
-            subtask.lapse_ -= less_exec_time;
+            lapse = buffer.front().lapse_;
+            if (lapse < less_exec_time)
+                less_exec_time = lapse;
+        }
+    }
+
+    // CORE PARALLELISM: Subtract the least amount of time from priority executions and eliminate what remains at 0.
+    TIME const  t_zero       {0};
+    slotId_t    slot_id_used {};
+    this->slots_used_.clear(); // Keep capacity.
+
+    for (coreId_t core_id=0; core_id < this->n_cores_; ++core_id)
+    {
+        auto& buffer { this->exec_buffers_[core_id] };
+        if ( !buffer.empty() )
+        {
+            // Subtract the shortest execution time from the active subtask.
+            ActiveSubtask_t& active_subtask = buffer.getActiveSubtask();
+            Subtask_t* subtask              = active_subtask.subtask_;
+            subtask->lapse_                -= less_exec_time;
             
-            if (subtask.lapse_ == t_zero) // Finished?
+            if (subtask->lapse_ == t_zero) // Finished?
             {
                 // Free slot.
-                slotId_t slot_id_used { subtask.slot_id_ };
-                getSlot(slot_id_used).setActive(false);
-                getSlot(slot_id_used).setUsing(false);
+                slot_id_used     = subtask->slot_id_;
+                TaskSlot_t& slot = getSlot(slot_id_used);
+                slot.setActive(false);
+                slot.setUsing(false);
+                this->slots_used_.emplace_back(slot_id_used);
+                
+                // Delete execution from priorities.
+                uint32_t idx_priority { active_subtask.idx_priority_ };
+                if (idx_priority != this->priority_execs_.size() - 1)  // Isn't the end?, copy the end to current.
+                {  
+                    this->priority_execs_[idx_priority] = this->priority_execs_.back();
+                    this->priority_execs_[idx_priority]->idx_priority_= idx_priority; // Update!
+                }
+                this->priority_execs_.pop_back(); // And drop last.
 
                 //buffer.erase(buffer.begin()); // Very slow !!
                 buffer.pop();
-
-                this->slots_used_.push_back(slot_id_used);
                 
-                if ( buffer.size() ) { // Execution pending.
-                    Subtask_t& subtask { buffer.front() }; // Get priority.
-                    slotId_t   slot_id { subtask.slot_id_ };
-                    getSlot(slot_id).setActive(true); // setUsing(true) is already in buffer.
+                // Is there queued execution?
+                if ( buffer.size() ) 
+                {
+                    Subtask_t& subtask { buffer.front() };                                // Get priority.
+                    getSlot(subtask.slot_id_).setActive(true);                            // setUsing(true) is already in buffer.
+                    buffer.activateSubtask(core_id, this->priority_execs_.size());        // Activate the subprocess with stored core id and position index.
+                    this->priority_execs_.emplace_back(&buffer.getActiveSubtask());       // Add active subtask to priorities.
                 }
+                else --this->current_execs_; // Update!
+
+                --this->pending_execs_; // Update!
             }
         }
     }
@@ -189,24 +185,13 @@ TaskManager_t::terminatePriorityExecutions() noexcept
 std::size_t  
 TaskManager_t::pendingExecutions() const noexcept
 {
-    std::size_t n_exec_pending {0};
-    this->current_execs_ = 0;
-    for (auto& [id_core, buffer] : this->exec_buffers_)
-    {
-        auto buffize { buffer.size() };
-        if (buffize){
-            ++current_execs_;
-            n_exec_pending += buffize;//buffer.size();
-        }
-        //std::cout<<"core "<<id_core<<": "<<buffize<<'\n';
-    }
-    return n_exec_pending;
+    return this->pending_execs_;
 }
 
 std::size_t 
 TaskManager_t::executing() const noexcept
 {
-    return current_execs_;
+    return this->current_execs_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

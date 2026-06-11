@@ -6,6 +6,7 @@
 */
 #pragma once
 #include "taskmanager.hpp"
+#include "taskslot.hpp"
 #include "../operator_location.hpp"
 
 namespace FLINK {
@@ -13,13 +14,18 @@ namespace FLINK {
 
 struct ResourceManager_t {
 
-    void agregateResource(nodeId_t, TaskManager_t&)                noexcept;
-    slotId_t assignResource(operId_t const&, nodeId_t)             noexcept;
-    TaskSlot_t const& slotFrom(OperatorLocation_t const&)    const noexcept;
-    TaskSlot_t& slotFrom(OperatorLocation_t const&)                noexcept;
+    explicit ResourceManager_t(uint32_t n_nodes)
+    {
+        refResources_.reserve(n_nodes);
+    }
+
+    void               registerResource(TaskManager_t&)               noexcept;
+    slotId_t           assignResource(operId_t const, nodeId_t)       noexcept;
+    TaskSlot_t const&  slotFrom(OperatorLocation_t const&)      const noexcept;
+    TaskSlot_t&        slotFrom(OperatorLocation_t const&)            noexcept;
 
 private:
-    std::map<nodeId_t, TaskManager_t*> refResources_;
+    std::vector<TaskManager_t*> refResources_{};
 };
 
 } // namespace FLINK

@@ -16299,5 +16299,4 @@ buffer.erase(buffer.begin()); // Very slow !!
 
 eso esta matando la optimizacion de tiempo porque si hay muchos elemenos, debe mover todos los elementos.
 
-Mi idea es amntener laas ejecucines prioridades siempre al final del vector, o, usar otra estructura, por ejempo una pila,
-pero nose si la pila seria eficiente porque nose como es su estructura interna.
+Mi idea es amntener laas ejecucines prioridades siempre al final del vector, o, usar otra estructura.

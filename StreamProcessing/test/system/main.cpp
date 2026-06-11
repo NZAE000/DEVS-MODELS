@@ -30,24 +30,26 @@ using namespace std;
 using namespace cadmium;
 //using namespace cadmium::basic_models::pdevs;
 
-using TIME = NDTime;
+using TIME = double;
 
 template<typename T>
 using MLogger_t = streamprcss::mylogger::MetricLogger_t<T>;
 
-double to_second(TIME const& time)
-{
-    return static_cast<double>(
-        time.getHours()         *  3600 +
-        time.getMinutes()       *    60 +
-        time.getSeconds()       *     1 +
-        time.getMilliseconds()  *  1e-3 +
-        time.getMicroseconds()  *  1e-6 +
-        time.getNanoseconds()   *  1e-9 +
-        time.getPicoseconds()   * 1e-12 +
-        time.getFemtoseconds()  * 1e-15
-    );
-}
+//double to_second(TIME const& time)
+//{
+//    return static_cast<double>(
+//        time.getHours()         *  3600 +
+//        time.getMinutes()       *    60 +
+//        time.getSeconds()       *     1 +
+//        time.getMilliseconds()  *  1e-3 +
+//        time.getMicroseconds()  *  1e-6 +
+//        time.getNanoseconds()   *  1e-9 +
+//        time.getPicoseconds()   * 1e-12 +
+//        time.getFemtoseconds()  * 1e-15
+//    );
+//}
+
+
 
 // Input and output ports of the Cluster coupled model
 namespace Cluster_defs {
@@ -57,17 +59,16 @@ namespace Cluster_defs {
 int 
 main(int arg, char** argv)
 {
-
-    ClusterConfig_t      cluster_cfg   {argv[1]};
-    FLINK::JobManager_t  JobManager    {cluster_cfg};
-    MLogger_t<double>    metric_logger {cluster_cfg};
+    ClusterConfig_t      cluster_cfg   { argv[1]     };
+    FLINK::JobManager_t  JobManager    { cluster_cfg };
+    MLogger_t<TIME>      metric_logger { cluster_cfg };
 
     //std::cout<<"distr: " << cluster_cfg.operProps_["op1"].distribution()<<"\n";
 
 /****** Productor atomic model instantiation *******************/
     shared_ptr<dynamic::modeling::model> productor;
     productor = dynamic::translate::make_dynamic_atomic_model<streamprcss::Producer_t, TIME, MLogger_t<double>&>("productor", metric_logger, "simulation_results/system/rate_change.txt");
-
+    
 /****** Node master atomic model instantiations *******************/
     std::vector<shared_ptr<dynamic::modeling::model>> abstract_nodes{};
     JobManager.deployJob([&](uint32_t nNodes, uint32_t nCores, std::vector<streamprcss::Node_t<TIME>*>& nodes)
@@ -81,7 +82,7 @@ main(int arg, char** argv)
 
         // Create slave nodes (node_1, node_2, ..., node_n).
         std::string name_base{"node_"}, fullname{};
-        for (uint32_t id=1; id<nNodes; ++id)
+        for (uint32_t id=1; id < nNodes; ++id)
         {
             fullname = name_base + std::to_string(id);
             abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcss::Node_t, TIME, FLINK::JobManager_t&>(fullname, JobManager, nCores));
@@ -126,7 +127,7 @@ main(int arg, char** argv)
     dynamic::modeling::ICs ics_Cluster = {
         BOOST_PP_REPEAT(N_NODES, GENERATE_IC, _)
     };
-
+    
     //dynamic::modeling::ICs ics_Cluster = {
     //    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcss::Switch_t<TIME>::defs_port::in_0>("node_0", "switch"),
     //    dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcss::Switch_t<TIME>::defs_port::in_1>("node_1", "switch"),
@@ -220,16 +221,16 @@ main(int arg, char** argv)
     // Once we have declared all the loggers we need, we have to combine them, so our simulation generates all the logs at the same time.
     //using logger_top = logger::multilogger<log_state, log_messages, global_time_mes, global_time_sta>;
     //using logger_top = logger::multilogger<log_state, global_time_sta>;
-    using logger_top = logger::multilogger<>; // TODO!: Without loggers, too slow for this model!!
-    TIME::startDeepView(); // Extend to hrs::mins:secs:mills:micrs::nns:pcs::fms
+    //using logger_top = logger::multilogger<>; // TODO!: Without loggers, too slow for this model!!
+    //TIME::startDeepView(); // Extend to hrs::mins:secs:mills:micrs::nns:pcs::fms
 
 /************** Runner call ************************/ 
-    dynamic::engine::runner<NDTime, logger_top> r (TOP, {0}); // runner class defined in <cadmium/engine/pdevs_dynamic_runner.hpp>. Init time to 0.
+    dynamic::engine::runner<TIME> r (TOP, {0}); // runner class defined in <cadmium/engine/pdevs_dynamic_runner.hpp>. Init time to 0.
     //r.run_until(NDTime("04:00:00:000"));
     TIME finish_time = r.run_until_passivate(); // Run the simulation until all models are passivated.
     
     // Capture and logg metrics (throughput system and operator utilizations).
-    metric_logger.captureMetrics(cluster_cfg.rate_, to_second(finish_time), cluster_cfg.requeriments_);
+    metric_logger.captureMetrics(cluster_cfg.rate_, streamprcss::Producer_t<TIME>::to_second(finish_time), cluster_cfg.requeriments_);
     #if APPLY_LOG
         #if LOG_MOD
             metric_logger.logDynamicMetrics();

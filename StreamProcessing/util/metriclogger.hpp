@@ -2,7 +2,7 @@
 #include<data_structures/cluster_config.hpp>
 
     /*
-    I can capture metrics with differents ways:
+    I can capture metrics for differents ways:
 
         |                    λ                        | 
         |                   lapse                     |
@@ -45,8 +45,8 @@ namespace streamprcss {
     template<typename TIME>
     struct MetricLogger_t {
 
-        using opername_t = ClusterConfig_t::operId_t;
-        using rate_t     = double;
+        using operId_t = ClusterConfig_t::operId_t;
+        using rate_t   = double;
 
         struct SystemMetric_t {
             std::size_t  processed_req_ {};
@@ -81,10 +81,10 @@ namespace streamprcss {
          
     private:
         
-        ClusterConfig_t&                                             cluster_cfg_;
-        std::map<rate_t,            sysmetrics_t>                    system_metrics_ {};
-        std::map<opername_t const*, std::map<rate_t, opermetrics_t>> oper_metrics_   {};
-        std::map<rate_t,            uint32_t>                        captures_       {};
+        ClusterConfig_t&                             cluster_cfg_;
+        std::map<rate_t,   sysmetrics_t>             system_metrics_ {};
+        std::vector<std::map<rate_t, opermetrics_t>> oper_metrics_   {};
+        std::map<rate_t,   uint32_t>                 captures_       {};
 
         #if LOG_MOD
         inline static constexpr char const* DYNAMIC_THROUGHPUT_BASE_PATH     {"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"};

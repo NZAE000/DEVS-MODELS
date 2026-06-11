@@ -16,25 +16,32 @@ namespace streamprcss {
         for (auto const& [_, rate] : cluster_cfg_.arrivalRates_) // Reserve possible quantity of metrics
         {
             if (!rate) continue;
-            // Reserve sytem metriocs
+            // Reserve sytem metrics
             sysmetrics_t& sys_metrics = this->system_metrics_[rate];
             sys_metrics.reserve(MAX_NUM_METRICS);
 
             // Reserve operator metrics
-            for (auto const& [oper_name, _] : cluster_cfg_.operProps_) 
-            {
-                opermetrics_t& oper_metrics = oper_metrics_[&oper_name][rate];
+            uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
+            this->oper_metrics_.resize(n_oper);
+            for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
+            {  
+                opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
                 oper_metrics.reserve(MAX_NUM_METRICS);
             }
             this->captures_[rate] = 0; // Set captures
         }
         #else // Producer has only 1 rate and stop when n requeriments are finished.
+        // Reserve sytem metrics
         double rate { cluster_cfg_.rate_};
         sysmetrics_t& sys_metrics = this->system_metrics_[rate];
         sys_metrics.reserve(MAX_NUM_METRICS);
-        for (auto const& [oper_name, _] : cluster_cfg_.operProps_) 
-        {
-            opermetrics_t& oper_metrics = oper_metrics_[&oper_name][rate];
+        
+        // Reserve operator metrics
+        uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
+        this->oper_metrics_.resize(n_oper);
+        for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
+        {  
+            opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
             oper_metrics.reserve(MAX_NUM_METRICS);
         }
         this->captures_[rate] = 0; // Set captures
@@ -51,12 +58,14 @@ namespace streamprcss {
         sys_metrics.emplace_back(procss_req, elapsed_time, throughput);
 
         // Add operator metrics
-        for (auto const& [oper_name, props] : cluster_cfg_.operProps_) 
-        {
-            double busy_time   { props.busy_time_accum_ / props.replication_ };
-            double utilization { busy_time / elapsed_time };
+        uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
+        for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
+        {  
+            auto const&  props       { this->cluster_cfg_.operProps_[oper_id] };
+            double       busy_time   { props.busy_time_accum_ / props.replication_ };
+            double       utilization { busy_time / elapsed_time };
 
-            opermetrics_t& oper_metrics = oper_metrics_[&oper_name][rate];
+            opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
             oper_metrics.emplace_back(props.replication_, 0, props.sent_records_accum_, props.busy_time_accum_, busy_time, utilization);
         }
         ++this->captures_[rate];
@@ -67,11 +76,10 @@ namespace streamprcss {
     printMetrics() const noexcept
     {
         /********** PRINT METRIC RESULTS ****************/
-        std::string const& app_name  { cluster_cfg_.app_name };
+        std::string const& app_name  { cluster_cfg_.app_name_ };
         uint32_t           n_nodes   = cluster_cfg_.n_nodes_;
         uint32_t           n_cores   = cluster_cfg_.n_cores_;
-        uint32_t           p_level   = cluster_cfg_.operProps_.find(*cluster_cfg_.begin_op)->second.replication_; // Assume all operators have same replication level.
-        //uint32_t           arrival_rate = static_cast<uint32_t>(cluster_cfg_.rate_ * PS_TO_S); // req/ps to res/s.
+        uint32_t           p_level   = cluster_cfg_.operProps_[cluster_cfg_.begin_op_].replication_; // Assume all operators have same replication level.
 
         // Print cluster config /////////////////////////////
         std::cout
@@ -116,7 +124,7 @@ namespace streamprcss {
         //    iss >> oper_name;
         //    oper_names.emplace_back(oper_name);
         //}
-
+        uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
         for (auto const& [rate, captures] : this->captures_)
         {
             std::cout <<"------------------- Rate: "<< static_cast<uint32_t>(rate * PS_TO_S) << " (req/s) ------------------\n\n";
@@ -129,11 +137,11 @@ namespace streamprcss {
             << std::setw(15) << "Utilization"
             << '\n';
             for (uint32_t i=0; i < captures; ++i){
-                for (auto const& [oper_name, rate_opermetrics] : this->oper_metrics_) 
-                {
-                    opermetrics_t const& oper_metrics = rate_opermetrics.find(rate)->second;
+                for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
+                { 
+                    opermetrics_t const& oper_metrics = this->oper_metrics_[oper_id].find(rate)->second;
                     std::cout << std::left
-                    << std::setw(25) << *oper_name
+                    << std::setw(25) << this->cluster_cfg_.operProps_[oper_id].name_
                     << std::setw(5)  << oper_metrics[i].p_level_
                     //<< std::setw(15) << oper_metrics[i].sent_records_accum_
                     << std::setw(15) << oper_metrics[i].accum_busy_time_
@@ -150,10 +158,10 @@ namespace streamprcss {
     void MetricLogger_t<TIME>::
     logDynamicMetrics() const noexcept
     {
-        std::string const& app_name  { cluster_cfg_.app_name };
+        std::string const& app_name  { cluster_cfg_.app_name_ };
         uint32_t           n_nodes   = cluster_cfg_.n_nodes_;
         uint32_t           n_cores   = cluster_cfg_.n_cores_;
-        uint32_t           p_level   = cluster_cfg_.operProps_.find(*cluster_cfg_.begin_op)->second.replication_; // Assume all operators have same replication level.
+        uint32_t           p_level   = cluster_cfg_.operProps_[cluster_cfg_.begin_op_].replication_; // Assume all operators have same replication level.
         
         // Paths.
         std::string file_throughput { DYNAMIC_THROUGHPUT_BASE_PATH + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
@@ -183,9 +191,11 @@ namespace streamprcss {
         out_utilization_result << '\n';
 
         // Then, all utilizations for each rate.        
-        for (auto const& [oper_name, rate_opermetrics] : this->oper_metrics_)
-        {
-            out_utilization_result << *oper_name <<':';
+        uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
+        for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
+        { 
+            auto const& rate_opermetrics { this->oper_metrics_[oper_id] };
+            out_utilization_result << this->cluster_cfg_.operProps_[oper_id].name_ <<':';
             for (auto const& [rate, oper_metrics] : rate_opermetrics)
             {
                 out_utilization_result <<'[';
@@ -204,10 +214,10 @@ namespace streamprcss {
     void MetricLogger_t<TIME>::
     logMetrics() const noexcept
     {
-        std::string const& app_name  { cluster_cfg_.app_name };
+        std::string const& app_name  { cluster_cfg_.app_name_ };
         uint32_t           n_nodes   = cluster_cfg_.n_nodes_;
         uint32_t           n_cores   = cluster_cfg_.n_cores_;
-        uint32_t           p_level   = cluster_cfg_.operProps_.find(*cluster_cfg_.begin_op)->second.replication_; // Assume all operators have same replication level.
+        uint32_t           p_level   = cluster_cfg_.operProps_[cluster_cfg_.begin_op_].replication_; // Assume all operators have same replication level.
         
         // Paths
         std::string file_throughput  {};
@@ -236,10 +246,11 @@ namespace streamprcss {
                 out_throughput_result << sys_metrics[i].elapsed_time_ <<' '<< sys_metrics[i].throughput_<<'\n';
 
                 // Log operator metrics.
-                for (auto const& [oper_name, rate_opermetrics] : this->oper_metrics_)
-                {
-                    opermetrics_t const& oper_metrics = rate_opermetrics.find(rate)->second;
-                    out_utilization_result << *oper_name <<':'<< oper_metrics[i].utilization_<<';';
+                uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
+                for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
+                { 
+                    opermetrics_t const& oper_metrics = this->oper_metrics_[oper_id].find(rate)->second;
+                    out_utilization_result << this->cluster_cfg_.operProps_[oper_id].name_ <<':'<< oper_metrics[i].utilization_<<';';
                 } 
                 out_utilization_result << '\n';
             }

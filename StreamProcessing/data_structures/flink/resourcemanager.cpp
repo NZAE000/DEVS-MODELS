@@ -8,12 +8,12 @@
 
 namespace FLINK {
 
-void ResourceManager_t::agregateResource(nodeId_t node_id, TaskManager_t& taskMan) noexcept
+void ResourceManager_t::registerResource(TaskManager_t& taskman) noexcept
 {
-    refResources_[node_id] = &taskMan;
+    refResources_.emplace_back(&taskman);
 }
 
-slotId_t ResourceManager_t::assignResource(operId_t const& oper_id, nodeId_t node_id) noexcept
+slotId_t ResourceManager_t::assignResource(operId_t const oper_id, nodeId_t node_id) noexcept
 {
     slotId_t slot_id = refResources_[node_id]->reserveSlot(oper_id);
     return slot_id;
@@ -22,9 +22,7 @@ slotId_t ResourceManager_t::assignResource(operId_t const& oper_id, nodeId_t nod
 TaskSlot_t const& ResourceManager_t::slotFrom(OperatorLocation_t const& operatorLocation) const noexcept
 {
     auto const [_, node_id, slot_id] = operatorLocation;
-    auto iter = refResources_.find(node_id);
-
-    return iter->second->getSlot(slot_id);
+    return refResources_[node_id]->getSlot(slot_id);
 }
 
 TaskSlot_t& ResourceManager_t::slotFrom(OperatorLocation_t const& operatorLocation) noexcept
