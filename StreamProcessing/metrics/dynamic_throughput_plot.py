@@ -114,7 +114,7 @@ def plot_throughput(
     plt.xlabel("Time (s)",labelpad=40)
     plt.ylabel("Throughput (req/s)")
     plt.title(
-        f"Throughput vs Time\n"
+        f"Dynamic {data_from} Throughput\n"
         f"App={app}, "
         f"Nodes={nodes}, "
         f"Cores={cores}, "

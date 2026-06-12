@@ -16300,3 +16300,74 @@ buffer.erase(buffer.begin()); // Very slow !!
 eso esta matando la optimizacion de tiempo porque si hay muchos elemenos, debe mover todos los elementos.
 
 Mi idea es amntener laas ejecucines prioridades siempre al final del vector, o, usar otra estructura.
+
+
+
+Super, tengo los scripts que egenarn graficos para el sistema real, el simulado, y ambos a la vez, tanto el throughput como utilizacion de operadores (y cpu del sisteam real). 
+Ahora, necesito generar estadisticas del troughput real vs simulado. Para ello, tengo los 2 archivos con el formato 'rate:time1,through1 time2,through2 ... timeN through N':
+
+filename_real = (
+        f"metrics/nexmark/throughput/real/dynamic/dynamic-throughput-real-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+filename_sim = (
+        f"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+
+¿que metricas podria conseguir para estos tipos de escenarios donde 2 variables (throughput real y simulada) se miden a lo largo del tiempo?
+¿presicion? ¿correlacion?. Necesito sugerencias para implementar el script en phython y mostrar las estadisticas en consola y exportarlas a un csv.
+
+
+Excelente, pues necesito que me construyas el script para calcular todas esas metricas, que las exporte a un csv:
+
+rate,pearson,spearman,r2,mae,rmse,mape,max_error,auc_real,auc_sim,auc_error_pct
+1000000,0.998,0.997,0.995,10432,15233,1.24,40231,9.95e7,9.89e7,0.61
+2000000,0.997,0.995,0.992,15211,22145,1.78,60512,1.98e8,1.96e8,1.01
+3000000,0.995,0.992,0.988,23452,32144,2.63,91211,2.97e8,2.91e8,2.02
+ 
+y que muestre en consola:
+
+=================================================
+THROUGHPUT VALIDATION
+=================================================
+
+Average Pearson : 0.997
+Average Spearman: 0.995
+Average R²      : 0.992
+Average MAE     : 16,365 req/s
+Average RMSE    : 22,744 req/s
+Average MAPE    : 1.88 %
+
+Average AUC Error: 1.21 %
+=================================================
+
+
+Antes de instalar numpy scipy pandas scikit-learn y librearias necesairas principales como mathplotlib, quier tener un archivo llamado
+"py-requeriments.tx" donde esten todoas las liberias, para que, cuando el usaurio use mi somulador, quiero que prepare unambienre de python,
+y luego le indique que instale las librerias que estan en "py-requeriments.tx", y cuando termine de usar el simulador, se salga del ambiente (dactivate creo).
+
+Vale. Ahora, necesito hacer exactamente el mismo análisis para las utilizaciones de operadores. Para ello, tengo los 2 archivos con el formato:
+
+		rate
+		op1:[util1 util2 .. utilN]
+		op2:[util1 util2 .. utilN]
+		opN:[util1 util2 .. utilN]
+
+Las rutas estan en:
+
+    filename_real = (
+        f"metrics/nexmark/utilization/real/dynamic/dynamic-utilization-real-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+    filename_sim = (
+        f"metrics/nexmark/utilization/sim/dynamic/dynamic-utilization-sim-"
+        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    )
+
+
+La diferencia es que el analisis se hace para cada operador real vs sim.
+Necesito que me construyas el script para calcular todas esas metricas, que las exporte a un csv e imprime el resumen por consola.

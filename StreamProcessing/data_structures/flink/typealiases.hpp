@@ -10,6 +10,7 @@
 
 namespace FLINK {
 
+using TIME     = double;
 using mssgId_t = uint32_t;
 using nodeId_t = uint32_t;
 using coreId_t = uint32_t;

@@ -172,8 +172,7 @@ def plot_dynamic_comparison(
     )
 
     plt.title(
-        f"Dynamic Throughput\n"
-        f"Real vs Simulation\n"
+        f"Dynamic Throughput: Real vs Simulated\n"
         f"App={app}, "
         f"Nodes={nodes}, "
         f"Cores={cores}, "

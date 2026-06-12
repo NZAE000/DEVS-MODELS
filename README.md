@@ -11,10 +11,10 @@ El simulador de Stream Processing esta desarrollado en lenguaje C++ y los regist
 #### Requisitos de software:
    • Sistema operativo: Linux (Ubuntu 20.04 o superior), macOS o Windows 10 con subsistema Cygwin o WSL.
    • Compilador: g++ versión 9.3 o superior, o clang++ equivalente.
-   • Estándar requerido: Soporte para C++20.
-   • Dependencias externas: bibliotecas como Boost, OpenMP y MPI.
+   • Estándar requerido: Soporte para C++23.
+   • Dependencias externas: Boost.
    • Herramientas de construcción: GNU Make versión 3.8 o superior.
-   • Sistema de control de versiones: Git para clonar el repositorio de Cadmium y del modelo de procesamiento de streams.
+   • Sistema de control de versiones: Git para clonar el repositorio de Cadmium (2020) y del modelo de procesamiento de streams.
 
 #### Requisitos de hardware recomendados:
    • Procesador multinúcleo (mínimo 4 núcleos).
@@ -41,15 +41,7 @@ El simulador de Stream Processing esta desarrollado en lenguaje C++ y los regist
 ### 1. Windows con Cygwin
 1. Descargar e instalar Cygwin desde [https://www.cygwin.com/].
 2. Durante la instalación, asegurarse de incluir los paquetes necesarios de desarrollo (gcc-core, gcc-g++, make, cmake, libboost-devel,
-openmpi, libopenmpi-devel, python3, python3-pip, git).
-3. Finalizada la instalación, abrir la terminal de Cygwin e instalar paquete de Python:
-```bash
-$ pip3 install matplotlib
-```
-4. (Opcional) Crear y activar un entorno virtual en Python:
-```bash
-$ python3 -m venv venv
-$ source venv/bin/activate
+python3, python3-pip, git).
 ```
 
 ### 2. Windows mediante WSL
@@ -65,7 +57,7 @@ $ sudo apt update && sudo apt upgrade -y
 4. Instalar herramientas necesarias para C++:
 ```bash
 $ sudo apt install build-essential g++ cmake make -y
-$ sudo apt install libboost-all-dev libopenmpi-dev openmpi-bin -y
+$ sudo apt install libboost-all-dev -y
 ```
 5. Instalar Python:
 ```bash
@@ -84,7 +76,7 @@ $ sudo apt update && sudo apt upgrade -y
 2. Instalar herramientas para C++:
 ```bash
 $ sudo apt install build-essential g++ cmake make -y
-$ sudo apt install libboost-all-dev libopenmpi-dev openmpi-bin -y
+$ sudo apt install libboost-all-dev -y
 ```
 3. Instalar Python y Git:
 ```bash
@@ -99,26 +91,56 @@ $ sudo apt install git -y
 ```
 2. Instalar herramientas:
 ```bash
-$ brew install gcc cmake make boost open-mpi python
-```
-3. Crear entorno virtual en Python:
-```bash
-$ python3 -m venv venv
-$ source venv/bin/activate
-$ pip3 install matplotlib
+$ brew install gcc cmake make boost python
 ```
 4. Instalar Git:
 ```bash
 $ brew install git
 ```
 
----
-
 Una vez listos los requisitos, se debe instalar la librería **Cadmium** para construir el modelo basado en DEVS. Instrucciones detalladas en su [documentación](https://cell-devs.sce.carleton.ca/index.php/cadmium/).
 
 Luego, clonar este repositorio en la misma ruta donde se instaló Cadmium:
 ```bash
 $ git clone https://github.com/NZAE000/DEVS-MODELS.git
+```
+
+Para el uso de scripts de Python, es necesario crear y activar un entorno virtual en Python para las instalacion de dependencias en su local.
+Para ello, ubiquece en el directorio 'StreamProcessing/':
+```bash
+$ cd StreamProcessing/
+```
+
+Luego, cree el ambiente de Python:
+```bash
+$ python3 -m venv venv
+```
+
+Active el ambiente:
+```bash
+$ source venv/bin/activate
+```
+
+Instale dependencias:
+```bash
+$ pip install --upgrade pip
+$ pip install -r py-requirements.txt
+```
+
+Verifique:
+```bash
+$ pip list
+```
+
+Cuando termine de usar los script, desactive el ambiente:
+Verifique:
+```bash
+$ deactivate
+```
+
+Para automatizar la instalacion del ambiente, ejecute el script en el directorio StreamProcessing/:
+```bash
+$ bash setup_python_env.sh
 ```
 
 ## Documentación

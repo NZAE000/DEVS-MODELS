@@ -99,7 +99,7 @@ def scenario_key(identifier):
 # -------------------------
 def main():
     if len(sys.argv) < 2:
-        print("Use: python3 calculate_utilization_statistics_real_sim.py <app>")
+        print("Use: python3 calculate_terminated_utilization_statistics_real_sim.py <app>")
         return
 
     appname = sys.argv[1]

@@ -83,8 +83,8 @@ public:
     
     // State definition (state variables of the Switch_t model)
     struct state_type {
-        mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_{}; // node_id, buffer.
-        bool transmitting_{false};   // Used to define that the model has something to output
+        mutable std::map<nodeId_t, MessageBuffer_t> port_buffers_  {};          // node_id, buffer.
+                bool                                transmitting_  {false};     // Used to define that the model has something to output
     };
     state_type state;
 
@@ -92,7 +92,7 @@ public:
     //int const mean_ {50};
     //myrandom::Poisson_t poisson_distr_{mean_};
     double min_ {7000}, max_{12000};
-    myrandom::Uniform_t uniform_distr_{min_, max_};
+    myrandom::Uniform_t<double> uniform_distr_{min_, max_};
 
     // Default constructor
     Switch_t() noexcept {}

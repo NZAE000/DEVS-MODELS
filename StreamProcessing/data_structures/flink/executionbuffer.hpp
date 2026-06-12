@@ -4,7 +4,7 @@
 //Time class header
 //#include <NDTime.hpp>
 using TIME = double;
-#include<iostream>
+//#include<iostream>
 
 namespace FLINK {
 
@@ -43,7 +43,7 @@ struct ExecutionBuffer_t {
             {
                 prepared_subtasks_.erase(prepared_subtasks_.begin(), prepared_subtasks_.begin() + head_index_);
                 head_index_ = 0;
-                std::cout<<"aca\n";
+                //std::cout<<"aca\n";
             }
             else {
                 // Exceptional growth.

@@ -7,104 +7,133 @@
 
 namespace myrandom {
 
+	template<typename T>
 	struct RandomBase_t {
 
-		virtual ~RandomBase_t()   = default;
-		virtual double generate() = 0;
-		private:	std::random_device rd{};
-		protected:  std::mt19937 gen{rd()};
+		virtual ~RandomBase_t() = default;
+		virtual T generate() = 0;
+		protected: 
+			std::mt19937 gen{std::random_device{}()};
 	};
 
-	//////////////////////////////////////////////////////
-	struct Constant_t : RandomBase_t {
 	
-		explicit Constant_t(double v) 
+	/****************************************************
+		RandomBase_t<T>
+		|
+		├── Constant_t<T>
+		├── Uniform_t<T>          (integral o floating)
+		├── Exponential_t<T>      (floating)
+		├── Normal_t<T>           (floating)
+		├── Poisson_t<T>          (integral)
+		├── Lognormal_t<T>        (floating)
+		├── Gamma_t<T>            (floating)
+		└── Bernoulli_t           (bool)
+	****************************************************/
+
+	//////////////////////////////////////////////////////
+	template<typename TYPE>
+	struct Constant_t : RandomBase_t<TYPE> {
+	
+		explicit Constant_t(TYPE v) 
 		: val_{v}{}
 
-		double generate() override { return val_; }
+		TYPE generate() override { return val_; }
 
 	private:
-		double val_{};
+		TYPE val_{};
 	};
 
 	//////////////////////////////////////////////////////
-	struct Uniform_t : RandomBase_t {
+	template<typename TYPE>
+	requires std::integral<TYPE> || std::floating_point<TYPE>
+	struct Uniform_t : RandomBase_t<TYPE> {
 	
-		explicit Uniform_t(double from, double to) 
-		: uniDistr{from, to}{}
+		explicit Uniform_t(TYPE from, TYPE to) 
+		: uniform{from, to}{}
 
-		double generate() override { return uniDistr(gen); }
+		TYPE generate() override { return uniform(this->gen); }
 
 	private:
-		std::uniform_real_distribution<double> uniDistr;
+		using UniformDistribution =
+			std::conditional_t<
+				std::is_integral_v<TYPE>,
+				std::uniform_int_distribution<TYPE>,
+				std::uniform_real_distribution<TYPE>>;
+
+		UniformDistribution uniform;
 	};
 
 	//////////////////////////////////////////////////////
-	struct Exponential_t : RandomBase_t {
+	template<std::floating_point TYPE>
+	struct Exponential_t : RandomBase_t<TYPE> {
 	
-		explicit Exponential_t(double rate) 
-		: expoDistr{rate}{}
+		explicit Exponential_t(TYPE rate) 
+		: exponential{rate}{}
 
-		double generate() override { return expoDistr(gen); }
+		TYPE generate() override { return exponential(this->gen); }
 
 	private:
-		std::exponential_distribution<double> expoDistr;
+		std::exponential_distribution<TYPE> exponential;
 	};
 
 	//////////////////////////////////////////////////////
-	struct Normal_t : RandomBase_t {
+	template<std::floating_point TYPE>
+	struct Normal_t : RandomBase_t<TYPE> {
 
-		explicit Normal_t(double mean, double std) 
-		: normalDistr{mean, std}{}
+		explicit Normal_t(TYPE mean, TYPE std) 
+		: normal{mean, std}{}
 
-		double generate() override { return normalDistr(gen); }
+		TYPE generate() override { return normal(this->gen); }
 
 	private:
-		std::normal_distribution<double> normalDistr;
+		std::normal_distribution<TYPE> normal;
 	};
 
 	//////////////////////////////////////////////////////
-	struct Poisson_t : RandomBase_t {
+	template<std::integral TYPE>
+	struct Poisson_t : RandomBase_t<TYPE> {
 
-		explicit Poisson_t(int mean) 
-		: poissonDistr(mean){}
+		explicit Poisson_t(double mean) 
+		: poisson(mean){}
 
-		double generate() override { return poissonDistr(gen); }
+		TYPE generate() override { return poisson(this->gen); }
 
 	private:
-		std::poisson_distribution<int> poissonDistr;
+		std::poisson_distribution<TYPE> poisson;
 	};
 
 	//////////////////////////////////////////////////////
-	struct LogNormal_t : RandomBase_t {
+	template<std::floating_point TYPE>
+	struct Lognormal_t : RandomBase_t<TYPE> {
 
-		explicit LogNormal_t(double mean, double std) 
-		: logNormalDistr{mean, std}{}
+		explicit Lognormal_t(TYPE mean, TYPE std) 
+		: lognormal{mean, std}{}
 
-		double generate() override { return logNormalDistr(gen); }
+		TYPE generate() override { return lognormal(this->gen); }
 
 	private:
-		std::lognormal_distribution<double> logNormalDistr;
+		std::lognormal_distribution<TYPE> lognormal;
 	};
 
 	//////////////////////////////////////////////////////
-	struct Gamma_t : RandomBase_t {
+	template<std::floating_point TYPE>
+	struct Gamma_t : RandomBase_t<TYPE> {
 
-		explicit Gamma_t(double shape, double scale) 
-		: gammaDistr{shape, scale}{}
+		explicit Gamma_t(TYPE shape, TYPE scale) 
+		: gamma{shape, scale}{}
 
-		double generate() override { return gammaDistr(gen); }
+		TYPE generate() override { return gamma(this->gen); }
 
 	private:
-		std::gamma_distribution<double> gammaDistr;
+		std::gamma_distribution<TYPE> gamma;
 	};
 
 	//////////////////////////////////////////////////////
-	struct Bernoulli_t : RandomBase_t {
+	struct Bernoulli_t : RandomBase_t<bool> {
 		explicit Bernoulli_t(double p) 
 		: bernoulli(p) {}
 
-		double generate() override { return bernoulli(gen); }
+		bool generate() override { return bernoulli(this->gen); }
 
 	private:
 		std::bernoulli_distribution bernoulli;

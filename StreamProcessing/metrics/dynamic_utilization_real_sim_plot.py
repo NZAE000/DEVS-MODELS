@@ -243,7 +243,7 @@ def plot_utilization_comparison(
     )
 
     ax.set_title(
-        f"Operator Utilization: Real vs Simulated\n"
+        f"Dynamic Operator Utilization: Real vs Simulated\n"
         f"App={app}, Nodes={nodes}, "
         f"Cores={cores}, P={p}"
     )

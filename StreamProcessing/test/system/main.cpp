@@ -9,7 +9,7 @@
 #include <boost/preprocessor/stringize.hpp> // To convert type names to strings.
 
 //Time class header
-#include <NDTime.hpp> // NDTime is a C++ class that implements time operations and allows defining the time as in digital clock format (“hh:mm:ss:mss”) or as a list of integer elements ({ hh, mm, ss, mss})
+//#include <NDTime.hpp> // NDTime is a C++ class that implements time operations and allows defining the time as in digital clock format (“hh:mm:ss:mss”) or as a list of integer elements ({ hh, mm, ss, mss})
 
 //Data structures
 #include <data_structures/cluster_config.hpp>
@@ -30,7 +30,7 @@ using namespace std;
 using namespace cadmium;
 //using namespace cadmium::basic_models::pdevs;
 
-using TIME = double;
+//using TIME = FLINK::TIME;
 
 template<typename T>
 using MLogger_t = streamprcss::mylogger::MetricLogger_t<T>;
@@ -59,15 +59,15 @@ namespace Cluster_defs {
 int 
 main(int arg, char** argv)
 {
-    ClusterConfig_t      cluster_cfg   { argv[1]     };
+    ClusterConfig_t      cluster_cfg   { argv[1]     }; // argv[1] = app name.
     FLINK::JobManager_t  JobManager    { cluster_cfg };
     MLogger_t<TIME>      metric_logger { cluster_cfg };
 
     //std::cout<<"distr: " << cluster_cfg.operProps_["op1"].distribution()<<"\n";
 
-/****** Productor atomic model instantiation *******************/
-    shared_ptr<dynamic::modeling::model> productor;
-    productor = dynamic::translate::make_dynamic_atomic_model<streamprcss::Producer_t, TIME, MLogger_t<double>&>("productor", metric_logger, "simulation_results/system/rate_change.txt");
+/****** Producer atomic model instantiation *******************/
+    shared_ptr<dynamic::modeling::model> abstract_producer;
+    abstract_producer = dynamic::translate::make_dynamic_atomic_model<streamprcss::Producer_t, TIME, MLogger_t<TIME>&>("producer", metric_logger);
     
 /****** Node master atomic model instantiations *******************/
     std::vector<shared_ptr<dynamic::modeling::model>> abstract_nodes{};
@@ -114,6 +114,11 @@ main(int arg, char** argv)
     dynamic::modeling::Models submodels_Cluster = abstract_nodes;
     submodels_Cluster.push_back(sswitch); // This might duplicate capacity!!
 
+// The producer model must include all submodels to determine the progress time of each one in order to calculate throughput and utilization metrics.
+    streamprcss::Producer_t<TIME>* producer { dynamic_cast<streamprcss::Producer_t<TIME>*>(abstract_producer.get()) };
+    producer->receiveModels(submodels_Cluster);
+    
+    
 // eics, eocs, ics
     dynamic::modeling::EICs eics_Cluster = {
         dynamic::translate::make_EIC<Cluster_defs::in, streamprcss::Node_defs::in_source>("node_0")    // eic to node_0 = node_master   ->[->(node_0)]
@@ -145,7 +150,7 @@ main(int arg, char** argv)
     //{
     //    ics_Cluster.push_back(dynamic::translate::make_IC<streamprcs::Node_defs::out, streamprcss::Switch_t<TIME>::defs_port::in_0>(node->get_id(), "switch"));
     //    ics_Cluster.push_back(dynamic::translate::make_IC<streamprcss::Switch_t<TIME>::defs_port::out_0, streamprcs::Node_defs::in>("switch", node->get_id()));
-    //    // dynamic::translate::make_IC<Producer_t<TIME>::defs::out, streamprcs::Node_defs::in_source>("productor", "node_master") // FROM output port of productor submodel (Prod->) TO input port node submodel (-> Node) =  ( [Prod(out) -> (int)node] ).
+    //    // dynamic::translate::make_IC<Producer_t<TIME>::defs::out, streamprcs::Node_defs::in_source>("producer", "node_master") // FROM output port of producer submodel (Prod->) TO input port node submodel (-> Node) =  ( [Prod(out) -> (int)node] ).
     //}
     dynamic::modeling::EOCs eocs_Cluster = {};     // Nothing to EOC of Cluster
 
@@ -167,7 +172,7 @@ main(int arg, char** argv)
 
 // Models: data type(vector) used to define the components of a coupled model.  It contains the instances of submodels inside the coupled model.
     dynamic::modeling::Models submodels_TOP; // models = vector<shared_ptr<cadmium::dynamic::modeling::model>>
-    submodels_TOP = {productor, CLUSTER};
+    submodels_TOP = {abstract_producer, CLUSTER};
 
 
 // EICs, EOCs, ICs (vectors)
@@ -180,14 +185,14 @@ main(int arg, char** argv)
     // External Output Couplings. Vector with elements of type EOC. Is a data type similar to EICs above, but for the External Output Couplings.
     dynamic::modeling::EOCs eocs_TOP;
     eocs_TOP = {
-        //dynamic::translate::make_EOC<Producer_t<TIME>::defs::out, top_out>("productor") //  FROM output port of submodel (Subnet->) TO output port coupled model ( [InputReader + Subnet->]-> ).
+        //dynamic::translate::make_EOC<Producer_t<TIME>::defs::out, top_out>("producer") //  FROM output port of submodel (Subnet->) TO output port coupled model ( [InputReader + Subnet->]-> ).
     };
     
     // ICs is a data type to define internal couplings. Vector that takes elements of type IC, used to define each internal connection.
     dynamic::modeling::ICs ics_TOP;
     ics_TOP = {
         // It uses the type of the output port of the submodel “from” and the type of the input port of the submodel “to”, in this specific order. 
-        dynamic::translate::make_IC<streamprcss::Producer_t<TIME>::defs::out, Cluster_defs::in>("productor", "Cluster") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
+        dynamic::translate::make_IC<streamprcss::Producer_t<TIME>::defs::out, Cluster_defs::in>("producer", "Cluster") // FROM output port of InputReader submodel (InputReader->) TO input port Subnet submodel (-> Subnet) =  ( [InputReader(out) -> (int)Subnet] ).
     };
 
 

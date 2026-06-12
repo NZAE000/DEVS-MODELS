@@ -140,16 +140,20 @@ private:
 
         if (size_bag) // Are there a message from the producer?
         {
-            // Find less congested location of first operator (source by default).
-            FLINK::operId_t const& first_op_id = this->jobman_.getFirstOperator();
-            OperatorLocation_t loc             = this->jobman_.getOperLocationLessload(first_op_id);
-            loc.mssg_id_                       = bag_in_port_src[0].id_;
+            uint32_t mssg_id = bag_in_port_src[0].id_;
+            if (mssg_id != 0) // Zero if the producer is not sending any more data, he is only capturing metrics. 
+            {
+                // Find less congested location of first operator (source by default).
+                FLINK::operId_t const& first_op_id = this->jobman_.getFirstOperator();
+                OperatorLocation_t loc             = this->jobman_.getOperLocationLessload(first_op_id);
+                loc.mssg_id_                       = mssg_id;
 
-            if (loc.node_id_ == this->state.id_){ // Chosen location on this node?
-                this->state.taskman_.scheduleExec(loc.mssg_id_, loc.slot_id_, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
-            }
-            else {
-                extern_locations_.emplace_back(loc); // Location messages for elsewhere.
+                if (loc.node_id_ == this->state.id_){ // Chosen location on this node?
+                    this->state.taskman_.scheduleExec(loc.mssg_id_, loc.slot_id_, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.
+                }
+                else {
+                    extern_locations_.emplace_back(loc); // Location messages for elsewhere.
+                }
             }
         }
     }

@@ -153,7 +153,7 @@ def scenario_key(identifier):
 
 def main():
     if len(sys.argv) < 2:
-        print("Use: python3 calculate_statistics_real_sim.py <aplicacion>")
+        print("Use: python3 calculate_terminated_throughput_statistics_real_sim.py <app>")
         return
 
     appname = sys.argv[1]

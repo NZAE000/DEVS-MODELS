@@ -74,7 +74,7 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
     plt.ylim(0, 100)
 
     plt.title(
-        f"CPU Utilization vs Time\n"
+        f"Dynamic CPU Utilization\n"
         f"App={app}, "
         f"Nodes={nodes}, "
         f"Cores={cores}, "

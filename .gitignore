@@ -6,3 +6,4 @@ StreamProcessing/distribution_test/lognorm_test
 StreamProcessing/distribution_test/uniform_test
 StreamProcessing/apacheflink/flink
 StreamProcessing/apacheflink/nexmark
+StreamProcessing/.venv

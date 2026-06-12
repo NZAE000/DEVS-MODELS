@@ -16,35 +16,35 @@ namespace streamprcss {
         for (auto const& [_, rate] : cluster_cfg_.arrivalRates_) // Reserve possible quantity of metrics
         {
             if (!rate) continue;
-            // Reserve sytem metrics
+            // Reserve sytem metrics.
             sysmetrics_t& sys_metrics = this->system_metrics_[rate];
-            sys_metrics.reserve(MAX_NUM_METRICS);
+            sys_metrics.reserve(MAX_NUM_METRICS_);
 
-            // Reserve operator metrics
+            // Reserve operator metrics.
             uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
             this->oper_metrics_.resize(n_oper);
             for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
             {  
                 opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
-                oper_metrics.reserve(MAX_NUM_METRICS);
+                oper_metrics.reserve(MAX_NUM_METRICS_);
             }
-            this->captures_[rate] = 0; // Set captures
+            this->captures_[rate] = 0; // Set captures.
         }
         #else // Producer has only 1 rate and stop when n requeriments are finished.
-        // Reserve sytem metrics
+        // Reserve sytem metrics.
         double rate { cluster_cfg_.rate_};
         sysmetrics_t& sys_metrics = this->system_metrics_[rate];
-        sys_metrics.reserve(MAX_NUM_METRICS);
+        sys_metrics.reserve(MAX_NUM_METRICS_);
         
-        // Reserve operator metrics
+        // Reserve operator metrics.
         uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
         this->oper_metrics_.resize(n_oper);
         for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
         {  
             opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
-            oper_metrics.reserve(MAX_NUM_METRICS);
+            oper_metrics.reserve(MAX_NUM_METRICS_);
         }
-        this->captures_[rate] = 0; // Set captures
+        this->captures_[rate] = 0; // Set captures.
         #endif
     }
 
@@ -92,7 +92,7 @@ namespace streamprcss {
         // Print system metrics ////////////////////////////
         for (auto const& [rate, sys_metrics] : this->system_metrics_)
         {
-            std::cout <<"------------------- Rate: "<< static_cast<uint32_t>(rate * PS_TO_S) << " (req/s) ------------------\n\n";
+            std::cout <<"------------------- Rate: "<< static_cast<uint32_t>(rate * PS_TO_S_) << " (req/s) ------------------\n\n";
             std::cout << std::left
             << std::setw(20) << "Procesed reqs"
             << std::setw(20) << "Time (s)"
@@ -127,7 +127,7 @@ namespace streamprcss {
         uint32_t n_oper { cluster_cfg_.N_OPERATORS_ };
         for (auto const& [rate, captures] : this->captures_)
         {
-            std::cout <<"------------------- Rate: "<< static_cast<uint32_t>(rate * PS_TO_S) << " (req/s) ------------------\n\n";
+            std::cout <<"------------------- Rate: "<< static_cast<uint32_t>(rate * PS_TO_S_) << " (req/s) ------------------\n\n";
             std::cout << std::left
             << std::setw(25) << "Operator"
             << std::setw(5)  << "P"
@@ -164,10 +164,10 @@ namespace streamprcss {
         uint32_t           p_level   = cluster_cfg_.operProps_[cluster_cfg_.begin_op_].replication_; // Assume all operators have same replication level.
         
         // Paths.
-        std::string file_throughput { DYNAMIC_THROUGHPUT_BASE_PATH + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+        std::string file_throughput { DYNAMIC_THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                             + std::to_string(p_level) + ".txt" };
 
-        std::string file_utilization { DYNAMIC_UTILIZATION_BASE_PATH + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+        std::string file_utilization { DYNAMIC_UTILIZATION_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                         + std::to_string(p_level) + ".txt" };
         
         // Writters     .               
@@ -177,7 +177,7 @@ namespace streamprcss {
         // Log system metrics /////////////////////////////////////////////////////////////////
         for (auto const& [rate, sys_metrics] : this->system_metrics_)
         {
-            out_throughput_result << static_cast<uint32_t>(rate * PS_TO_S)  <<':'; // req/ps to res/s.
+            out_throughput_result << static_cast<uint32_t>(rate * PS_TO_S_)  <<':'; // req/ps to res/s.
             for (auto const& sysmetric : sys_metrics) 
             {
                 out_throughput_result << sysmetric.elapsed_time_ <<','<< sysmetric.throughput_<<' ';
@@ -187,7 +187,7 @@ namespace streamprcss {
         
         // Log operator metrics /////////////////////////////////////////////////////////////////
         // First, log rates horizontally.
-        for (auto const& [rate, _] : this->captures_) out_utilization_result << static_cast<uint32_t>(rate * PS_TO_S)  <<' ';
+        for (auto const& [rate, _] : this->captures_) out_utilization_result << static_cast<uint32_t>(rate * PS_TO_S_)  <<' ';
         out_utilization_result << '\n';
 
         // Then, all utilizations for each rate.        
@@ -229,13 +229,13 @@ namespace streamprcss {
             {
                 sysmetrics_t const& sys_metrics  { this->system_metrics_.find(rate)->second  };
                 std::size_t         total_reqs   { sys_metrics[i].processed_req_             }; 
-                uint32_t            a_rate       { static_cast<uint32_t>(rate * PS_TO_S)     };  // req/ps to res/s.
+                uint32_t            a_rate       { static_cast<uint32_t>(rate * PS_TO_S_)     };  // req/ps to res/s.
                 
                 // Paths.
-                file_throughput  = TERMINATED_THROUGHPUT_BASE_PATH + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+                file_throughput  = TERMINATED_THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                                 + std::to_string(p_level) + "-" + std::to_string(total_reqs) + "-" + std::to_string(a_rate) + ".txt";
 
-                file_utilization = TERMINATED_UTILIZATION_BASE_PATH + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+                file_utilization = TERMINATED_UTILIZATION_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                             + std::to_string(p_level) + "-" + std::to_string(total_reqs) + "-" + std::to_string(a_rate) + ".txt";
 
                 // Wrtters.

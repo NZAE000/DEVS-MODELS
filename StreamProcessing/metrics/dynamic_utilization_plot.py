@@ -125,7 +125,7 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
     plt.ylabel("Utilization")
 
     plt.title(
-        f"Operator Utilization vs Time\n"
+        f"Dynamic {data_from} Operator Utilization\n"
         f"App={app}, Nodes={nodes}, "
         f"Cores={cores}, P={p}"
     )

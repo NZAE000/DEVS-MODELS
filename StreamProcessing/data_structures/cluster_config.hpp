@@ -20,10 +20,7 @@
 #include "../input_data/hardware.hpp"
 
 
-//Time class header
-//#include <NDTime.hpp> // NDTime is a C++ class that implements time operations and allows defining the time as in digital clock format (“hh:mm:ss:mss”) or as a list of integer elements ({ hh, mm, ss, mss})
-using TIME = double;
-
+using TIME = FLINK::TIME;
 
 struct ConfigPath_t {
     static constexpr std::string_view topo_path       {"input_data/topology.txt"};
@@ -39,7 +36,8 @@ struct OperatorProperties_t {
 
     std::string                             name_               {};
     uint32_t                                replication_        {};
-    std::unique_ptr<myrandom::RandomBase_t> random_time_        {};
+    std::unique_ptr
+    <myrandom::RandomBase_t<TIME>>   random_time_        {};
     std::string                             ship_strategy_      {};
     double                                  selectivity_        {};
     uint32_t                                sent_records_accum_ {};
@@ -68,7 +66,7 @@ struct ClusterConfig_t {
     std::vector<std::vector<operId_t>> topology_           {};
     operId_t                           begin_op_           {};
     std::vector<operId_t>              end_ops_            {};
-    std::map<TIME, double>             arrivalRates_       {};
+    std::map<TIME, double>      arrivalRates_       {};
     uint32_t                           requeriments_       {}; 
     double                             rate_               {};
     uint32_t                           n_nodes_            {};
@@ -129,27 +127,27 @@ private:
             if (distr == "norm"){
                 double param1{}, param2{};
                 iss >> param1 >> param2 >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Normal_t>(param1, param2), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Normal_t<TIME>>(param1, param2), strategy, selectivity);
             }
             else if (distr == "fix"){
                 double param{};
                 iss >> param >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Constant_t>(param), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Constant_t<TIME>>(param), strategy, selectivity);
             }
             else if (distr == "expo"){
                 double param{};
                 iss >> param >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Exponential_t>(param), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Exponential_t<TIME>>(param), strategy, selectivity);
             }
             else if (distr == "lnorm"){
                 double param1{}, param2{};
                 iss >> param1 >> param2 >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::LogNormal_t>(param1, param2), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Lognormal_t<TIME>>(param1, param2), strategy, selectivity);
             }
             else if (distr == "gamm"){
                 double param1{}, param2{};
                 iss >> param1 >> param2 >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Gamma_t>(param1, param2), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Gamma_t<TIME>>(param1, param2), strategy, selectivity);
             }
 
             this->oper_ids_[operProps_[N_OPERATORS_].name_] = N_OPERATORS_; // Store name reerences.
