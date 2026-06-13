@@ -20,7 +20,7 @@ public:
     NodeMaster_t() noexcept
     : Node_t<TIME>{} {}
 
-    NodeMaster_t(FLINK::JobManager_t& jman, uint32_t n_cores) noexcept
+    NodeMaster_t(flink::JobManager_t& jman, uint32_t n_cores) noexcept
     : Node_t<TIME>{jman, n_cores} {}
 
 
@@ -32,11 +32,11 @@ public:
             extern_locations_.clear();
             if (this->state.taskman_.pendingExecutions())
             {
-                std::vector<FLINK::ActiveSubtask_t*>& prior_execs { this->state.taskman_.getPriorityExecutions() };
-                TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
+                std::vector<flink::ActiveSubtask_t*>& active_execs { this->state.taskman_.getActiveExecutions() };
+                TIME lapse_prioriry                                { std::numeric_limits<TIME>::max()           };
 
-                for (auto& a_subtask : prior_execs)
-                    if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
+                for (auto& actve_subtask : active_execs)
+                    if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
 
                 this->lapse_time_       = lapse_prioriry;  // Update lapse.
                 this->state.processing_ = true;
@@ -59,8 +59,8 @@ public:
     void external_transition(TIME e, typename make_message_bags<typename Node_t<TIME>::input_ports>::type mbs)  // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
     {      
 
-        vector<Message_t>&          prod_bag = get_messages<typename Node_defs::in_source>(mbs);
-        vector<OperatorLocation_t>& bag      = get_messages<typename Node_defs::in>(mbs);
+        std::vector<Message_t>&          prod_bag = get_messages<typename Node_defs::in_source>(mbs);
+        std::vector<OperatorLocation_t>& bag      = get_messages<typename Node_defs::in>(mbs);
         //if (prod_bag.size()) //std::cout<<"\n[master external from prod]: message "<<prod_bag.begin()->id_<<" recivied\n";
         //if (bag.size())      //std::cout<<"\n[master external from switch]: message "<<*bag.begin().base()<<" recivied\n";
 
@@ -73,13 +73,13 @@ public:
         }
         else if (this->state.taskman_.pendingExecutions())
         {
-            std::vector<FLINK::ActiveSubtask_t*>& prior_execs    { this->state.taskman_.getPriorityExecutions() };
-            TIME                                  lapse_prioriry { std::numeric_limits<TIME>::max()             };
+            std::vector<flink::ActiveSubtask_t*>& active_execs   { this->state.taskman_.getActiveExecutions() };
+            TIME                                  lapse_prioriry { std::numeric_limits<TIME>::max()           };
             if (this->state.processing_) 
             {
-                for (auto& a_subtask : prior_execs)
+                for (auto& actve_subtask : active_execs)
                 {
-                    auto* subtask { a_subtask->subtask_ };
+                    auto* subtask { actve_subtask->subtask_ };
                     bool recently = (prod_bag.size() && prod_bag[0].id_ == subtask->mssg_id_) || (bag.size() && bag[0].mssg_id_ == subtask->mssg_id_);
                     if (subtask->lapse_ >= e && !recently){
                         subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
@@ -88,8 +88,8 @@ public:
                 }
             }
             else {
-                for (auto& a_subtask : prior_execs)
-                    if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
+                for (auto& actve_subtask : active_execs)
+                    if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
             }
             this->lapse_time_ = lapse_prioriry;  // Update lapse.
             //std::cout<<"[master external]: time execution: "<< this->lapse_time_ <<"\n";
@@ -108,7 +108,7 @@ public:
     typename make_message_bags<typename Node_t<TIME>::output_ports>::type output() const
     {   
         typename make_message_bags<typename Node_t<TIME>::output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
-        vector<OperatorLocation_t> bag_port_out;                                    // To build the message bag for the output port 'out'.
+        std::vector<OperatorLocation_t> bag_port_out;                                    // To build the message bag for the output port 'out'.
 
         if (this->sendInmediatlyToSwitch()){        // Do you have to send messages to other locations immediately?
             bag_port_out = extern_locations_;
@@ -125,7 +125,7 @@ public:
     }
 
 private:
-    mutable vector<OperatorLocation_t> extern_locations_ {}; 
+    mutable std::vector<OperatorLocation_t> extern_locations_ {}; 
 
     bool sendInmediatlyToSwitch() const noexcept { return extern_locations_.size(); }
 
@@ -133,7 +133,7 @@ private:
     {
         // get_messages<>: to get the message bag from the port (in this case input port).
         // Uses a template parameter for the port we want to access, in this case, the 'in' port, defined by typename NodeMaster_defs::in.
-        vector<Message_t> 
+        std::vector<Message_t> 
         bag_in_port_src = get_messages<typename Node_defs::in_source>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<Message_t>) for us).
         auto size_bag   { bag_in_port_src.size() };
         if (size_bag > 1) assert(false && "[Node master]: One message at a time");
@@ -144,7 +144,7 @@ private:
             if (mssg_id != 0) // Zero if the producer is not sending any more data, he is only capturing metrics. 
             {
                 // Find less congested location of first operator (source by default).
-                FLINK::operId_t const& first_op_id = this->jobman_.getFirstOperator();
+                flink::operId_t const& first_op_id = this->jobman_.getFirstOperator();
                 OperatorLocation_t loc             = this->jobman_.getOperLocationLessload(first_op_id);
                 loc.mssg_id_                       = mssg_id;
 

@@ -12,12 +12,12 @@
 //#include <NDTime.hpp> // NDTime is a C++ class that implements time operations and allows defining the time as in digital clock format (“hh:mm:ss:mss”) or as a list of integer elements ({ hh, mm, ss, mss})
 
 //Data structures
-#include <data_structures/cluster_config.hpp>
+#include <data_structures/clusterconfig.hpp>
 #include <data_structures/flink/jobmanager.tpp>
 
 //Atomic model headers
 #include <atomics/producer.hpp>
-#include <atomics/node_master.hpp>
+#include <atomics/nodemaster.hpp>
 #include <atomics/switch.hpp>
 #include <util/metriclogger.tpp>
 
@@ -26,14 +26,11 @@
 #include <string>
 #include <iomanip>
 
-using namespace std;
 using namespace cadmium;
-//using namespace cadmium::basic_models::pdevs;
+using namespace streamprcss;
 
-//using TIME = FLINK::TIME;
-
-template<typename T>
-using MLogger_t = streamprcss::mylogger::MetricLogger_t<T>;
+//template<typename T>
+//using MLogger_t = mylogger::MetricLogger_t<T>;
 
 //double to_second(TIME const& time)
 //{
@@ -60,7 +57,7 @@ int
 main(int arg, char** argv)
 {
     ClusterConfig_t      cluster_cfg   { argv[1]     }; // argv[1] = app name.
-    FLINK::JobManager_t  JobManager    { cluster_cfg };
+    flink::JobManager_t  JobManager    { cluster_cfg };
     MLogger_t<TIME>      metric_logger { cluster_cfg };
 
     //std::cout<<"distr: " << cluster_cfg.operProps_["op1"].distribution()<<"\n";
@@ -77,7 +74,7 @@ main(int arg, char** argv)
         nodes.reserve(nNodes);
 
         // Create always first node (master=node_0).
-        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcss::NodeMaster_t, TIME, FLINK::JobManager_t&>("node_0", JobManager, nCores));
+        abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcss::NodeMaster_t, TIME, flink::JobManager_t&>("node_0", JobManager, nCores));
         nodes.push_back(dynamic_cast<streamprcss::Node_t<TIME>*>(abstract_nodes.begin()->get()));
 
         // Create slave nodes (node_1, node_2, ..., node_n).
@@ -85,7 +82,7 @@ main(int arg, char** argv)
         for (uint32_t id=1; id < nNodes; ++id)
         {
             fullname = name_base + std::to_string(id);
-            abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcss::Node_t, TIME, FLINK::JobManager_t&>(fullname, JobManager, nCores));
+            abstract_nodes.emplace_back(dynamic::translate::make_dynamic_atomic_model<streamprcss::Node_t, TIME, flink::JobManager_t&>(fullname, JobManager, nCores));
             nodes.push_back(dynamic_cast<streamprcss::Node_t<TIME>*>((abstract_nodes.begin() + id)->get())); // Next interation, get down to subclase (atomic_model -> node) and store address.
         }
     });
@@ -96,11 +93,11 @@ main(int arg, char** argv)
 
 
     //streamprcs::Node_t<TIME>& node_m = dynamic_cast<streamprcs::Node_t<TIME>&>(*nodes.begin()->get());
-    //FLINK::operId_t oper1 = node_m.getTaskManager().getOperator(0);
-    //FLINK::operId_t oper2 = node_m.getTaskManager().getOperator(1);
-    //FLINK::operId_t oper3 = node_m.getTaskManager().getOperator(2);
-    //FLINK::operId_t oper4 = node_m.getTaskManager().getOperator(3);
-    //FLINK::operId_t oper5 = node_m.getTaskManager().getOperator(4);
+    //flink::operId_t oper1 = node_m.getTaskManager().getOperator(0);
+    //flink::operId_t oper2 = node_m.getTaskManager().getOperator(1);
+    //flink::operId_t oper3 = node_m.getTaskManager().getOperator(2);
+    //flink::operId_t oper4 = node_m.getTaskManager().getOperator(3);
+    //flink::operId_t oper5 = node_m.getTaskManager().getOperator(4);
 //
     //std::cout<<oper1<<" "<<oper2<<" "<<oper3<<" "<<oper4<<" "<<oper5<<"\n";
 
@@ -243,7 +240,7 @@ main(int arg, char** argv)
             metric_logger.logMetrics();
         #endif
     #endif
-    //metric_logger.printMetrics();   
+    //metric_logger.printMetrics();
 
     return 0;
 }

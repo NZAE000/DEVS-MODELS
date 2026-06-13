@@ -1,5 +1,5 @@
 #pragma once
-#include<data_structures/cluster_config.hpp>
+#include<data_structures/clusterconfig.hpp>
 
     /*
     I can capture metrics for differents ways:
@@ -48,12 +48,12 @@ namespace streamprcss {
         using operId_t = ClusterConfig_t::operId_t;
         using rate_t   = double;
 
-        struct SystemMetric_t {
+        struct SysMetric_t {
             std::size_t  processed_req_ {};
             double       elapsed_time_  {};
             double       throughput_    {};
         };
-        using sysmetrics_t = std::vector<SystemMetric_t>;
+        using sysmetrics_t = std::vector<SysMetric_t>;
 
         struct OperMetric_t {
             uint32_t     p_level_          {};
@@ -65,10 +65,7 @@ namespace streamprcss {
         };
         using opermetrics_t = std::vector<OperMetric_t>;
 
-        explicit MetricLogger_t(ClusterConfig_t&);
-
-        auto const& getClusterCFG() const noexcept { return cluster_cfg_; }
-        auto&       getClusterCFG()       noexcept { return cluster_cfg_; }
+        explicit MetricLogger_t(ClusterConfig_t const&);
 
         void captureMetrics(double rate, TIME elapsed_t, std::size_t procss_req) noexcept;
         void printMetrics()                                                const noexcept;
@@ -78,10 +75,13 @@ namespace streamprcss {
         #else
         void logMetrics()                                                  const noexcept;
         #endif
+
+        auto const& getClusterCFG() const noexcept { return cluster_cfg_; }
+        auto&       getClusterCFG()       noexcept { return cluster_cfg_; }
          
     private:
         
-        ClusterConfig_t&                             cluster_cfg_;
+        ClusterConfig_t const&                       cluster_cfg_;
         std::map<rate_t,   sysmetrics_t>             system_metrics_ {};
         std::vector<std::map<rate_t, opermetrics_t>> oper_metrics_   {};
         std::map<rate_t,   uint32_t>                 captures_       {};

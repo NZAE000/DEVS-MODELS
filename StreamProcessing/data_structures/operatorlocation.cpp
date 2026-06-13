@@ -5,7 +5,7 @@
 * Operator location data implementation
 */
 
-#include "operator_location.hpp"
+#include "operatorlocation.hpp"
 
 /***************************************************/
 /************* Output stream ************************/

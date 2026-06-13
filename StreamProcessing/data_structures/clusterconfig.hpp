@@ -14,13 +14,13 @@
 #include <functional>
 #include <cassert>
 #include <memory>
-#include <iostream>
 #include "flink/typealiases.hpp"
 #include "../util/random.hpp"
 #include "../input_data/hardware.hpp"
+//#include <iostream>
 
+using TIME = streamprcss::flink::TIME;
 
-using TIME = FLINK::TIME;
 
 struct ConfigPath_t {
     static constexpr std::string_view topo_path       {"input_data/topology.txt"};
@@ -37,7 +37,7 @@ struct OperatorProperties_t {
     std::string                             name_               {};
     uint32_t                                replication_        {};
     std::unique_ptr
-    <myrandom::RandomBase_t<TIME>>   random_time_        {};
+    <myrandom::RandomBase_t<TIME>>          random_time_        {};
     std::string                             ship_strategy_      {};
     double                                  selectivity_        {};
     uint32_t                                sent_records_accum_ {};
@@ -47,7 +47,7 @@ struct OperatorProperties_t {
 
 struct ClusterConfig_t {
 
-    using operId_t = FLINK::operId_t;
+    using operId_t = streamprcss::flink::operId_t;
 
     explicit ClusterConfig_t(std::string_view app_n) : app_name_{app_n}
     {
@@ -61,25 +61,22 @@ struct ClusterConfig_t {
     }
 
 // Data config
-    std::string                        app_name_           {};
-    std::vector<OperatorProperties_t>  operProps_          {};
-    std::vector<std::vector<operId_t>> topology_           {};
-    operId_t                           begin_op_           {};
-    std::vector<operId_t>              end_ops_            {};
-    std::map<TIME, double>      arrivalRates_       {};
-    uint32_t                           requeriments_       {}; 
-    double                             rate_               {};
-    uint32_t                           n_nodes_            {};
-    uint32_t                           n_cores_            {};
-    double                             degradation_factor_ {};  // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
-    inline static operId_t             N_OPERATORS_        {0};
+    std::string                         app_name_           {};
+    std::vector<OperatorProperties_t>   operProps_          {};
+    std::vector<std::vector<operId_t>>  topology_           {};
+    operId_t                            begin_op_           {};
+    std::vector<operId_t>               end_ops_            {};
+    std::map<TIME, double>              arrivalRates_       {};
+    uint32_t                            requeriments_       {}; 
+    double                              rate_               {};
+    uint32_t                            n_nodes_            {};
+    uint32_t                            n_cores_            {};
+    double                              degradation_factor_ {};  // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
+    inline static operId_t              N_OPERATORS_        {0};
 
     void accumBusyTime(operId_t const operid, double time) noexcept
     {
         auto& operprop = operProps_[operid];
-        //double lamda {0.9}, beta{0.071001}; // p=2 -> l=0.9, 
-        //auto extrawork = [&]() -> double { return 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_; };
-
         operprop.busy_time_accum_ += time * operprop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
     }
 
@@ -90,7 +87,7 @@ struct ClusterConfig_t {
     }
 
 private:
-    std::map<std::string, operId_t> oper_ids_     {};
+    std::map<std::string, operId_t> oper_ids_ {};
 
     void initOperators(std::string_view path) noexcept
     {
@@ -215,8 +212,6 @@ private:
 
     void initHardware(std::string_view path) noexcept
     {
-        //std::ifstream file(path.data());
-        //file>>n_cores_;
         n_nodes_ = N_NODES;
         n_cores_ = N_CORES;
         assert( n_nodes_ > 0 && "Invalid hardware parameter: n_nodes is 0" );
@@ -234,9 +229,6 @@ private:
         double p_inefficiency_ { 1 / e_ };
 
         degradation_factor_ = interferency_ * saturation_ * p_inefficiency_;
-        //gamma_              = std::max(0.0, cpuu_ - u_thr_);
-        //std::cout<<"cpuu: "<<cpuu_<<" u_thr: "<<u_thr_<<" alpha: "<<alpha_<<" u_sat: "<<u_sat_<<"\n";
-        //std::cout<<"deg: "<<degradation_factor_<<'\n';
     }
 
     void initExtraOccupFactors(std::string_view path) noexcept 

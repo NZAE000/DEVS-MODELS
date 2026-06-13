@@ -36,8 +36,8 @@ random.o: util/random.cpp
 	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) util/random.cpp -o build/random.o
 
 # DATA STRUCTURES
-operator_location.o : data_structures/operator_location.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/operator_location.cpp -o build/operator_location.o
+operatorlocation.o : data_structures/operatorlocation.cpp
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/operatorlocation.cpp -o build/operatorlocation.o
 
 message.o : data_structures/message.cpp
 	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/message.cpp -o build/message.o
@@ -79,26 +79,26 @@ main_prod_nmaster_test.o: test/integration/main_prod_nmaster_test.cpp
 main_top.o: test/system/main.cpp
 	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/system/main.cpp -o build/main_top.o
 
-unitary_producer: main_producer_test.o operator_location.o message.o random.o flinklib
-	$(CC) -o bin/PRODUCTOR_TEST build/libflink.a build/main_producer_test.o build/random.o build/operator_location.o build/message.o
+unitary_producer: main_producer_test.o operatorlocation.o message.o random.o flinklib
+	$(CC) -o bin/PRODUCTOR_TEST build/libflink.a build/main_producer_test.o build/random.o build/operatorlocation.o build/message.o
 
-unitary_nodemaster: main_nodemaster_test.o operator_location.o message.o random.o flinklib
-	$(CC) -o bin/NODEMASTER_TEST build/libflink.a build/main_nodemaster_test.o build/random.o build/operator_location.o build/message.o
+unitary_nodemaster: main_nodemaster_test.o operatorlocation.o message.o random.o flinklib
+	$(CC) -o bin/NODEMASTER_TEST build/libflink.a build/main_nodemaster_test.o build/random.o build/operatorlocation.o build/message.o
 
-unitary_switch: main_switch_test.o operator_location.o message.o random.o flinklib
-	$(CC) -o bin/SWITCH_TEST build/libflink.a build/main_switch_test.o build/random.o build/operator_location.o build/message.o
+unitary_switch: main_switch_test.o operatorlocation.o message.o random.o flinklib
+	$(CC) -o bin/SWITCH_TEST build/libflink.a build/main_switch_test.o build/random.o build/operatorlocation.o build/message.o
 
-unitary_tests: main_producer_test.o main_nodemaster_test.o main_switch_test.o operator_location.o message.o random.o flinklib
+unitary_tests: main_producer_test.o main_nodemaster_test.o main_switch_test.o operatorlocation.o message.o random.o flinklib
 	$(unitary_producer)
 	$(unitary_nodemaster)
 	$(unitary_switch)
 
-integration_tests: main_prod_nmaster_test.o random.o operator_location.o message.o flinklib
-	$(CC) -o bin/PRODUCTOR_NMASTER_TEST build/libflink.a build/main_prod_nmaster_test.o build/random.o build/operator_location.o build/message.o
+integration_tests: main_prod_nmaster_test.o random.o operatorlocation.o message.o flinklib
+	$(CC) -o bin/PRODUCTOR_NMASTER_TEST build/libflink.a build/main_prod_nmaster_test.o build/random.o build/operatorlocation.o build/message.o
 
 #TARGET TO COMPILE ONLY STREAN PROCESSING SIMULATOR
-$(SIMULATOR): main_top.o random.o operator_location.o message.o flinklib
-	$(CC) build/main_top.o build/random.o build/operator_location.o build/message.o build/libflink.a -o bin/$(SIMULATOR) 
+$(SIMULATOR): main_top.o random.o operatorlocation.o message.o flinklib
+	$(CC) build/main_top.o build/random.o build/operatorlocation.o build/message.o build/libflink.a -o bin/$(SIMULATOR) 
 	
 #TARGET TO COMPILE EVERYTHING (ABP SIMULATOR + TESTS TOGETHER)
 all: $(SIMULATOR) unitary_tests integration_tests

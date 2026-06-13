@@ -21,12 +21,11 @@
 #include <vector>
 
 #include "../input_data/hardware.hpp"
-#include "../data_structures/operator_location.hpp"
+#include "../data_structures/operatorlocation.hpp"
 #include "../data_structures/message.hpp"
 #include "../util/random.hpp"
 
 using namespace cadmium;
-using namespace std;
 
 /*Call order: external, time_avance, output, internal*/
 
@@ -35,6 +34,7 @@ namespace streamprcss {
 
 
 struct MessageBuffer_t {
+    
     std::vector<OperatorLocation_t> messages{};
     bool active {false};
 };

@@ -16,13 +16,12 @@
 #include <random>
 #include <iostream>
 
-#include "../data_structures/operator_location.hpp"
+#include "../data_structures/operatorlocation.hpp"
 #include "../data_structures/message.hpp"
 #include "../data_structures/flink/jobmanager.hpp"
 #include "../util/random.hpp"
 
 using namespace cadmium;
-using namespace std;
 
 /*Call order: external, time_avance, output, internal*/
 
@@ -44,8 +43,8 @@ public:
     // ports definition: tuple for distintes types of messages
     // NOTA: The 'typename' specifies that Node_defs::in and Node_defs::out aredatatypesthatwilloverwritethetemplateclassinthesimulator
     //"typename" indicates that the expression that follows is a "data type" (not a specific object).
-    using input_ports  = tuple<typename Node_defs::in_source, typename Node_defs::in>;
-    using output_ports = tuple<typename Node_defs::out>;
+    using input_ports  = std::tuple<typename Node_defs::in_source, typename Node_defs::in>;
+    using output_ports = std::tuple<typename Node_defs::out>;
 
 
     // State definition (state variables of the Node_t model)
@@ -54,22 +53,22 @@ public:
         state_type(uint32_t n_cores) 
         : taskman_{n_cores} {}
 
-        FLINK::nodeId_t              id_ {NEXT_ID_++};
+        flink::nodeId_t              id_ {NEXT_ID_++};
         bool                         processing_{false};
-        mutable FLINK::TaskManager_t taskman_{1};
+        mutable flink::TaskManager_t taskman_{1};
     };
     state_type state{1};
     
     Node_t() noexcept {} // Default constructor
 
-    Node_t(FLINK::JobManager_t& jman, uint32_t n_cores) noexcept
+    Node_t(flink::JobManager_t& jman, uint32_t n_cores) noexcept
     :  state{n_cores}, jobman_{jman} {}
 
     // Internal transition
     void internal_transition() 
     {
         // Terminate what was executed.
-        std::vector<FLINK::slotId_t> const& slot_ids_used { state.taskman_.terminatePriorityExecutions() };
+        std::vector<flink::slotId_t> const& slot_ids_used { state.taskman_.terminateActiveExecutions() };
         
         // Before, schedule internal pending requeriments (if there are pending). 
         for (auto& location : this->internal_pendings_){
@@ -85,11 +84,11 @@ public:
         // Is there some pending execution? get his execution time and set processing to active.
         if (state.taskman_.pendingExecutions())
         {            
-            std::vector<FLINK::ActiveSubtask_t*>& execs_prior { this->state.taskman_.getPriorityExecutions() };
+            std::vector<flink::ActiveSubtask_t*>& active_execs { this->state.taskman_.getActiveExecutions() };
             TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
 
-            for (auto& a_subtask : execs_prior)
-                if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
+            for (auto& actve_subtask : active_execs)
+                if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
 
             this->lapse_time_       = lapse_prioriry;  // Update lapse.
             this->state.processing_ = true;
@@ -104,20 +103,20 @@ public:
     // (Here (in this model), mbs is a tuple of one bag: the message bag in port in. The messages inside the set of messages in the bag are stored in a C++ vector.)
     void external_transition(TIME e, typename make_message_bags<input_ports>::type mbs) // std::tuple<message_bag<Ps>...> / Ps = ports 'in'.
     {   
-        vector<OperatorLocation_t>& bag = get_messages<typename Node_defs::in>(mbs);
+        std::vector<OperatorLocation_t>& bag = get_messages<typename Node_defs::in>(mbs);
         //if (bag.size())
             //std::cout<<"\n[slave external "<<state.id<< "]: message "<<*bag.begin().base()<<" recivied\n";
 
         checkExternalTransitionFromSwitch(mbs); // Check some location message of switch
 
-        std::vector<FLINK::ActiveSubtask_t*>& execs_prior    { this->state.taskman_.getPriorityExecutions() };
-        TIME                                  lapse_prioriry { std::numeric_limits<TIME>::max()             };
+        std::vector<flink::ActiveSubtask_t*>& active_execs   { this->state.taskman_.getActiveExecutions() };
+        TIME                                  lapse_prioriry { std::numeric_limits<TIME>::max()           };
 
         if (this->state.processing_) 
         {
-            for (auto& a_subtask : execs_prior)
+            for (auto& actve_subtask : active_execs)
             {   
-                auto* subtask { a_subtask->subtask_ };
+                auto* subtask { actve_subtask->subtask_ };
                 bool recently = bag.size() && bag[0].mssg_id_ == subtask->mssg_id_;
                 if (subtask->lapse_ >= e && !recently)
                     subtask->lapse_ -= e; // Minus time left (e = elapsed time value since last transition).
@@ -125,8 +124,8 @@ public:
             }
         }
         else {
-            for (auto& a_subtask : execs_prior)
-                if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
+            for (auto& actve_subtask : active_execs)
+                if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
             state.processing_ = true;
         }      
         lapse_time_ = lapse_prioriry;
@@ -145,7 +144,7 @@ public:
     typename make_message_bags<output_ports>::type output() const 
     {
         typename make_message_bags<output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
-        vector<OperatorLocation_t> bag_out_port;             // To build the message bag for the output port 'out'.
+        std::vector<OperatorLocation_t> bag_out_port;             // To build the message bag for the output port 'out'.
         //std::cout<<"[slave output "<<state.id<< "]: searchNextOperatorDestinations\n";
         searchNextOperatorDestinations(bag_out_port);
         // get_messages uses a template parameter for the port we want to access, in this case, the port 'out'.
@@ -159,7 +158,7 @@ public:
     {
         // TIME next_interval;
         if (state.processing_) return lapse_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
-        else                   return numeric_limits<TIME>::infinity();
+        else                   return std::numeric_limits<TIME>::infinity();
         
         //return next_interval;
     }
@@ -168,7 +167,7 @@ public:
     // In this case, we only display two of the state variables: index and processing.
     // That sentence typename Node_t<TIME>::state_typ means that we are accessing the structure state_type inside the template class Node_t<TIME>.
     // We need to declare the operator using the keyword 'friend's to specify that the function can access the private members of the structure state_type.
-    friend ostringstream& operator<<(ostringstream& os, const typename Node_t<TIME>::state_type& i) { // State log
+    friend std::ostringstream& operator<<(std::ostringstream& os, const typename Node_t<TIME>::state_type& i) { // State log
         //os <<"node_"<<i.id<<": buff: "<<i.buffer<<" & sent loc: " << i.index << " & processing: " << i.processing; 
         os<<"processing: " << i.processing_ << ", buffer executions: " << i.taskman_.pendingExecutions()<<", executing: "<<i.taskman_.executing()<<","; // TODO.
         for (auto const& [id, slot] : i.taskman_.getSlots())
@@ -179,15 +178,15 @@ public:
     }
 
 
-    FLINK::TaskManager_t&       getTaskManager()       noexcept { return state.taskman_;  }
-    FLINK::TaskManager_t const& getTaskManager() const noexcept { return state.taskman_;  }
-    FLINK::nodeId_t             id()                   noexcept { return state.id_;       }
+    flink::TaskManager_t&       getTaskManager()       noexcept { return state.taskman_;  }
+    flink::TaskManager_t const& getTaskManager() const noexcept { return state.taskman_;  }
+    flink::nodeId_t             id()                   noexcept { return state.id_;       }
 
 protected: // Son access (node_master).
 
     void checkExternalTransitionFromSwitch(typename make_message_bags<input_ports>::type& mbs)
     {   
-        vector<OperatorLocation_t>
+        std::vector<OperatorLocation_t>
         bag_in_port = get_messages<typename Node_defs::in>(mbs); // To retrieve the bag (return vector message(in this case get messages of port in_source<OperatorLocation_t>) for us).
         
         auto size_bag { bag_in_port.size() };
@@ -200,20 +199,20 @@ protected: // Son access (node_master).
         //else{ //std::cout<<"\nno switch\n"; }
     }
 
-    void searchNextOperatorDestinations(vector<OperatorLocation_t>& bag_out_port) const
+    void searchNextOperatorDestinations(std::vector<OperatorLocation_t>& bag_out_port) const
     {
         // Find less lapse execution.
-        std::vector<FLINK::ActiveSubtask_t*>& execs_prior     { this->state.taskman_.getPriorityExecutions()  };
+        std::vector<flink::ActiveSubtask_t*>& active_execs     { this->state.taskman_.getActiveExecutions()  };
         TIME                                  lapse_prioriry  { std::numeric_limits<TIME>::max()              };
-        for (auto& a_subtask : execs_prior){
-            if (a_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = a_subtask->subtask_->lapse_;
+        for (auto& actve_subtask : active_execs){
+            if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
         }
         
         // Then get the operator that was running for get their next destinations.
-        for (auto& a_subtask : execs_prior){
-            if (a_subtask->subtask_->lapse_ == lapse_prioriry) 
+        for (auto& actve_subtask : active_execs){
+            if (actve_subtask->subtask_->lapse_ == lapse_prioriry) 
             {
-                FLINK::operId_t const& oper_id = state.taskman_.getSlot(a_subtask->subtask_->slot_id_).getOperator();
+                flink::operId_t const& oper_id = state.taskman_.getSlot(actve_subtask->subtask_->slot_id_).getOperator();
                 
                 // Know if send message or not according operator's selectivity probability.
                 double selectivity { this->jobman_.getOperatorProperties(oper_id).selectivity_ };
@@ -223,14 +222,14 @@ protected: // Son access (node_master).
                 {
                     this->jobman_.accumSentRecords(oper_id, 1); // Accumulate send messages.
                     
-                    vector<FLINK::operId_t> const& 
+                    std::vector<flink::operId_t> const& 
                     operDestinations = this->jobman_.getOperatorDestinations(oper_id);
                     
                     // Get balanced destiny locations for each destiny opeartor.
                     for (auto const oper_id_des : operDestinations) 
                     {
                         OperatorLocation_t location = this->jobman_.getOperLocationLessload(oper_id_des);
-                        location.mssg_id_           = a_subtask->subtask_->mssg_id_; // Pass message.
+                        location.mssg_id_           = actve_subtask->subtask_->mssg_id_; // Pass message.
 
                         // Location in this node? store local pending.
                         if (location.node_id_ == state.id_){
@@ -251,12 +250,12 @@ protected: // Son access (node_master).
 
     //const TIME exec_time_{0,0,0,0,5}; // Excecution time
 protected:
-    TIME                                 lapse_time_ {0}; // Time left until next departure.
-    FLINK::JobManager_t&                 jobman_;
+    TIME                                      lapse_time_ {0}; // Time left until next departure.
+    flink::JobManager_t&                      jobman_;
 private:
-    inline static FLINK::nodeId_t        NEXT_ID_            {0};
-    mutable vector<OperatorLocation_t>   internal_pendings_  {}; 
-    mutable myrandom::Uniform_t<double>  unidistr_           {0.0, 1.0};
+    inline static flink::nodeId_t             NEXT_ID_            {0};
+    mutable std::vector<OperatorLocation_t>   internal_pendings_  {}; 
+    mutable myrandom::Uniform_t<double>       unidistr_           {0.0, 1.0};
 };
 
 } // namespace streamprcs

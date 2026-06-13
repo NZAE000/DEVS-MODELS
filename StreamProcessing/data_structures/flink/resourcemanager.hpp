@@ -7,25 +7,27 @@
 #pragma once
 #include "taskmanager.hpp"
 #include "taskslot.hpp"
-#include "../operator_location.hpp"
-
-namespace FLINK {
+#include "../operatorlocation.hpp"
 
 
-struct ResourceManager_t {
+namespace streamprcss {
+    namespace flink {
 
-    explicit ResourceManager_t(uint32_t n_nodes)
-    {
-        refResources_.reserve(n_nodes);
-    }
+    struct ResourceManager_t {
 
-    void               registerResource(TaskManager_t&)               noexcept;
-    slotId_t           assignResource(operId_t const, nodeId_t)       noexcept;
-    TaskSlot_t const&  slotFrom(OperatorLocation_t const&)      const noexcept;
-    TaskSlot_t&        slotFrom(OperatorLocation_t const&)            noexcept;
+        explicit ResourceManager_t(uint32_t n_nodes)
+        {
+            ref_resources_.reserve(n_nodes);
+        }
 
-private:
-    std::vector<TaskManager_t*> refResources_{};
-};
+        void               registerResource(TaskManager_t&)               noexcept;
+        slotId_t           assignResource(operId_t const, nodeId_t)       noexcept;
+        TaskSlot_t const&  slotFrom(OperatorLocation_t const&)      const noexcept;
+        TaskSlot_t&        slotFrom(OperatorLocation_t const&)            noexcept;
 
-} // namespace FLINK
+    private:
+        std::vector<TaskManager_t*> ref_resources_ {};
+    };
+
+    } // namespace flink
+} // namespace streamprcss
