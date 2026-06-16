@@ -1,4 +1,12 @@
-Repository with models implemented using Discrete Event Specification (DEVS) formalism, through the CADMIUM tool, whose installation can be found in the user guide: https://cell-devs.sce.carleton.ca/index.php/cadmium/.
+Repository with models implemented using Discrete Event Specification (DEVS) formalism, through the CADMIUM simulation engine, whose installation can be found in the user guide: https://cell-devs.sce.carleton.ca/index.php/cadmium/.
+
+## Third-Party Software
+
+This project includes the CADMIUM DEVS simulation engine.
+CADMIUM is distributed under the BSD-2-Clause License.
+Copyright (c) 2013-2015 Damian Vicino,
+Carleton University, Universite de Nice-Sophia Antipolis.
+The full license text is available in: cadmium/BSD-LICENSE.txt
 
 # Simulador DEVS Stream Processing System (SPS)
 
@@ -105,7 +113,7 @@ Luego, clonar este repositorio en la misma ruta donde se instaló Cadmium:
 $ git clone https://github.com/NZAE000/DEVS-MODELS.git
 ```
 
-Para el uso de scripts de Python, es necesario crear y activar un entorno virtual en Python para las instalacion de dependencias en su local.
+Para el uso de scripts de Python, es necesario crear y activar un entorno virtual para las instalacion de dependencias en su local.
 Para ello, ubiquece en el directorio 'StreamProcessing/':
 ```bash
 $ cd StreamProcessing/
@@ -138,7 +146,7 @@ Verifique:
 $ deactivate
 ```
 
-Para automatizar la instalacion del ambiente, ejecute el script en el directorio StreamProcessing/:
+Para automatizar la instalación del ambiente, ejecute el script en el directorio StreamProcessing/:
 ```bash
 $ bash setup_python_env.sh
 ```

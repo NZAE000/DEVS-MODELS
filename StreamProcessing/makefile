@@ -5,6 +5,7 @@ PARALLELISM_L := 0
 PROD_MOD := 0
 APPLY_LOG := 0
 LOG_MOD := 0
+PRINT_LOG := 0
 CC=clang++
 ifneq ($(N_NODES),0)
 	CC += -DN_NODES=$(N_NODES)
@@ -18,10 +19,11 @@ endif
 CC += -DPROD_MOD=$(PROD_MOD)#Producer transmition method.
 CC += -DAPPLY_LOG=${APPLY_LOG}#Log metrics in file (1) or not (0).
 CC += -DLOG_MOD=${LOG_MOD}#If metrics logger is dynamic (1) (log in execution time) or only log when the execution is terminated (0).
+CC += -DPRINT_LOG=${PRINT_LOG}#when the simualtion is completed, print logs or not.
 CFLAGS=-std=c++23 -O3 #-g #-Wall -Wextra -Wpedantic -Wconvertions
 
-INCLUDECADMIUM=-I ../../Cadmium-Simulation-Environment/cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
-INCLUDEDESTIMES=-I ../../Cadmium-Simulation-Environment/DESTimes/include/
+INCLUDECADMIUM=-I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
+#INCLUDEDESTIMES=-I DESTimes/include/
 INCLUDESTREAMPRCSS=-I .
 
 #CREATE BIN AND BUILD FOLDERS TO SAVE THE COMPILED FILES DURING RUNTIME
@@ -33,26 +35,26 @@ results_folder := $(shell mkdir -p simulation_results simulation_results/unitary
 
 # UTILS
 random.o: util/random.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) util/random.cpp -o build/random.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) util/random.cpp -o build/random.o
 
 # DATA STRUCTURES
 operatorlocation.o : data_structures/operatorlocation.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/operatorlocation.cpp -o build/operatorlocation.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) data_structures/operatorlocation.cpp -o build/operatorlocation.o
 
 message.o : data_structures/message.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/message.cpp -o build/message.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) data_structures/message.cpp -o build/message.o
 
 jobmanager.o : data_structures/flink/jobmanager.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/jobmanager.cpp -o build/jobmanager.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) data_structures/flink/jobmanager.cpp -o build/jobmanager.o
 
 resourcemanager.o : data_structures/flink/resourcemanager.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/resourcemanager.cpp -o build/resourcemanager.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) data_structures/flink/resourcemanager.cpp -o build/resourcemanager.o
 
 jobmaster.o : data_structures/flink/jobmaster.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/jobmaster.cpp -o build/jobmaster.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) data_structures/flink/jobmaster.cpp -o build/jobmaster.o
 
 taskmanager.o : data_structures/flink/taskmanager.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) data_structures/flink/taskmanager.cpp -o build/taskmanager.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) data_structures/flink/taskmanager.cpp -o build/taskmanager.o
 
 flinklib: jobmanager.o resourcemanager.o jobmaster.o taskmanager.o
 	ar -crs build/libflink.a  build/jobmanager.o build/resourcemanager.o build/jobmaster.o build/taskmanager.o
@@ -61,23 +63,23 @@ flinklib: jobmanager.o resourcemanager.o jobmaster.o taskmanager.o
 
 # UNITARY TESTS
 main_producer_test.o : test/unitary/main_producer_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/unitary/main_producer_test.cpp -o build/main_producer_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) test/unitary/main_producer_test.cpp -o build/main_producer_test.o
 
 main_nodemaster_test.o : test/unitary/main_nodemaster_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/unitary/main_nodemaster_test.cpp -o build/main_nodemaster_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) test/unitary/main_nodemaster_test.cpp -o build/main_nodemaster_test.o
 
 main_switch_test.o : test/unitary/main_switch_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/unitary/main_switch_test.cpp -o build/main_switch_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) test/unitary/main_switch_test.cpp -o build/main_switch_test.o
 
 
 # INTEGRATION TESTS
 main_prod_nmaster_test.o: test/integration/main_prod_nmaster_test.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/integration/main_prod_nmaster_test.cpp -o build/main_prod_nmaster_test.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) test/integration/main_prod_nmaster_test.cpp -o build/main_prod_nmaster_test.o
 
 
 # SIMULATOR
 main_top.o: test/system/main.cpp
-	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDEDESTIMES) $(INCLUDESTREAMPRCSS) test/system/main.cpp -o build/main_top.o
+	$(CC) $(CFLAGS) -c $(INCLUDECADMIUM) $(INCLUDESTREAMPRCSS) test/system/main.cpp -o build/main_top.o
 
 unitary_producer: main_producer_test.o operatorlocation.o message.o random.o flinklib
 	$(CC) -o bin/PRODUCTOR_TEST build/libflink.a build/main_producer_test.o build/random.o build/operatorlocation.o build/message.o

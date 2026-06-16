@@ -58,7 +58,8 @@ namespace streamprcss {
             //std::cout<<"inx: "<<index<<'\n';
         }
 
-        ActiveSubtask_t& getActiveSubtask() noexcept { return this->active_subtask_; }
+        ActiveSubtask_t&       getActiveSubtask()       noexcept { return this->active_subtask_; }
+        ActiveSubtask_t const& getActiveSubtask() const noexcept { return this->active_subtask_; }
 
         Subtask_t&            front()                 { return prepared_subtasks_[head_index_];          }
         Subtask_t const&      front()  const          { return prepared_subtasks_[head_index_];          }

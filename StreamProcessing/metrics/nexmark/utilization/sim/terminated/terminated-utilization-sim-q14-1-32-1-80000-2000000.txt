@@ -1,3 +1,0 @@
-sourcedatagen1:0.999975;calc2:0.647091;watermarkassigner3:0.413849;minibatchassigner4:0.428737;calc5:0.510031;nexmarkq146writer:0.0610616;
-sourcedatagen1:0.99995;calc2:0.647076;watermarkassigner3:0.413839;minibatchassigner4:0.428727;calc5:0.510019;nexmarkq146writer:0.0605851;
-sourcedatagen1:0.999975;calc2:0.647091;watermarkassigner3:0.413849;minibatchassigner4:0.428737;calc5:0.510031;nexmarkq146writer:0.061047;

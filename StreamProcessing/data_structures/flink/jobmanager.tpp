@@ -1,6 +1,6 @@
 //#include "jobmanager.hpp"
 #include <atomics/nodemaster.hpp>
-#include <iostream>
+//#include <iostream>
 
 
 namespace streamprcss {
@@ -41,13 +41,15 @@ namespace streamprcss {
             }
         }
 
-        //// Show distribution.
-        //for (auto const& [oper_id, properties] : cluster_cfg_.operProps_)
+        // Show distribution.
+        //uint32_t size = cluster_cfg_.N_OPERATORS_;
+        //for (uint32_t i=0; i<size; ++i)
         //{
-        //    auto locations = jobMaster_.getLocations(oper_id);
-        //    std::cout<<"Locations of "<<oper_id<<":\n";
+        //    auto const& properties = cluster_cfg_.operProps_[i];
+        //    auto locations = jobMaster_.getLocations(i);
+        //    std::cout<<"Locations of "<<properties.name_<<":\n";
         //    for (auto const& loc : locations){
-        //        std::cout<<"\tnode: "<<loc.node_id<<" slot_id: "<<loc.slot_id<<"\n";
+        //        std::cout<<"\tnode: "<<loc.node_id_<<" slot_id: "<<loc.slot_id_<<"\n";
         //    }
         //}
     }

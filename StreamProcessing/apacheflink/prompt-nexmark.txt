@@ -16370,4 +16370,122 @@ Las rutas estan en:
 
 
 La diferencia es que el analisis se hace para cada operador real vs sim.
-Necesito que me construyas el script para calcular todas esas metricas, que las exporte a un csv e imprime el resumen por consola.
+Necesito que me construyas el script para calcular todas esas metricas, que las exporte a un csv e imprime el resumen por consola
+
+Super. Con los resultados de validacion hasta ahora, mi profesor guia (Alonso) como mi revisor (Daniel walddimiro), me indican que la validacion es decente para
+empezar a finalizar el paper llamado: FlinkSim: A DEVS-based Discrete-Event Simulator for Apache Flink.
+Me mencionaron que el abstract (resumen) dejarlo al final cuando se tenga completado el paper.
+Hasta ahora, en el overleaf, tengo completado las siguientes secciones:
+
+	- Introduccion:
+		- Incremento de volumen de datos en los ultimos años
+		- Batch vs stream processing
+		- Evaluar el recurso donde esta aplicaciones de streams es escencial
+		- Numerosos trabajos de simulacion en la literatura
+		- La importancia de modelar el sistema sin recurrir directamente a experimentar con el real
+		- Paradigmas de simulacion y DEVS
+		- Proposito de este trabajo: modelo SPS (stream processing system) centrado en ApacheFlink, basaado en devs
+		- Permitir evaluar el rendimiento, analizar el sisteama priori, decisiones de configuracion.
+		- Lo novedoso: ademas de modelar los componente, capturar fenomeno de degradacion y de ocupacion interna extra de operadores
+		- Validacion del simulador com nexmark benchmark
+		- Organizacion del paper (secciones)
+	- Background
+		- Stream processing system (Directed Acyclic Graph (DAG), dataflow, operadores, reaplicas, distribucion del dataflow, balance de carga)
+		- Flink: job graph, source, operators, sink, substaks, arquitectura: jobmanager, distpatcher, resourcemanager, taskmanager, taskslots, jobmaster.
+		- Modelamiento y simulacion: modelo de simulacion, DES, DEVS (modelos atomicos, acoplados, funciones, puertos, EIC, EOC, IC, ejemplos)
+	- Trabajos realcionados
+		- Simuladores DSP
+		- Large-scale simulators
+		- Enfoues basado en modelamiento
+
+Ahora, necesito avanzar en las siguiete  seccion: 'Flink simulator'.
+Mi estructura ideada para esta seccion es:
+
+- Primero presentar una vista de alto nivel del modelo de ambiente de ejecucion: usuario envia un trabajo a un nodo maestro junto a varios nodos esclavos,
+en conjunto conectados mediante un switch, y una fuente externa como un productor que presenta el publicador de eventos o tuplas.
+- Luego, situarse en cada paso de lo que sucedio en la vista general para ir relacionando los conceptos arquitectonicos de flink:
+el jobmanager recive el dataflow graph del usuario, se gestiona el recurso disponilble mediante el resourcemanager donde el trabajo deberá ser distribuido, 
+asignando cada replica de operador (subtarea) a una unidad minima de memoria llamado taskslot, ubicados en diferentes taskmanger de los workers, permietiendo que ejecuten
+cada subtarea como thread de manera paralela. 
+Cada explicacion anterior ir mostrando imagenes desde la asignacion hasta el modelo resultante de una aplicacion ejecutandose en el cluster, figurando cada taskmanager en un nodo,
+teniendo su conjuto de subtareas (suboperadores) con sus taskslots asignados.
+- De la explicaion anterior, conlleva a conocer la subseccion llamada 'Simulation Paameters:
+	- Topologia (from -> to de operadores)
+	- Cantidad de nodos y nucleos por nodo
+	- Propiedad de cada operador: nombre, nievel paralelismo, dsitrubucion de tiempo productivo de operacion y sus argumentos, etc.
+	- Cantidad de taskslots dependará del la suma del nivel de paralelismo de cada opearador.
+	- Workload: numero de requerimientos y tasa de arribo
+
+	- Luego de explicar los parametros anteriores, en este ultimo punto necesito de tu gran ayuda: "Parametros de degradacion y ocupacion interna extra de los operadores", ya que es uno de los 	puntos mas novedosos del paper. Cual es mi idea para que me garantizes una explicacion clara, sutil y potente de esto:
+
+		- Conducir al tema respecto a los fenomenos subyacentes que emergen cuando la aplicacion es paralelizada, es decir, cuando la aplicacion se configura con altos niveles de 			paralelismo en los operadores.
+		- Cuando se comienze a conducir aquel tema, necesito que referencies literatura que mencione o trate sobre el overhead que causa degradacion del rendimiento en sisteamas paralelos, 		debido a todas estas ocurrencias internas en el sistema, como la sincronizacion entre threads, gestion y planificacion del sisteam operativo, etc. 
+		- Como demostracion, muestro un grafico de throughput vs niveles de paralelismo de los primeros experimentos donde mi modelo de simulacion no contaba con el modelo de 				degradacion.
+		- De ello, que expliques los fenomenos identificados, los regimen de interferencia, saturacion e infeficiencia de paralelismo, siendo los factores principales, loas cuales siendo
+		extraidos de manera expirica mediante ejecuciones reales de la aplicaion, mas bien llamados 'barridos de carga' como etapa de calibracion para estos parametros, consiguiendo
+		modelar esta degradcion global en funcion de P, como:
+			
+			t_effec_op = t_base_op × Degradation(P)
+
+			donde:
+				Degradation(P) = Finter(P) × Fsatu(P) × Fineff_par(P)
+				Finter(P)      = (1 + α(P) · max(0, U_cpu(P) − U_thr(P)))
+				Fsatu(P)       = (1 + B · max(0, U_cpu(P) − U_sat(P))), donde B = 0.05
+				Fineff_par(P)  = 1 / E(P), donde E(P) = Tmax(P) / (Peff · Tmax(1))
+
+				Tmax(p): mejor throughput observado en nivel de paralelismo p
+			U_thr(p): CPU al 95% de Tmax
+			U_sat(p): CPU en el punto de máximo throughput
+			α(p): pendiente de caída de throughput vs aumento de CPU
+			P0: primer p a partir del cual ningún P mayor mejora Tmax
+			E(p): eficiencia paralela real respecto al escalamiento ideal
+		
+		(De ello respecto a a la modelacion, no estaria de mas mencionar el trabajo “StarData: Distributed Map-Reduce Framework Atop Serverless Computing Platforms” discute explícitamente (Sección D: 		Trade-off Between Numbers and RAM) el uso de coeficientes de penalización dependientes del hardware y del grado de paralelismo para modelar costos y degradación de rendimiento, lo que respalda 			conceptualmente este enfoque)
+
+		- Luego, necesito que pases al siguiente fenomeno respecto al tiempo extra de ocupacion de los operadores, aparte del tiempo productivo en si, debido a al aumento de paralelizacion 		del sistema  (referenciar litaratura)
+		- Como demostracion, muestro un grafico de utilizacion de operadores vs niveles de paralelismo de los primeros experimentos que no contaba con los factores de ocupacion
+		- Que expliques que al al simulador le falta aquel tiempo de residencia/ocupación de cada opeardor dependiente de P, donde mediante barridos de utilizacion y los valores de throughput del 		barrido de carga se consigue de manera empirica estimar aquellos factores mediante calculomatematico con la 'Ley de utilizacion':
+
+		La utilización de un operador cumple: U(P,op) = TP(P)*occupation/event(P,op) / P, porque:
+
+		throughput = eventos/segundo,
+		occupation/event = segundos/evento,
+		multiplicar da tiempo ocupado/segundo,
+		dividir por P porque existen P instancias paralelas.
+
+		Entonces: occupation/event(P,op) = U(P,op)⋅P / TP(P)
+		Y AHORA aparece el dato importante: esto incluye:
+
+			CPU útil,
+			stalls,
+			esperas,
+			backpressure,
+			coordinación.
+
+		TODO. Exactamente lo que tu simulador no conoce.
+
+		- Entonces de manera formal seria:
+
+			accumBusy_op += t_base_op​ * InternalOccupation(P,op)
+
+			donde:
+				InternalOcupation(P,op) 	= (1 + Foccup(P,op))
+				Foccup(P,op) 		= occupEvent(P,op) / occupEvent(ref,op)
+				occupEvent(P,op)		= U(P,op) x P / Thr(P)
+				occupEvent(ref,op)	= U(1,op) x 1 / Thr(1)
+
+			ya que por ley de utilizacion:
+	
+				U(P,op) = TP(p) * occupEvent(P,op) / P  = "Througput por el tiempo medio de ocupacion, y dividir por P porque existen P instancias paralelas"
+
+
+Necesito que en este ultimo punto seas claro, sutil, potente y detallado para lograr potente novedad del paper.
+Si es posible, me dejas todas la formulas matematicas listas para pasarlo al overleaf.
+
+	
+- Despues pasar el modelo anterior a un diseño DEVS, figurando cuales son los modelos atomicos, acomplados, iterfaces de acomplamiento.
+- Del modelo DEVS general, enfocar o enmarcar un submodelo que tenga en cuenta solo 1 nodo, ya que los resultados de validacion fueron mediante la ejecucion del la plataforma en modo standalone (experimentos con mas de un nodo interconectados con el switch se deja como trabajo futuro mencionado en la seccion 'conslusion').
+- Presentar el diagrama de clases que presenta los modelos, entidades y sus realaciones como diseño conceptual, la cual es explicada de manera bien general.
+	
+
+	

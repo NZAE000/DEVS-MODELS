@@ -26,25 +26,13 @@
 #include <string>
 #include <iomanip>
 
+
+#ifndef PRINT_LOG
+#define PRINT_LOG 0 // When the simualtion is completed, print logs or not.
+#endif
+
 using namespace cadmium;
 using namespace streamprcss;
-
-//template<typename T>
-//using MLogger_t = mylogger::MetricLogger_t<T>;
-
-//double to_second(TIME const& time)
-//{
-//    return static_cast<double>(
-//        time.getHours()         *  3600 +
-//        time.getMinutes()       *    60 +
-//        time.getSeconds()       *     1 +
-//        time.getMilliseconds()  *  1e-3 +
-//        time.getMicroseconds()  *  1e-6 +
-//        time.getNanoseconds()   *  1e-9 +
-//        time.getPicoseconds()   * 1e-12 +
-//        time.getFemtoseconds()  * 1e-15
-//    );
-//}
 
 
 
@@ -240,7 +228,9 @@ main(int arg, char** argv)
             metric_logger.logMetrics();
         #endif
     #endif
-    //metric_logger.printMetrics();
+    #if PRINT_LOG
+        metric_logger.printMetrics();
+    #endif
 
     return 0;
 }

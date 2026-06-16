@@ -27,6 +27,8 @@ while IFS=':' read -r key value; do
         prod_mod)   PROD_MOD="$value" ;;
         per_exec)   PER_EXEC="$value" ;;
         log)        LOG="$value" ;;
+        log_mod)    LOG_MOD="$value" ;;
+        print_log)  PRINT_LOG="$value" ;;
     esac
 done < "$CONFIG_FILE"
 
@@ -39,6 +41,8 @@ echo "P-Level     : $P_LEVEL"
 echo "Prod Mod    : $PROD_MOD"
 echo "Per Exec    : $PER_EXEC"
 echo "Log         : $LOG"
+echo "Log mod     : $LOG_MOD"
+echo "Print Log   : $PRINT_LOG"
 echo "======================================="
 
 # Separe workloads by coma
@@ -80,7 +84,9 @@ for wl in "${WL_ARRAY[@]}"; do
         "$P_LEVEL" \
         "$PROD_MOD" \
         "$PER_EXEC" \
-        "$LOG"
+        "$LOG" \
+        "$LOG_MOD"\
+        "$PRINT_LOG"
 
     if [[ $? -ne 0 ]]; then
         echo "Error running simulation for workload $wl"

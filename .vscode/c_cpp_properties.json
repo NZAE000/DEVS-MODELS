@@ -4,8 +4,7 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/../../CADMIUM/Cadmium-Simulation-Environment/cadmium/include",
-                "${workspaceFolder}/../../CADMIUM/Cadmium-Simulation-Environment/DESTimes/include",
+                "${workspaceFolder}/cadmium/include",
                 "/opt/homebrew/Cellar/boost/1.88.0/include/"
             ],
             "defines": [],

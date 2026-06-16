@@ -64,7 +64,6 @@ namespace streamprcss {
             auto const&  props       { this->cluster_cfg_.operProps_[oper_id] };
             double       busy_time   { props.busy_time_accum_ / props.replication_ };
             double       utilization { busy_time / elapsed_time };
-
             opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
             oper_metrics.emplace_back(props.replication_, 0, props.sent_records_accum_, props.busy_time_accum_, busy_time, utilization);
         }

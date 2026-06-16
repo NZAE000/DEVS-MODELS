@@ -14,7 +14,7 @@
 #include <assert.h>
 #include <string>
 #include <random>
-#include <iostream>
+//#include <cstdio>
 
 #include "../data_structures/operatorlocation.hpp"
 #include "../data_structures/message.hpp"
@@ -87,9 +87,13 @@ public:
             std::vector<flink::ActiveSubtask_t*>& active_execs { this->state.taskman_.getActiveExecutions() };
             TIME lapse_prioriry { std::numeric_limits<TIME>::max() };
 
-            for (auto& actve_subtask : active_execs)
+            //std::printf("\ninternal:\n");
+            for (auto& actve_subtask : active_execs){
+                //std::printf("%.10lf ", actve_subtask->subtask_->lapse_);
                 if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
+            }
 
+            //std::printf("\nlapse prior: %.4lf\n\n", lapse_prioriry);
             this->lapse_time_       = lapse_prioriry;  // Update lapse.
             this->state.processing_ = true;
             //std::cout<<"\t[slave] pending exec: "<< this->lapse_time_ <<"\n";
@@ -157,6 +161,7 @@ public:
     TIME time_advance() const 
     {
         // TIME next_interval;
+        //std::cout<<"time: "<<lapse_time_<<'\n';
         if (state.processing_) return lapse_time_; // Lapse: hrs::mins:secs:mills:(micrs)::nns:pcs::fms
         else                   return std::numeric_limits<TIME>::infinity();
         

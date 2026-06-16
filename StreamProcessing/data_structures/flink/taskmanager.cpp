@@ -7,8 +7,7 @@
 #include "taskmanager.hpp"
 #include "jobmanager.hpp"
 #include<algorithm>
-#include<iostream>
-
+//#include<iostream>
 
 namespace streamprcss {
     namespace flink {
@@ -72,7 +71,7 @@ namespace streamprcss {
             exec_lapse        = jobMan.getTimeExecution(operid);            // Get avg time excecution of some distribution.
             prod_improd_lapse = exec_lapse * jobMan.getDegradationFactor(); // Increase the time to degrade the system
         } 
-        while (prod_improd_lapse < 0 || prod_improd_lapse >= std::numeric_limits<int>::max());
+        while (prod_improd_lapse < 0 || prod_improd_lapse >= std::numeric_limits<TIME>::max());
 
         // Accumulate operator busy time (to sec).
         jobMan.accumBusyTime(operid, exec_lapse / 1000000000000);
@@ -117,20 +116,23 @@ namespace streamprcss {
         TIME lapse          {};
 
         // Detect subtask with less exec time.
+        //std::cout<<"\nless exec: ";
         for (auto const& buffer : this->exec_buffers_){   
             if ( !buffer.empty() )
             {
-                lapse = buffer.front().lapse_;
+                lapse = buffer.getActiveSubtask().subtask_->lapse_;
+                //std::cout<<lapse<<' ';
                 if (lapse < less_exec_time)
                     less_exec_time = lapse;
             }
-        }
+        }//std::cout<<"\nless: "<< less_exec_time<<"\n";
 
         // CORE PARALLELISM: Subtract the least amount of time from priority executions and eliminate what remains at 0.
         TIME const  t_zero       {0};
         slotId_t    slot_id_used {};
         this->slots_used_.clear(); // Keep capacity.
 
+        //std::cout<<"substract exec: ";
         for (coreId_t core_id=0; core_id < this->n_cores_; ++core_id)
         {
             auto& buffer { this->exec_buffers_[core_id] };
@@ -144,6 +146,7 @@ namespace streamprcss {
                 if (subtask->lapse_ == t_zero) // Finished?
                 {
                     // Free slot.
+                    //std::cout<<"drop:\n";
                     slot_id_used     = subtask->slot_id_;
                     TaskSlot_t& slot = getSlot(slot_id_used);
                     slot.setActive(false);

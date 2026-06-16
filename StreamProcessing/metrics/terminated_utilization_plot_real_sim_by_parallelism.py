@@ -97,7 +97,6 @@ def main():
     sim_map  = {}
 
     for f in real_files:
-        print("aca")
         ident = parse_identifier_from_filename(f, app)
         if ident.startswith(prefix) and ident.endswith(f"{events}-{arrival}"):
             # pattern: nodes-cores-par-events-arrival -> we keep par varying
