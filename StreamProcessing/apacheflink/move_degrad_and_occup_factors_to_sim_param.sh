@@ -1,22 +1,22 @@
 #!/bin/bash
 
 ###############################################################################
-# move_occup_factors_to_sim_param.sh
+#  move_degrad_and_occup_factors_to_sim_param.sh
 #
-# Uso:
+# Use:
 #
-#   ./move_occup_factors_to_sim_param.sh <app> <parallelism>
+#   ./ move_degrad_and_occup_factors_to_sim_param.sh <app> <parallelism>
 #
-# Ejemplo:
+# e.g:
 #
-#   ./move_occup_factors_to_sim_param.sh q3 16
+#   ./ move_degrad_and_occup_factors_to_sim_param.sh q3 16
 #
 ###############################################################################
 
 set -e
 
 ###############################################################################
-# VALIDACIÓN
+# VALIDATION
 ###############################################################################
 if [ $# -ne 2 ]; then
     echo "Uso: $0 <app> <parallelism>"
@@ -27,32 +27,32 @@ APP="$1"
 P="$2"
 
 ###############################################################################
-# ARCHIVOS DE ENTRADA
+# INPUT FILES
 ###############################################################################
 DEGRAD_PARAMS_FILE="load-sweep/degrad-params-${APP}.txt"
 W_PARAMS_FILE="load-sweep/w-params-${APP}.txt"
 
 ###############################################################################
-# ARCHIVOS DE SALIDA
+# OUTPUT FILES
 ###############################################################################
 DEGRAD_OUTPUT="../input_data/degradation.txt"
 EXTRA_OUTPUT="../input_data/extraoccupation.txt"
 
 ###############################################################################
-# VALIDAR EXISTENCIA
+# VALIDATE IF EXISTS
 ###############################################################################
 if [ ! -f "$DEGRAD_PARAMS_FILE" ]; then
-    echo "ERROR: no existe $DEGRAD_PARAMS_FILE"
+    echo "ERROR: $DEGRAD_PARAMS_FILE no exists" 
     exit 1
 fi
 
 if [ ! -f "$W_PARAMS_FILE" ]; then
-    echo "ERROR: no existe $W_PARAMS_FILE"
+    echo "ERROR: $W_PARAMS_FILE no exists" 
     exit 1
 fi
 
 ###############################################################################
-# EXTRAER PARÁMETROS DE DEGRADACIÓN
+# EXTRAXT DEGRADATION PARAMS
 ###############################################################################
 DEGRAD_LINE=$(awk -v p="$P" '
 $1 == p {
@@ -63,14 +63,14 @@ $1 == p {
 ' "$DEGRAD_PARAMS_FILE")
 
 if [ -z "$DEGRAD_LINE" ]; then
-    echo "ERROR: no se encontró P=$P en $DEGRAD_PARAMS_FILE"
+    echo "ERROR: P not found: $P in $DEGRAD_PARAMS_FILE"
     exit 1
 fi
 
 echo "$DEGRAD_LINE" > "$DEGRAD_OUTPUT"
 
 ###############################################################################
-# EXTRAER FACTORES DE OCUPACIÓN
+# EXTRACT OCCUPATION FACTORS
 ###############################################################################
 awk -v p="$P" '
 
@@ -87,7 +87,7 @@ NR == 1 {
 
     if (target_col == 0) {
 
-        print "ERROR: no se encontró columna para P=" p > "/dev/stderr"
+        print "ERROR: No column found for P=" p > "/dev/stderr"
         exit 1
     }
 
@@ -95,7 +95,7 @@ NR == 1 {
 }
 
 ###############################################################################
-# DATOS
+# DATA
 ###############################################################################
 {
 
@@ -111,7 +111,7 @@ NR == 1 {
 # INFO
 ###############################################################################
 echo "========================================"
-echo "Parámetros generados correctamente"
+echo "Parameters generated successfully"
 echo "========================================"
 echo ""
 echo "APP: $APP"
@@ -120,9 +120,8 @@ echo ""
 echo "Degradation params -> $DEGRAD_OUTPUT"
 echo "Occupation factors -> $EXTRA_OUTPUT"
 echo ""
-echo "Contenido degradation.txt:"
+echo "Content degradation.txt:"
 cat "$DEGRAD_OUTPUT"
-
 echo ""
-echo "Contenido extraoccupation.txt:"
+echo "Content extraoccupation.txt:"
 cat "$EXTRA_OUTPUT"

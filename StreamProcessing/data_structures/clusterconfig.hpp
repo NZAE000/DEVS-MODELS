@@ -76,8 +76,8 @@ struct ClusterConfig_t {
 
     void accumBusyTime(operId_t const operid, double time) noexcept
     {
-        auto& operprop = operProps_[operid];
-        operprop.busy_time_accum_ += time * operprop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
+        auto& oper_prop = operProps_[operid];
+        oper_prop.busy_time_accum_ += time * oper_prop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
     }
 
     void accumSentRecords(operId_t const operid, uint32_t n_rec) noexcept

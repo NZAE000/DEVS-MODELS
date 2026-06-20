@@ -47,7 +47,7 @@ namespace streamprcss {
         //{
         //    auto const& properties = cluster_cfg_.operProps_[i];
         //    auto locations = jobMaster_.getLocations(i);
-        //    std::cout<<"Locations of "<<properties.name_<<":\n";
+        //    std::cout<<"Locations of "<<properties.name_<<"(id: "<<i<<"):\n";
         //    for (auto const& loc : locations){
         //        std::cout<<"\tnode: "<<loc.node_id_<<" slot_id: "<<loc.slot_id_<<"\n";
         //    }

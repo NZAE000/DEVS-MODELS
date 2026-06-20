@@ -50,7 +50,7 @@ IFS=',' read -ra WL_ARRAY <<< "$WORKLOADS"
 
 for wl in "${WL_ARRAY[@]}"; do
 
-    wl=$(echo "$wl" | xargs)
+    wl=$(echo "$wl" | xargs) # trim spaces
 
     REQS=$(echo "$wl" | cut -d'-' -f1)
     RATE=$(echo "$wl" | cut -d'-' -f2)

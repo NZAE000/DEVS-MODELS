@@ -3,8 +3,7 @@ Anyway, don't worry, the repository already integrates the Cadmium.
 
 This project is licensed under the MIT License. See LICENSE.
 
-## Third-Party Software
-
+Third-Party Software.
 This project includes the Cadmium DEVS engine.
 Cadmium is distributed under the BSD-2-Clause License.
 Copyright (c) 2013-2015 Damian Vicino,

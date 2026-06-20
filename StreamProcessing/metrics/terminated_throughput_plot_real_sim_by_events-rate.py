@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.style.use("metrics/thesis.mplstyle")
 
 BASE_DIR = "metrics/nexmark/throughput"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
@@ -162,7 +163,7 @@ def main():
     # -----------------------------------------------------
     # SINGLE GRAPH: simulated throughput accuracy
     # -----------------------------------------------------
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.plot(x_labels, tp_sim_norm, marker="o", label="Simulated accuracy")
 
     # Labels directly on each point
@@ -170,8 +171,7 @@ def main():
         plt.text(
             i, val + 1,                     # position (above the point)
             f"{val:.1f}%",                  # text
-            ha="center", va="bottom",
-            fontsize=9
+            ha="center", va="bottom"
         )
 
     plt.title(
@@ -188,9 +188,12 @@ def main():
     # Export plot to PNG file
     # ----------------------------------------------------------
     out_dir  = os.path.join(BASE_DIR, "plot-real-sim/terminated")
-    out_name = f"terminated-throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(par)}.png"
+    out_name = f"terminated-throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(par)}"
     out_path = os.path.join(out_dir, out_name)
-    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    
+    plt.savefig(f"{out_path}.pdf")
+    plt.savefig(f"{out_path}.png")
+    
     plt.show()
 
 

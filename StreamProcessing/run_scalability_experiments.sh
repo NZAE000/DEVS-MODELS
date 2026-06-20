@@ -54,7 +54,7 @@ RATE=$(echo "$WORKLOAD" | cut -d'-' -f2)
 IFS=',' read -ra PL_ARRAY <<< "$P_LEVELS"
 
 
-## Before, execute real app and generate simulation parameters
+# Before, execute real app and generate simulation parameters
 #(
 #    cd apacheflink || exit 1
 #    bash execute_and_gen_sim_params.sh \
@@ -66,7 +66,7 @@ IFS=',' read -ra PL_ARRAY <<< "$P_LEVELS"
 #)
 
 for pl in "${PL_ARRAY[@]}"; do
-
+    pl=$(echo "$pl" | xargs)  # trim spaces
     echo
     echo "======================================="
     echo "P level: $pl"
@@ -74,7 +74,7 @@ for pl in "${PL_ARRAY[@]}"; do
 
     (
         cd apacheflink || exit 1
-        bash move_degrad_factors_to_sim_param.sh \
+        bash  move_degrad_and_occup_factors_to_sim_param.sh \
             "$APP" \
             "$pl" 
     )

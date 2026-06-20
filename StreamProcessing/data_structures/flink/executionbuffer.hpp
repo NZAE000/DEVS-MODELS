@@ -46,15 +46,16 @@ namespace streamprcss {
                     // Exceptional growth.
                     prepared_subtasks_.reserve(prepared_subtasks_.capacity() * 1.5);
                 }
+                active_subtask_.subtask_ = &this->front();
             }
             prepared_subtasks_.emplace_back(std::move(subtask));
-            active_subtask_.subtask_ = &this->front();
         }
 
         void activateSubtask(coreId_t core_id_, uint32_t index) noexcept
         {
             active_subtask_.core_id_      = core_id_;
             active_subtask_.idx_priority_ = index;
+            active_subtask_.subtask_      = &this->front();
             //std::cout<<"inx: "<<index<<'\n';
         }
 

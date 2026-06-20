@@ -4,7 +4,7 @@
 # Input arguments
 # -------------------------
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 load-sweep-app.txt load-sweep-util-app.txt"
+    echo "Usage: $0 l load-sweep/load-sweep-app.txt  load-sweep/load-sweep-util-app.txt"
     exit 1
 fi
 
@@ -15,8 +15,6 @@ INPUT_UTIL="$2"
 # Parse app name (desde INPUT)
 # -------------------------
 APP=$(echo "$INPUT" | cut -d'.' -f1 | cut -d'-' -f4)
-
-# (opcional pero MUY recomendable)
 APP_UTIL=$(echo "$INPUT_UTIL" | cut -d'.' -f1 | cut -d'-' -f5)
 
 if [ "$APP" != "$APP_UTIL" ]; then
@@ -26,6 +24,7 @@ if [ "$APP" != "$APP_UTIL" ]; then
     exit 1
 fi
 
+# Clean
 OUTPUT="load-sweep/degrad-params-${APP}.txt"
 > "$OUTPUT"
 OUTPUT_UTIL="load-sweep/w-params-${APP}.txt"
@@ -34,7 +33,7 @@ OUTPUT_UTIL="load-sweep/w-params-${APP}.txt"
 
 awk '
 ###############################################################################
-# PRIMERA PASADA: leer datos y extraer métricas básicas
+# FIRST PASS: Read data and extract basic metrics
 ###############################################################################
 NR == 1 { next }   # saltar header
 
@@ -44,7 +43,7 @@ NR == 1 { next }   # saltar header
     max_cpu = -1
     sat_idx = -1
 
-# Leer métricas por configuración de carga
+# Read metrics by load configuration
     for (i = 2; i <= NF; i++) {
         split($i, a, ":")
         tp[i]  = a[2]
@@ -60,20 +59,20 @@ NR == 1 { next }   # saltar header
         }
     }
 
-# Guardar lista de P, Tmax, CPUMax y U_sat
+# Save list of P, Tmax, CPUMax and U_sat
     P_list[++nP] = p
     Tmax[p] = max_tp
     CPUmax[p] = max_cpu
     printf("P=%d, Tmax=%.4f, CPUmax=%.4f\n", p, Tmax[p], CPUmax[p]);
 
-    # Guardar throughput de referencia (mejor escalado temprano)
+    # Save reference throughput (better early scaling)
     if (p == 1)
         T_ref = max_tp
 
     # U_sat
     U_sat[p] = cpu[sat_idx]
 
-# Buscar U_thr (95% del throughput máximo)
+# Search U_thr (95% of maximum throughput)
     thr_idx = -1
     for (i = 2; i <= NF; i++) {
         if (tp[i] >= 0.95 * max_tp) {
@@ -88,7 +87,7 @@ NR == 1 { next }   # saltar header
     U_thr[p] = cpu[thr_idx]
     S_thr = tp[thr_idx]
 
-# Calcular alpha (interferencia)
+# Calculate alpha (interference)
     num = 0.0
     den = 0.0
 
@@ -109,12 +108,12 @@ NR == 1 { next }   # saltar header
 }
 
 ###############################################################################
-# SEGUNDA PASADA: detectar P0 (máximo estable global)
+# SECOND PASS: detect P0 (global stable maximum)
 ###############################################################################
 END {
 
-    eps = 0.01          # tolerancia del 1%
-    P0 = P_list[nP]     # fallback: último P
+    eps = 0.01          # 1% tolerance
+    P0 = P_list[nP]     # fallback: last P
 
     for (i = 1; i <= nP; i++) {
         p_i = P_list[i]
@@ -134,7 +133,7 @@ END {
         }
     }
     P0 = 12
-    # Calcular gamma promedio post-P0
+    # Calculate average gamma post-P0
     sum_gamma = 0.0
     count = 0
 
@@ -157,8 +156,8 @@ END {
     if (gamma > 0.5)  gamma = 0.5
 
     ############################################################################
-    # SALIDA FINAL CON MONOTONIZACIÓN DE E POST-P0
-    # Formato:
+    # FINAL OUTPUT WITH MONOTONIZATION OF E POST-P0
+    # Format:
     # P  CPUmax  U_thr  alpha  U_sat  E
     ############################################################################
 
@@ -180,7 +179,7 @@ END {
             E = 1.0
 
         # --------------------------------------------------
-        # Monotonización de E post-P0
+        # Monotoning of E post-P0
         # --------------------------------------------------
         if (p >= P0) {
             if (prev_E < 0)
@@ -201,20 +200,20 @@ END {
             p, CPUmax[p], U_thr[p], alpha[p], U_sat[p], E >> "'"$OUTPUT"'"
     }
 
-    # Información diagnóstica (opcional)
+    # Info
     print "# Detected P0 =", P0     > "/dev/stderr"
     print "# Computed gamma =", gamma > "/dev/stderr"
 }
 ' "$INPUT"
 
 ###############################################################################
-# TERCERA PASADA:
+# THIRD PASS:
 #
-# Extraer FACTOR DE OCUPACIÓN por operador:
+# Extract OCCUPANCY FACTOR per operator:
 #
 #   stallFactor(op,P)
 #
-# Modelo:
+# Model:
 #
 #   OccupationPerEvent(op,P)=U(op,P)/TP(P)
 #
@@ -223,7 +222,7 @@ END {
 #       --------------------------------
 #       OccupationPerEvent(op,1)
 #
-# Uso final:
+# End use:
 #
 #   accumBusy += t_base_op * stallFactor(op,P)
 #
@@ -231,8 +230,8 @@ END {
 awk '
 
 ###############################################################################
-# PRIMER ARCHIVO:
-# Leer throughput máximo por P desde INPUT
+# FIRST FILE:
+# Read maximum throughput per P from INPUT
 ###############################################################################
 FNR == NR && NR > 1 {
 
@@ -256,8 +255,8 @@ FNR == NR && NR > 1 {
 }
 
 ###############################################################################
-# SEGUNDO ARCHIVO:
-# Leer utilizaciones promedio
+# SECOND FILE:
+# Read average utilization
 ###############################################################################
 FNR == 1 { next }
 
@@ -265,7 +264,7 @@ FNR == 1 { next }
     p = $1
 
     ###########################################################################
-    # Guardar lista P
+    # Save list P
     ###########################################################################
     if (!(p in seen_p)) {
 
@@ -274,7 +273,7 @@ FNR == 1 { next }
     }
 
     ###########################################################################
-    # Últimos workloads
+    # Latest workloads
     ###########################################################################
     last = 2
     start = NF - last
@@ -300,7 +299,7 @@ FNR == 1 { next }
             count[key] += 1
 
             ###################################################################
-            # Orden operadores
+            # Order operators
             ###################################################################
             if (!(op in seen_op)) {
 
@@ -314,7 +313,7 @@ FNR == 1 { next }
 END {
 
     ###########################################################################
-    # ORDENAR P
+    # ORDER P
     ###########################################################################
     for (i = 1; i <= nP; i++) {
 
@@ -330,7 +329,7 @@ END {
     }
 
     ###########################################################################
-    # CALCULAR U(op,P)
+    # CALCULATE U(op,P)
     ###########################################################################
     for (k = 1; k <= n_ops; k++) {
 
@@ -404,7 +403,7 @@ END {
             }
 
             ###################################################################
-            # Clamp mínimo
+            # Min clamp
             ###################################################################
             if (stall[p_i, op] < 1)
                 stall[p_i, op] = 1
@@ -412,7 +411,7 @@ END {
     }
 
     ###########################################################################
-    # ANCHO
+    # MAX WIDTH OPERATOR
     ###########################################################################
     max_len = length("opname")
 
@@ -440,7 +439,7 @@ END {
     printf "\n" >> "'"$OUTPUT_UTIL"'"
 
     ###########################################################################
-    # FILAS
+    # ROWS
     ###########################################################################
     for (k = 1; k <= n_ops; k++) {
 

@@ -1,8 +1,8 @@
-sourcedatagen1:0.890780;calc2:0.720878;watermarkassigner3:0.531470;minibatchassigner4:0.499638;calc5:0.445754;nexmarkq26writer:0.00364461;
-sourcedatagen1:0.890825;calc2:0.720912;watermarkassigner3:0.531496;minibatchassigner4:0.499663;calc5:0.445775;nexmarkq26writer:0.00350200;
-sourcedatagen1:0.890818;calc2:0.720907;watermarkassigner3:0.531492;minibatchassigner4:0.499659;calc5:0.445772;nexmarkq26writer:0.00341443;
-sourcedatagen1:0.890816;calc2:0.720905;watermarkassigner3:0.531491;minibatchassigner4:0.499658;calc5:0.445771;nexmarkq26writer:0.00343272;
-sourcedatagen1:0.890828;calc2:0.720915;watermarkassigner3:0.531498;minibatchassigner4:0.499664;calc5:0.445777;nexmarkq26writer:0.00344292;
-sourcedatagen1:0.890806;calc2:0.720898;watermarkassigner3:0.531485;minibatchassigner4:0.499652;calc5:0.445766;nexmarkq26writer:0.00341642;
-sourcedatagen1:0.890780;calc2:0.720878;watermarkassigner3:0.531470;minibatchassigner4:0.499638;calc5:0.445754;nexmarkq26writer:0.00350234;
-sourcedatagen1:0.890780;calc2:0.720878;watermarkassigner3:0.531470;minibatchassigner4:0.499638;calc5:0.445754;nexmarkq26writer:0.00364250;
+sourcedatagen1:0.929638;calc2:0.751625;watermarkassigner3:0.568446;minibatchassigner4:0.506603;calc5:0.46616;nexmarkq26writer:0.00473525;
+sourcedatagen1:0.929724;calc2:0.751695;watermarkassigner3:0.568498;minibatchassigner4:0.50665;calc5:0.466203;nexmarkq26writer:0.00474185;
+sourcedatagen1:0.92963;calc2:0.751618;watermarkassigner3:0.56844;minibatchassigner4:0.506598;calc5:0.466156;nexmarkq26writer:0.0047537;
+sourcedatagen1:0.929702;calc2:0.751676;watermarkassigner3:0.568484;minibatchassigner4:0.506637;calc5:0.466192;nexmarkq26writer:0.00446426;
+sourcedatagen1:0.929693;calc2:0.75167;watermarkassigner3:0.568479;minibatchassigner4:0.506632;calc5:0.466187;nexmarkq26writer:0.00485268;
+sourcedatagen1:0.929709;calc2:0.751683;watermarkassigner3:0.568489;minibatchassigner4:0.506641;calc5:0.466195;nexmarkq26writer:0.0044273;
+sourcedatagen1:0.929702;calc2:0.751677;watermarkassigner3:0.568485;minibatchassigner4:0.506638;calc5:0.466192;nexmarkq26writer:0.00472324;
+sourcedatagen1:0.929653;calc2:0.751637;watermarkassigner3:0.568455;minibatchassigner4:0.506611;calc5:0.466167;nexmarkq26writer:0.00485247;

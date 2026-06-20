@@ -4,7 +4,7 @@
 # Config file as argument
 # -------------------------
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 load-sweep.cfg"
+    echo "Usage: $0 load-sweep/cfg/load-sweep-app.cfg"
     exit 1
 fi
 CFG=$1
@@ -101,9 +101,8 @@ for P in "${P_LEVELS[@]}"; do
 
             if [ -z "$RESULT" ]; then
                 echo "WARNING: missing FTime (P=$P, L=$L, run=$r)" >&2
-                sleep 10
                 continue
-	    fi
+	        fi
 
             FT=$(echo "$RESULT" | cut -d',' -f1 | cut -d' ' -f2)
             TP=$(echo "$RESULT" | cut -d',' -f2 | cut -d' ' -f3)
@@ -143,7 +142,8 @@ for P in "${P_LEVELS[@]}"; do
                 idx=$((idx + 1))
             done <<< "$UTIL_BLOCK"
 
-            rm -f "$TMP_OUT"	
+            rm -f "$TMP_OUT"
+            sleep 5
     	done
 
         # -------------------------
@@ -161,7 +161,6 @@ for P in "${P_LEVELS[@]}"; do
 
         printf " %.4f:%.4f:%.4f" "$avg_ft" "$avg_tp" "$avg_cpu" >> "$OUT"
         printf "%.4f:%.4f:%.4f\n" "$avg_ft" "$avg_tp" "$avg_cpu"
-
 
         UTIL_STR=""
         for i in "${!op_names[@]}"; do

@@ -8,6 +8,7 @@
 #define _NODE_MASTER_HPP__
 
 #include "node.hpp"
+#include<iostream>
 
 namespace streamprcss {
 
@@ -108,7 +109,7 @@ public:
     typename make_message_bags<typename Node_t<TIME>::output_ports>::type output() const
     {   
         typename make_message_bags<typename Node_t<TIME>::output_ports>::type bags; // Therefore, bags is a tuple whose elements are the message bags available on the different output ports.
-        std::vector<OperatorLocation_t> bag_port_out;                                    // To build the message bag for the output port 'out'.
+        std::vector<OperatorLocation_t> bag_port_out;                               // To build the message bag for the output port 'out'.
 
         if (this->sendInmediatlyToSwitch()){        // Do you have to send messages to other locations immediately?
             bag_port_out = extern_locations_;
@@ -146,7 +147,7 @@ private:
                 // Find less congested location of first operator (source by default).
                 flink::operId_t const& first_op_id = this->jobman_.getFirstOperator();
                 OperatorLocation_t loc             = this->jobman_.getOperLocationLessload(first_op_id);
-                loc.mssg_id_                       = mssg_id;
+                loc.mssg_id_                       = mssg_id; // Set mssg id.
 
                 if (loc.node_id_ == this->state.id_){ // Chosen location on this node?
                     this->state.taskman_.scheduleExec(loc.mssg_id_, loc.slot_id_, this->jobman_); // SCHEDULE ON SPECIFIC SLOT.

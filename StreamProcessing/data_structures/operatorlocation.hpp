@@ -8,7 +8,7 @@
 #pragma once
 #include <cstdint>
 #include <iostream>
-
+#include "flink/typealiases.hpp"
 
 /*******************************************/
 /************ OperatorLocation_t ***********/
@@ -18,9 +18,9 @@ struct OperatorLocation_t {
   OperatorLocation_t(uint32_t mssgId, uint32_t nid, uint32_t sid) 
     : mssg_id_{mssgId}, node_id_{nid}, slot_id_{sid} {}
 
-    uint32_t mssg_id_ {};
-    uint32_t node_id_ {};
-    uint32_t slot_id_ {};
+    streamprcss::flink::mssgId_t mssg_id_ {};
+    streamprcss::flink::nodeId_t node_id_ {};
+    streamprcss::flink::slotId_t slot_id_ {};
 };
 
 /***************************************************/

@@ -14,7 +14,7 @@ namespace streamprcss {
         ref_resources_.emplace_back(&taskman);
     }
 
-    slotId_t ResourceManager_t::assignResource(operId_t const oper_id, nodeId_t node_id) noexcept
+    slotId_t ResourceManager_t::assignResource(operId_t oper_id, nodeId_t node_id) noexcept
     {
         slotId_t slot_id = ref_resources_[node_id]->reserveSlot(oper_id);
         return slot_id;

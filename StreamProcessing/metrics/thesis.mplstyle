@@ -1,0 +1,32 @@
+font.size: 24
+
+axes.titlesize: 24
+axes.labelsize: 24
+
+xtick.labelsize: 20
+ytick.labelsize: 20
+
+legend.fontsize: 18
+
+lines.linewidth: 2
+lines.markersize: 6
+
+grid.alpha: 0.3
+
+legend.frameon: True
+
+xtick.direction: in
+ytick.direction: in
+
+svg.fonttype: none
+
+figure.figsize: 14, 10
+
+figure.dpi: 100
+savefig.dpi: 300
+
+savefig.bbox: tight
+
+axes.titleweight: bold
+axes.labelweight: bold
+

@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.style.use("metrics/thesis.mplstyle")
 
 BASE_DIR = "metrics/nexmark/throughput"
 REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
@@ -123,15 +124,16 @@ def main():
     # -----------------------------
     # Plot
     # -----------------------------
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.plot(parallelism_levels, real_avg, marker='o', color='blue', label="Real")
     plt.plot(parallelism_levels, sim_avg, marker='o', color='red', label="Simulated")
 
     plt.title(
-        f"Throughput- {app} ({nodes} nodes, {cores} cores, reqs={events}, rate={arrival})"
+        f"Throughput - {app} \n"
+        f"{nodes} nodes, {cores} cores, reqs={events}, rate={arrival}"
     )
     plt.xlabel("Parallelism operator level")
-    plt.ylabel("Avg Throughput")
+    plt.ylabel("Throughput")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
@@ -140,9 +142,12 @@ def main():
     # Export plot to PNG file
     # ----------------------------------------------------------
     out_dir  = os.path.join(BASE_DIR, "plot-real-sim/terminated")
-    out_name = f"terminated-throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(events)}-{str(arrival)}.png"
+    out_name = f"terminated-throughput-real-sim-{app}-{str(nodes)}-{str(cores)}-{str(events)}-{str(arrival)}"
     out_path = os.path.join(out_dir, out_name)
-    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    
+    plt.savefig(f"{out_path}.pdf")
+    plt.savefig(f"{out_path}.png")
+
     plt.show()
 
 if __name__ == "__main__":

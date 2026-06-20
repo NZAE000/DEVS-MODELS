@@ -3,7 +3,10 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from collections import defaultdict, OrderedDict
+
+plt.style.use("metrics/thesis.mplstyle")
 
 # Paths
 BASE_DIR = "metrics/nexmark/utilization"
@@ -218,14 +221,14 @@ def main():
     # ---------------------------------------------------------
     # Plot
     # ---------------------------------------------------------
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     cmap  = plt.get_cmap("tab20")
     n_ops = len(operators)
     base_colors = [cmap(i % cmap.N) for i in range(n_ops)]
-
+    
     # To store legend handlers
-    real_handles = []
-    sim_handles  = []
+    #real_handles = []
+    #sim_handles  = []
 
     for i, op in enumerate(operators):
         color = base_colors[i]
@@ -235,10 +238,9 @@ def main():
             paral_levels, op_real_series[op],
             label=f"{op}",
             color=color,
-            linewidth=2.2,
             marker='o'
         )
-        real_handles.append(real_line)
+        #real_handles.append(real_line)
 
         # --- SIMULATED (soft color + dashed) ---
         light_color = (color[0], color[1], color[2], 0.45)
@@ -246,15 +248,15 @@ def main():
             paral_levels, op_sim_series[op],
             label=f"{op}",
             color=light_color,
-            linewidth=1.8,
             linestyle='--',
-            marker='s'
+            marker='o'
         )
-        sim_handles.append(sim_line)
+        #sim_handles.append(sim_line)
 
 
     plt.title(
-        f"Operator utilization - {app} ({nodes} nodes, {cores} cores, reqs={events}, rate={arrival})"
+        f"Operator utilization - {app}\n"
+        f"{nodes} nodes, {cores} cores, reqs={events}, rate={arrival}"
     )
     plt.xlabel("Parallelism level")
     plt.ylabel("Utilization")
@@ -262,62 +264,79 @@ def main():
     plt.grid(True)
 
     # ---------------------------
-    #   Legends side-by-side
+    #   Legends
     # ---------------------------
-
     ax = plt.gca()
 
-    # SIMULATED legend (ONLY styles, NO names)
-    legend_sim = ax.legend(
-        handles=sim_handles,
-        labels=[""] * len(sim_handles),   # Empty names
-        title="Sim",
-        loc="center left",
-        bbox_to_anchor=(1.0, 0.45)
-    )
-    ax.add_artist(legend_sim)
-    
-    # REAL Legend (operator names + solid lines)
-    legend_real = ax.legend(
-        handles=real_handles,
-        title="Real",
-        loc="center left",
-        bbox_to_anchor=(1.078, 0.45)
+    # ---------------------------
+    # Main leyend (operators)
+    # ---------------------------
+    operator_handles = []
+    for i, op in enumerate(operators):
+
+        color = base_colors[i]
+
+        operator_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker='s',
+                linestyle='None',
+                markerfacecolor=color,
+                markeredgecolor=color,
+                markersize=8,
+                label=op
+            )
+        )
+        
+    legend_ops = ax.legend(
+        handles=operator_handles,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15),
+        ncol=min(4, len(operators))
     )
 
-    legend_real.get_title().set_position((-220,0))
-    
-    plt.tight_layout()
+    ax.add_artist(legend_ops)
 
+    # ---------------------------
+    # Secundary (styles)
+    # ---------------------------
+    style_handles = [
+        Line2D(
+            [0], [0],
+            color="black",
+            linestyle="-",
+            linewidth=2,
+            label="Real"
+        ),
+        Line2D(
+            [0], [0],
+            color="black",
+            linestyle="--",
+            linewidth=2,
+            label="Simulated"
+        )
+    ]
+
+    legend_style = ax.legend(
+        handles=style_handles,
+        loc="upper right",
+        frameon=True
+    )
+
+    plt.subplots_adjust(bottom=0.3)
+    
     # ----------------------------------------------------------
     # Export plot to PNG file
     # ----------------------------------------------------------
     out_dir = os.path.join(BASE_DIR, "plot-real-sim/terminated")
-    out_name = f"terminated-utilization-real-sim-{app}-{nodes}-{cores}-{events}-{arrival}.png"
+    out_name = f"terminated-utilization-real-sim-{app}-{nodes}-{cores}-{events}-{arrival}"
     out_path = os.path.join(out_dir, out_name)
-    plt.savefig(out_path, dpi=300, bbox_inches='tight')
-
+    
+    plt.savefig(f"{out_path}.pdf", bbox_extra_artists=(legend_ops,))
+    plt.savefig(f"{out_path}.png", bbox_extra_artists=(legend_ops,))
+    
     plt.show()
-
-
-    ## --------------- Print summary table -----------------
-    ## Print a concise table: rows = paral_levels, cols grouped by operator (real/sim)
-    #print("\nTabla resumen (utilizaciones promedio por operador):")
-    ## header
-    #header = ["par"] + [f"{op} (r)" for op in operators] + [f"{op} (s)" for op in operators]
-    ## print header nicely
-    #print(" | ".join(h.center(12) for h in header))
-    #print("-" * (14 * len(header)))
-#
-    #for idx, ident in enumerate(common_ids):
-    #    row_elems = [str(paral_levels[idx]).center(6)]
-    #    for op in operators:
-    #        row_elems.append(f"{op_real_series[op][idx]:.4f}".center(12))
-    #    for op in operators:
-    #        row_elems.append(f"{op_sim_series[op][idx]:.4f}".center(12))
-    #    print(" | ".join(row_elems))
-#
-    #print("\nHecho.")
 
 
 if __name__ == "__main__":

@@ -2,8 +2,4 @@ sourcedatagen1 calc2
 calc2 watermarkassigner3
 watermarkassigner3 minibatchassigner4
 minibatchassigner4 calc5
-minibatchassigner4 calc7
-calc7 join9
-calc5 join9
-join9 calc10
-calc10 nexmarkq311writer
+calc5 nexmarkq146writer

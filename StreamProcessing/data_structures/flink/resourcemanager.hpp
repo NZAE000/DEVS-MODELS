@@ -21,7 +21,7 @@ namespace streamprcss {
         }
 
         void               registerResource(TaskManager_t&)               noexcept;
-        slotId_t           assignResource(operId_t const, nodeId_t)       noexcept;
+        slotId_t           assignResource(operId_t, nodeId_t)             noexcept;
         TaskSlot_t const&  slotFrom(OperatorLocation_t const&)      const noexcept;
         TaskSlot_t&        slotFrom(OperatorLocation_t const&)            noexcept;
 

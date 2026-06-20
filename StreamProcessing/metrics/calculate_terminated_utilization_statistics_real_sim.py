@@ -416,7 +416,7 @@ def main():
         # -------------------------
         header = []
         for op in all_ops:
-            header.append(f"{op}_pearson_par")
+            header.append(f"{op}_spearman_par")
         writer.writerow(header)
 
         row = []

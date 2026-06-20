@@ -13,9 +13,9 @@ namespace streamprcss {
     namespace flink {
 
     [[nodiscard]] slotId_t 
-    TaskManager_t::reserveSlot(operId_t const oper_id) noexcept
+    TaskManager_t::reserveSlot(operId_t oper_id) noexcept
     {
-        auto pair = taskslots_.insert(std::pair<slotId_t, operId_t const&>(next_slot_id_++, oper_id));
+        auto pair = taskslots_.insert(std::pair<slotId_t, TaskSlot_t>(next_slot_id_++, oper_id));
         return pair.first->first;
     }
 
@@ -41,6 +41,7 @@ namespace streamprcss {
     void 
     TaskManager_t::scheduleExec(mssgId_t mssg_id, slotId_t slot_id, JobManager_t& jobMan) noexcept
     {
+        
         TaskSlot_t& slot = getSlot(slot_id); // Get task slot.
 
         if (slot.isUsing()) slot.pushTuple(mssg_id); // Queuing on buffer.
@@ -79,7 +80,7 @@ namespace streamprcss {
         // Search core buffer with less congestion.
         ExecutionBuffer_t* less_loaded_buff { nullptr };
         std::size_t        n_exec_less      { std::numeric_limits<uint32_t>::max() };
-        coreId_t           core_id_select   {};
+        coreId_t           selected_core    {};
         for (coreId_t core_id=0; core_id < this->n_cores_; ++core_id)
         {
             auto& buffer { this->exec_buffers_[core_id] };
@@ -88,7 +89,7 @@ namespace streamprcss {
             {
                 n_exec_less      = n_exec;
                 less_loaded_buff = &buffer;
-                core_id_select   = core_id;
+                selected_core    = core_id;
             }
         }
 
@@ -101,10 +102,11 @@ namespace streamprcss {
         if (less_loaded_buff->size() == 1)
         {
             slot.setActive(true);
-            less_loaded_buff->activateSubtask(core_id_select, this->active_subtasks_.size());    // Activate the subprocess with stored core id and position index.
-            this->active_subtasks_.emplace_back(&less_loaded_buff->getActiveSubtask());          // Add active subtask to priorities.
-            ++this->current_execs_; // Update!
+            less_loaded_buff->activateSubtask(selected_core, this->active_subtasks_.size());    // Activate the subprocess with stored core id and position index.
+            this->active_subtasks_.emplace_back(&less_loaded_buff->getActiveSubtask());         // Add active subtask to priorities.
         }
+
+        //std::cout<<"active cores: "<<this->active_subtasks_.size() <<", pending execs: "<<this->pending_execs_<<'\n';
     }
 
 
@@ -173,7 +175,6 @@ namespace streamprcss {
                         buffer.activateSubtask(core_id, this->active_subtasks_.size());       // Activate the subprocess with stored core id and position index.
                         this->active_subtasks_.emplace_back(&buffer.getActiveSubtask());      // Add active subtask to priorities.
                     }
-                    else --this->current_execs_; // Update!
 
                     --this->pending_execs_; // Update!
                 }
@@ -198,7 +199,7 @@ namespace streamprcss {
     std::size_t 
     TaskManager_t::executing() const noexcept
     {
-        return this->current_execs_;
+        return this->active_subtasks_.size();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////

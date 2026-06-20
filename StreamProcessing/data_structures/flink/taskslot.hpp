@@ -17,7 +17,7 @@ namespace streamprcss {
     struct TaskSlot_t {
 
         //explicit TaskSlot_t() noexcept = default;
-        explicit TaskSlot_t(operId_t const oper_id) noexcept
+        explicit TaskSlot_t(operId_t oper_id) noexcept
         : operator_id_{oper_id} 
         {
             buffer_.reserve(TUPLES_CAPACITY);
@@ -32,14 +32,17 @@ namespace streamprcss {
                 {
                     buffer_.erase(buffer_.begin(), buffer_.begin() + head_index_);
                     head_index_ = 0;
-                    //std::cout<<"aca\n";
+                    //std::cout<<"aca1\n";
                 }
                 else {
                     // Exceptional growth.
+                    //std::cout<<"aca2\n";
                     buffer_.reserve(buffer_.capacity() * 1.5);
                 }
             }
             buffer_.emplace_back(mssg);
+            ++count_tuples_recv;
+            //std::cout<<"oper_id: "<<this->operator_id_<<": "<<count_tuples_recv<<'\n';
         }
 
         constexpr mssgId_t popTuple() noexcept 
@@ -59,13 +62,14 @@ namespace streamprcss {
 
     private:
         std::vector<mssgId_t>   buffer_        {};
-        operId_t const          operator_id_;
+        operId_t const          operator_id_   {};
         bool                    using_         { false };
         bool                    active_        { false };
         std::size_t             head_index_    {};
 
-        inline static constexpr std::size_t TUPLES_CAPACITY { 10000   };
+        inline static constexpr std::size_t TUPLES_CAPACITY { 100000  };
         inline static constexpr double      COMPACT_RATIO   { 0.75    };
+        inline static uint32_t    count_tuples_recv {0}; 
     };
 
 

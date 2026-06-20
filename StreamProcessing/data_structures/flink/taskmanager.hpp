@@ -5,7 +5,6 @@
 * Taskmanager definition
 */
 #pragma once
-#include <iostream>
 #include <string>
 #include <unordered_map>
 #include "executionbuffer.hpp"
@@ -33,7 +32,7 @@ namespace streamprcss {
         }
 
     // Methods
-        [[nodiscard]] slotId_t                  reserveSlot(operId_t const)                     noexcept;
+        [[nodiscard]] slotId_t                  reserveSlot(operId_t)                           noexcept;
         TaskSlot_t const&                       getSlot(slotId_t)                         const noexcept;
         TaskSlot_t&                             getSlot(slotId_t)                               noexcept;
         std::unordered_map
@@ -56,9 +55,8 @@ namespace streamprcss {
         std::vector<slotId_t>                     slots_used_        {};
         coreId_t                                  n_cores_           { 1 };
         slotId_t                                  next_slot_id_      { 0 };
-        std::size_t                               current_execs_     { 0 };
         std::size_t                               pending_execs_     { 0 };
-        inline static constexpr std::size_t       SUBTASKS_CAPACITY_ { 10000 };
+        inline static constexpr std::size_t       SUBTASKS_CAPACITY_ { 100000 };
     };
 
     } // namespace flink
