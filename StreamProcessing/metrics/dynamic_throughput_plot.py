@@ -6,6 +6,7 @@ import sys
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
+plt.style.use("metrics/thesis.mplstyle")
 
 def read_file(filename):
     """
@@ -43,17 +44,9 @@ def read_file(filename):
     return rates_order, rate_data
 
 
-def plot_throughput(
-    rates,
-    rate_data,
-    app,
-    nodes,
-    cores,
-    p,
-    data_from
-):
+def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
 
-    plt.figure(figsize=(12, 7))
+    plt.figure()
     ax = plt.gca()
 
     #
@@ -83,8 +76,6 @@ def plot_throughput(
         x_values,
         y_values,
         marker="o",
-        markersize=3,
-        linewidth=1.5,
         label="Observed"
     )
 
@@ -107,11 +98,10 @@ def plot_throughput(
         ideal_y,
         where="post",
         linestyle="--",
-        linewidth=2,
         label="Ideal"
     )
 
-    plt.xlabel("Time (s)",labelpad=40)
+    plt.xlabel("Time (s)", labelpad=40)
     plt.ylabel("Throughput (req/s)")
     plt.title(
         f"Dynamic {data_from} Throughput\n"
@@ -129,17 +119,13 @@ def plot_throughput(
     #
     plt.axvline(
         x=0,
-        linestyle=":",
-        linewidth=1,
-        alpha=0.4
+        linestyle=":"
     )
 
     for end_time in interval_end_times:
         plt.axvline(
             x=end_time,
-            linestyle=":",
-            linewidth=1,
-            alpha=0.4
+            linestyle=":"
         )
 
     #
@@ -161,7 +147,7 @@ def plot_throughput(
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=8,
+            fontsize=16,
             fontweight="bold"
         )
 
@@ -177,11 +163,11 @@ def plot_throughput(
             "axes fraction",
             "axes fraction"
         ),
-        xytext=(-35, -25),
+        xytext=(0, -25),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=9,
+        fontsize=16,
         fontweight="bold"
     )
 
@@ -216,16 +202,14 @@ def plot_throughput(
         f"{app}-"
         f"{nodes}-"
         f"{cores}-"
-        f"{p}.png"
+        f"{p}"
     )
 
-    plt.savefig(
-        output_file,
-        dpi=300
-    )
+    plt.savefig(f"{output_file}.pdf")
+    plt.savefig(f"{output_file}.png")
 
     plt.show()
-    print(f"Graph saved in: "f"{output_file}")
+    #print(f"Graph saved in: "f"{output_file}")
 
 def main():
     parser = argparse.ArgumentParser(

@@ -13,7 +13,7 @@ CFG=$1
 # -------------------------
 # Parse app name
 # -------------------------
-APP=$(grep '^app:' "$CFG" | cut -d':' -f2 | xargs)
+APP=$(echo "$CFG" | cut -d'-' -f4 | cut -d'.' -f1 | xargs)
 
 
 # -------------------------

@@ -132,7 +132,7 @@ END {
             break
         }
     }
-    P0 = 12
+    P0 = 8
     # Calculate average gamma post-P0
     sum_gamma = 0.0
     count = 0

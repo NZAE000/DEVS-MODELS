@@ -99,6 +99,7 @@ done
 ########################################################
 # Main loop
 ########################################################
+current_req=0
 while true
 do
     #start=$(date +%s.%N) # Begin time point
@@ -113,50 +114,56 @@ do
     ####################################################
     ACCUM_TIME_MS=$(bash get_query.sh "$JOB_ID" | jq -r '.duration')
     ACCUM_TIME=$(echo "scale=6; $ACCUM_TIME_MS / 1000.0" | bc -l)
-    
+
     ####################################################
     # Total requeriments
     ####################################################
-    total_req=0
-    for ((i=0;i<PARALLELISM;i++))
-    do
-        req=$(bash get_suboperator_metrics.sh source "$i" | jq '.metrics["write-records"] // 0')
-        total_req=$((total_req + req))
-    done
+    #total_req=0
+    #for ((i=0;i<PARALLELISM;i++))
+    #do
+    #    req=$(bash get_suboperator_metrics.sh source "$i" | jq '.metrics["write-records"] // 0')
+    #    total_req=$((total_req + req))
+    #done
+    total_req=$(bash get_suboperator_accum_metric.sh source numRecordsOut sum)
+    total_req=${total_req:-0}
+    total_req=$(awk -v x="$total_req" 'BEGIN { printf "%.0f", x + 0 }')
 
     ####################################################
     # Throughput: calculate if reqs change
     ####################################################
     if [[ "$CURRENT_REQS" != "$total_req" ]]; then
         CURRENT_REQS=$total_req #Update
-
         THROUGHPUT=$(echo "scale=6; $total_req / $ACCUM_TIME" | bc -l)
         THROUGHPUT_LIST+=("${ACCUM_TIME},${THROUGHPUT}")
     fi
+    
 
     ####################################################
     # Operator Utilizations: calculate if accumbusy change
     ####################################################
     for opername in "${OPERATORS[@]}"
     do
-        id_op=$(bash get_oper_id.sh "$opername")
-        total_acum_busy=0
+        #id_op=$(bash get_oper_id.sh "$opername")
+        #total_acum_busy=0
 
-        for ((i=0;i<PARALLELISM;i++))
-        do
-            METRICS=$(bash get_suboperator_metrics.sh "$id_op" "$i")
-            busy=$(echo "$METRICS" | jq '.metrics["accumulated-busy-time"] // 0')
-            total_acum_busy=$(echo "$total_acum_busy + $busy" | bc -l)
-        done
+        #for ((i=0;i<PARALLELISM;i++))
+        #do
+        #    echo "oper: $opername, P: $i"
+        #    METRICS=$(bash get_suboperator_metrics.sh "$id_op" "$i")
+        #    busy=$(echo "$METRICS" | jq '.metrics["accumulated-busy-time"] // 0')
+        #    total_acum_busy=$(echo "$total_acum_busy + $busy" | bc -l)
+        #done
 
-        if [[ "${ACCUM_BUSY_MAP["$opername"]}" != "$total_acum_busy"  ]]; then
-            ACCUM_BUSY_MAP["$opername"]="$total_acum_busy" # Update
+        #if [[ "${ACCUM_BUSY_MAP["$opername"]}" != "$total_acum_busy"  ]]; then
+        #    ACCUM_BUSY_MAP["$opername"]="$total_acum_busy" # Update
 
-            ACUM_BUSY_TIME=$(echo "$total_acum_busy / 1000.0" | bc -l)
-            BUSY_TIME=$(echo "$ACUM_BUSY_TIME / $PARALLELISM" | bc -l)
+            #ACUM_BUSY_TIME=$(echo "$total_acum_busy / 1000.0" | bc -l)
+            #BUSY_TIME=$(echo "$ACUM_BUSY_TIME / $PARALLELISM" | bc -l)
+            BUSY_TIME_MS=$(bash get_suboperator_accum_metric.sh "$opername" accumulateBusyTimeMs avg)
+            BUSY_TIME=$(echo "$BUSY_TIME_MS / 1000.0" | bc -l)
             UTILIZATION=$(echo "scale=8; $BUSY_TIME / $ACCUM_TIME" | bc -l)
             UTILIZATION_MAP["$opername"]+="${UTILIZATION} "
-        fi
+        #fi
     done
 
     ####################################################
@@ -191,6 +198,8 @@ do
     #    sleep "$wait"
     #fi
 done
+
+rm "$CPU_LOG"
 
 ########################################################
 # Wait for the process to finish

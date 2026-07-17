@@ -2,6 +2,7 @@ import argparse
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
+plt.style.use("metrics/thesis.mplstyle")
 
 def read_file(filename):
 
@@ -41,18 +42,9 @@ def read_file(filename):
     return rates, rate_data
 
 
-def plot_dynamic_comparison(
-    rates,
-    real_data,
-    sim_data,
-    app,
-    nodes,
-    cores,
-    p
-):
+def plot_dynamic_comparison(rates, real_data, sim_data, app, nodes, cores, p):
 
-    plt.figure(figsize=(12, 7))
-
+    plt.figure()
     ax = plt.gca()
 
     #
@@ -60,12 +52,11 @@ def plot_dynamic_comparison(
     #
     real_x = []
     real_y = []
-
-    sim_x = []
-    sim_y = []
+    sim_x  = []
+    sim_y  = []
 
     real_end_times = []
-    sim_end_times = []
+    sim_end_times  = []
 
     for rate in rates:
 
@@ -99,8 +90,6 @@ def plot_dynamic_comparison(
         real_x,
         real_y,
         marker="o",
-        markersize=3,
-        linewidth=1.5,
         label="Real"
     )
 
@@ -108,8 +97,6 @@ def plot_dynamic_comparison(
         sim_x,
         sim_y,
         marker="o",
-        markersize=3,
-        linewidth=1.5,
         label="Simulation"
     )
 
@@ -158,7 +145,6 @@ def plot_dynamic_comparison(
         ideal_y,
         where="post",
         linestyle="--",
-        linewidth=2,
         label="Ideal"
     )
 
@@ -187,18 +173,14 @@ def plot_dynamic_comparison(
     #
     plt.axvline(
         x=0,
-        linestyle=":",
-        linewidth=1,
-        alpha=0.4
+        linestyle=":"
     )
 
     for end_time in avg_end_times:
 
         plt.axvline(
             x=end_time,
-            linestyle=":",
-            linewidth=1,
-            alpha=0.4
+            linestyle=":"
         )
 
     #
@@ -231,7 +213,7 @@ def plot_dynamic_comparison(
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=8,
+            fontsize=16,
             fontweight="bold"
         )
 
@@ -244,11 +226,11 @@ def plot_dynamic_comparison(
             "axes fraction",
             "axes fraction"
         ),
-        xytext=(-35, -25),
+        xytext=(0, -25),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=9,
+        fontsize=16,
         fontweight="bold"
     )
 
@@ -294,20 +276,14 @@ def plot_dynamic_comparison(
         f"{app}-"
         f"{nodes}-"
         f"{cores}-"
-        f"{p}.png"
+        f"{p}"
     )
-
-    plt.savefig(
-        output_file,
-        dpi=300
-    )
-
+    
+    plt.savefig(f"{output_file}.pdf")
+    plt.savefig(f"{output_file}.png")
     plt.show()
 
-    print(
-        f"Graph saved in: "
-        f"{output_file}"
-    )
+    #print(f"Graph saved in: " f"{output_file}")
     
     
 def main():
@@ -331,7 +307,7 @@ def main():
     filename_sim = (
             f"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"
             f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
-        )
+    )
     
     rates_real, real_data = read_file(filename_real)
     rates_sim, sim_data = read_file(filename_sim)

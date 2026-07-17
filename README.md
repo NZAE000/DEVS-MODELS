@@ -123,12 +123,12 @@ $ cd StreamProcessing/
 
 Luego, cree el ambiente de Python:
 ```bash
-$ python3 -m venv venv
+$ python3 -m venv .venv
 ```
 
 Active el ambiente:
 ```bash
-$ source venv/bin/activate
+$ source .venv/bin/activate
 ```
 
 Instale dependencias:

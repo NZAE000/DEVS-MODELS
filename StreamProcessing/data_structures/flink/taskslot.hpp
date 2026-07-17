@@ -67,8 +67,8 @@ namespace streamprcss {
         bool                    active_        { false };
         std::size_t             head_index_    {};
 
-        inline static constexpr std::size_t TUPLES_CAPACITY { 100000  };
-        inline static constexpr double      COMPACT_RATIO   { 0.75    };
+        inline static constexpr std::size_t TUPLES_CAPACITY { 100000 };
+        inline static constexpr double      COMPACT_RATIO   { 0.75   };
         inline static uint32_t    count_tuples_recv {0}; 
     };
 

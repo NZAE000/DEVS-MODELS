@@ -15,15 +15,15 @@ namespace streamprcss {
     [[nodiscard]] slotId_t 
     TaskManager_t::reserveSlot(operId_t oper_id) noexcept
     {
-        auto pair = taskslots_.insert(std::pair<slotId_t, TaskSlot_t>(next_slot_id_++, oper_id));
-        return pair.first->first;
+        this->taskslots_.emplace_back(oper_id);
+        ++this->next_slot_id_;
+        return (this->next_slot_id_ - 1);
     }
 
     TaskSlot_t const& 
     TaskManager_t::getSlot(slotId_t id) const noexcept
     {
-        auto taskSlot_iter = taskslots_.find(id);
-        return taskSlot_iter->second;
+        return this->taskslots_[id];
     }
     TaskSlot_t&       
     TaskManager_t::getSlot(slotId_t id) noexcept
@@ -32,10 +32,10 @@ namespace streamprcss {
         return *const_cast<TaskSlot_t*>(&slot);
     }
 
-    std::unordered_map<slotId_t, TaskSlot_t> const&
+    std::vector<TaskSlot_t> const&
     TaskManager_t::getSlots() const noexcept
     {
-        return taskslots_;
+        return this->taskslots_;
     }
 
     void 
@@ -119,20 +119,66 @@ namespace streamprcss {
 
         // Detect subtask with less exec time.
         //std::cout<<"\nless exec: ";
-        for (auto const& buffer : this->exec_buffers_){   
-            if ( !buffer.empty() )
-            {
-                lapse = buffer.getActiveSubtask().subtask_->lapse_;
+        for (auto const& active_subtask : this->active_subtasks_){
+        //for (auto const& buffer : this->exec_buffers_){   
+            //if ( !buffer.empty() )
+            //{
+                lapse = active_subtask->subtask_->lapse_;
                 //std::cout<<lapse<<' ';
                 if (lapse < less_exec_time)
                     less_exec_time = lapse;
-            }
+            //}
         }//std::cout<<"\nless: "<< less_exec_time<<"\n";
 
         // CORE PARALLELISM: Subtract the least amount of time from priority executions and eliminate what remains at 0.
+        this->slots_used_.clear(); // Keep capacity.
         TIME const  t_zero       {0};
         slotId_t    slot_id_used {};
-        this->slots_used_.clear(); // Keep capacity.
+        std::size_t size         {this->active_subtasks_.size()};
+
+        //for (std::size_t i{}; i < size; ++i)
+        //{
+        //    // Subtract the shortest execution time from the active subtask.
+        //    ActiveSubtask_t* active_subtask = this->active_subtasks_[i];
+        //    Subtask_t* subtask              = active_subtask->subtask_;
+        //    subtask->lapse_                -= less_exec_time;
+        //    
+        //    if (subtask->lapse_ == t_zero) // Finished?
+        //    {
+        //        // Free slot.
+        //        //std::cout<<"drop:\n";
+        //        slot_id_used     = subtask->slot_id_;
+        //        TaskSlot_t& slot = getSlot(slot_id_used);
+        //        slot.setActive(false);
+        //        slot.setUsing(false);
+        //        this->slots_used_.emplace_back(slot_id_used);
+        //        
+        //        // Delete execution from priorities.
+        //        uint32_t idx_priority { active_subtask->idx_priority_ };
+        //        if (idx_priority != this->active_subtasks_.size() - 1)  // Isn't the end?, copy the end to current.
+        //        {  
+        //            this->active_subtasks_[idx_priority] = this->active_subtasks_.back();
+        //            this->active_subtasks_[idx_priority]->idx_priority_= idx_priority; // Update!
+        //        }
+        //        this->active_subtasks_.pop_back(); // And drop last.
+        //        --size; // Update!
+//
+        //        //buffer.erase(buffer.begin()); // Very slow !!
+        //        auto& buffer { this->exec_buffers_[active_subtask->core_id_] };
+        //        buffer.pop();
+        //        
+        //        // Is there queued execution?
+        //        if ( buffer.size() ) 
+        //        {
+        //            Subtask_t& subtask { buffer.front() };                                                  // Get priority.
+        //            getSlot(subtask.slot_id_).setActive(true);                                              // setUsing(true) is already in buffer.
+        //            buffer.activateSubtask(active_subtask->core_id_, this->active_subtasks_.size());        // Activate the subprocess with stored core id and position index.
+        //            this->active_subtasks_.emplace_back(&buffer.getActiveSubtask());                        // Add active subtask to priorities.
+        //        }
+//
+        //        --this->pending_execs_; // Update!
+        //    }
+        //}
 
         //std::cout<<"substract exec: ";
         for (coreId_t core_id=0; core_id < this->n_cores_; ++core_id)

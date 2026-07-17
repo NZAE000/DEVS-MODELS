@@ -3,10 +3,10 @@
 import argparse
 import re
 from collections import defaultdict
-
 import matplotlib.pyplot as plt
-import numpy as np
+from matplotlib.lines import Line2D
 
+plt.style.use("metrics/thesis.mplstyle")
 
 def read_file(filename):
 
@@ -52,226 +52,216 @@ def read_file(filename):
     return rates, operators, operator_data
 
 
-def plot_utilization_comparison(
-    rates,
-    operators,
-    real_data,
-    sim_data,
-    app,
-    nodes,
-    cores,
-    p
-):
+def plot_utilization_comparison(rates, operators, real_data, sim_data, app, nodes, cores, p):
+    fig, ax = plt.subplots()
 
-    fig, ax = plt.subplots(
-        figsize=(15, 8)
-    )
+    cmap = plt.get_cmap("tab20")
+    base_colors = [cmap(i % cmap.N) for i in range(len(operators))]
 
-    #
-    # Curvas
-    #
-    for operator in operators:
-
-        #
-        # REAL
-        #
-        x_real = []
-        y_real = []
+    for i, operator in enumerate(operators):
+        color = base_colors[i]
+        x_real, y_real = [], []
+        x_sim, y_sim = [], []
 
         interval_start = 0.0
-
         for rate in rates:
-
             samples = real_data[operator][rate]
-
             n = len(samples)
 
             if n == 1:
-                x_real.append(interval_start)
+                x_real.append(interval_start + 0.5)
                 y_real.append(samples[0])
-
             else:
-
                 for idx, util in enumerate(samples):
-
-                    x = (
-                        interval_start
-                        + idx / (n - 1)
-                    )
-
-                    x_real.append(x)
+                    x_real.append(interval_start + idx / (n - 1))
                     y_real.append(util)
 
             interval_start += 1.0
 
-        #
-        # SIMULATED
-        #
-        x_sim = []
-        y_sim = []
-
         interval_start = 0.0
-
         for rate in rates:
-
             samples = sim_data[operator][rate]
-
             n = len(samples)
 
             if n == 1:
-                x_sim.append(interval_start)
+                x_sim.append(interval_start + 0.5)
                 y_sim.append(samples[0])
-
             else:
-
                 for idx, util in enumerate(samples):
-
-                    x = (
-                        interval_start
-                        + idx / (n - 1)
-                    )
-
-                    x_sim.append(x)
+                    x_sim.append(interval_start + idx / (n - 1))
                     y_sim.append(util)
 
             interval_start += 1.0
 
-        #
-        # Dibujar
-        #
         ax.plot(
             x_real,
             y_real,
-            linestyle="--",
-            linewidth=2,
-            label=f"{operator} (Real)"
+            color=color,
+            linestyle="-",
+            linewidth=2.8,
+            alpha=1.0,
+            zorder=3
         )
 
         ax.plot(
             x_sim,
             y_sim,
-            linewidth=2,
-            label=f"{operator} (Sim)"
+            color=color,
+            linestyle=(0, (6, 3)),
+            linewidth=2.8,
+            alpha=0.65,
+            zorder=2
         )
 
-    #
-    # Separadores
-    #
-    for x in range(len(rates) + 1):
-
+    # Líneas divisorias entre tasas.
+    for boundary in range(len(rates) + 1):
         ax.axvline(
-            x=x,
+            x=boundary,
             linestyle=":",
-            linewidth=1,
-            alpha=0.3
+            color="black",
+            linewidth=1
         )
 
-    #
-    # Etiquetas inferiores (tasas)
-    #
+    # Etiquetas inferiores de las tasas.
+    rate_labels = []
+
     for idx, rate in enumerate(rates):
-
-        center = idx + 0.5
-
-        ax.annotate(
-            f"{rate/1e6:.0f}M",
-            xy=(center, 0),
+        annotation = ax.annotate(
+            f"{rate / 1e6:.0f}M",
+            xy=(idx + 0.5, 0),
             xycoords=("data", "axes fraction"),
             xytext=(0, -25),
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=8,
-            fontweight="bold"
+            fontsize=16,
+            fontweight="bold",
+            annotation_clip=False,
+            clip_on=False
         )
+        rate_labels.append(annotation)
 
-    ax.annotate(
+    rate_annotation = ax.annotate(
         "Rate (req/s)",
         xy=(0, 0),
-        xycoords=("axes fraction",
-                  "axes fraction"),
-        xytext=(-35, -25),
+        xycoords=("axes fraction", "axes fraction"),
+        xytext=(0, -25),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=9,
-        fontweight="bold"
+        fontsize=16,
+        fontweight="bold",
+        annotation_clip=False,
+        clip_on=False
     )
 
-    #
-    # Eje X
-    #
+    # Eje X.
     xticks = []
-
     xticklabels = []
 
     for i in range(len(rates)):
-
         for frac in [0.0, 0.2, 0.4, 0.6, 0.8]:
-
             xticks.append(i + frac)
-            xticklabels.append(
-                f"{frac:.1f}"
-            )
+            xticklabels.append(f"{frac:.1f}")
 
     xticks.append(len(rates))
     xticklabels.append("1.0")
 
     ax.set_xticks(xticks)
-    ax.set_xticklabels(
-        xticklabels,
-        rotation=0
-    )
+    ax.set_xticklabels(xticklabels)
+    ax.set_xlim(0, len(rates))
+    ax.set_ylim(0, 1.0)
 
-    ax.set_xlim(
-        0,
-        len(rates)
-    )
-
-    ax.set_ylim(
-        0,
-        1.0
-    )
-
-    ax.set_xlabel(
-        "Time Period",
-        labelpad=40
-    )
-
-    ax.set_ylabel(
-        "Utilization"
-    )
-
+    ax.set_xlabel("Time Period", labelpad=40)
+    ax.set_ylabel("Utilization")
     ax.set_title(
-        f"Dynamic Operator Utilization: Real vs Simulated\n"
-        f"App={app}, Nodes={nodes}, "
-        f"Cores={cores}, P={p}"
+        "Dynamic Operator Utilization: Real vs Simulated\n"
+        f"App={app}, Nodes={nodes}, Cores={cores}, P={p}"
     )
-
     ax.grid(True)
 
-    plt.legend(
+    # Leyenda de operadores.
+    operator_handles = []
+
+    for i, operator in enumerate(operators):
+        color = base_colors[i]
+        operator_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="s",
+                linestyle="None",
+                markerfacecolor=color,
+                markeredgecolor=color,
+                markersize=10,
+                label=operator
+            )
+        )
+
+    legend_ops = ax.legend(
+        handles=operator_handles,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.18),
-        ncol=3
+        bbox_to_anchor=(0.5, -0.25),
+        ncol=min(4, len(operators)),
+        frameon=True
+    )
+    ax.add_artist(legend_ops)
+
+    # Leyenda de estilos.
+    style_handles = [
+        Line2D(
+            [0], [0],
+            color="black",
+            linestyle="-",
+            linewidth=2,
+            label="Real"
+        ),
+        Line2D(
+            [0], [0],
+            color="black",
+            linestyle="--",
+            linewidth=2,
+            label="Simulated"
+        )
+    ]
+
+    ax.legend(
+        handles=style_handles,
+        loc="upper right",
+        frameon=True
     )
 
-    plt.tight_layout()
-    plt.subplots_adjust(
-        bottom=0.25
+    fig.subplots_adjust(
+        left=0.12,
+        right=0.98,
+        bottom=0.32,
+        top=0.88
     )
 
     output_file = (
         "metrics/nexmark/utilization/"
         "plot-real-sim/dynamic/"
-        f"dynamic-utilization-real-sim-"
-        f"{app}-{nodes}-{cores}-{p}.png"
+        f"dynamic-utilization-real-sim-{app}-{nodes}-{cores}-{p}"
     )
 
-    plt.savefig(output_file, dpi=300, bbox_inches="tight")
-    plt.show()
-    print(f"Graph saved in: {output_file}")
+    extra_artists = (
+        legend_ops,
+        rate_annotation,
+        *rate_labels
+    )
 
+    fig.savefig(
+        f"{output_file}.pdf",
+        bbox_extra_artists=extra_artists
+    )
+
+    fig.savefig(
+        f"{output_file}.png",
+        bbox_extra_artists=extra_artists
+    )
+
+    plt.show()
+    #plt.close(fig)
 
 def main():
 

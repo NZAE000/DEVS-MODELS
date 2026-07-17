@@ -9,7 +9,7 @@ ytick.labelsize: 20
 legend.fontsize: 18
 
 lines.linewidth: 2
-lines.markersize: 6
+lines.markersize: 3
 
 grid.alpha: 0.3
 

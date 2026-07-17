@@ -26,7 +26,8 @@ namespace streamprcss {
             exec_buffers_.reserve(n_cores);
             for (coreId_t i=0; i < n_cores; ++i) 
                 exec_buffers_.emplace_back(SUBTASKS_CAPACITY_);
-    
+            
+            taskslots_.reserve(TASKSLOTS_CAPACITY_);
             active_subtasks_.reserve(n_cores);
             slots_used_.reserve(n_cores);
         }
@@ -35,8 +36,7 @@ namespace streamprcss {
         [[nodiscard]] slotId_t                  reserveSlot(operId_t)                           noexcept;
         TaskSlot_t const&                       getSlot(slotId_t)                         const noexcept;
         TaskSlot_t&                             getSlot(slotId_t)                               noexcept;
-        std::unordered_map
-        <slotId_t, TaskSlot_t> const&           getSlots()                                const noexcept;
+        std::vector<TaskSlot_t> const&          getSlots()                                const noexcept;
         void                                    scheduleExec(mssgId_t, slotId_t, JobManager_t&) noexcept; 
         void                                    checkQueuedExecution(slotId_t, JobManager_t&)   noexcept;
         std::vector<ActiveSubtask_t*>&          getActiveExecutions()                           noexcept;
@@ -49,14 +49,15 @@ namespace streamprcss {
     private:
         void createSubTask(JobManager_t&, TaskSlot_t&, mssgId_t, slotId_t) noexcept;
 
-        std::vector<ExecutionBuffer_t>            exec_buffers_      {};           // Cores here!.
-        std::unordered_map<slotId_t, TaskSlot_t>  taskslots_         {};           // Slots here!. 
-        std::vector<ActiveSubtask_t*>             active_subtasks_   {};
-        std::vector<slotId_t>                     slots_used_        {};
-        coreId_t                                  n_cores_           { 1 };
-        slotId_t                                  next_slot_id_      { 0 };
-        std::size_t                               pending_execs_     { 0 };
-        inline static constexpr std::size_t       SUBTASKS_CAPACITY_ { 100000 };
+        std::vector<ExecutionBuffer_t>            exec_buffers_       {};           // Cores here!.
+        std::vector<TaskSlot_t>                   taskslots_          {};           // Slots here!. 
+        std::vector<ActiveSubtask_t*>             active_subtasks_    {};
+        std::vector<slotId_t>                     slots_used_         {};
+        coreId_t                                  n_cores_            { 1 };
+        slotId_t                                  next_slot_id_       { 0 };
+        std::size_t                               pending_execs_      { 0 };
+        inline static constexpr std::size_t       SUBTASKS_CAPACITY_  { 100000 };
+        inline static constexpr std::size_t       TASKSLOTS_CAPACITY_ { 1000   };
     };
 
     } // namespace flink

@@ -16491,3 +16491,39 @@ Lista las 4 subsecciones: ''An overview of the model", "DEVS Model", "Simulation
 taskslot, etc.
 
 Me gustaria pasarte mi diagrama UML hecho en draw.io, para que me puedas genear una descricion presisa, potente y entendible de mi arquitectura.
+
+p=1
+Average MAE     : 0.014927
+Average RMSE    : 0.021972
+Average MAPE    : 3.36%
+Average AUC Error: 2.62%
+
+p=2
+Average MAE     : 0.030557
+Average RMSE    : 0.036853
+Average MAPE    : 6.11%
+Average AUC Error: 4.98%
+
+p=4
+Average MAE     : 0.019622
+Average RMSE    : 0.026132
+Average MAPE    : 3.34%
+Average AUC Error: 1.60%
+
+p=8
+Average MAE     : 0.039722
+Average RMSE    : 0.049748
+Average MAPE    : 8.15%
+Average AUC Error: 6.74%
+
+p=16
+Average MAE     : 0.020412
+Average RMSE    : 0.033913
+Average MAPE    : 3.71%
+Average AUC Error: 2.76%
+
+p=32
+Average MAE     : 0.019717
+Average RMSE    : 0.036505
+Average MAPE    : 4.90%
+Average AUC Error: 2.99%

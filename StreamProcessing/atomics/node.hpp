@@ -175,9 +175,11 @@ public:
     friend std::ostringstream& operator<<(std::ostringstream& os, const typename Node_t<TIME>::state_type& i) { // State log
         //os <<"node_"<<i.id<<": buff: "<<i.buffer<<" & sent loc: " << i.index << " & processing: " << i.processing; 
         os<<"processing: " << i.processing_ << ", buffer executions: " << i.taskman_.pendingExecutions()<<", executing: "<<i.taskman_.executing()<<","; // TODO.
-        for (auto const& [id, slot] : i.taskman_.getSlots())
+        uint32_t id { 0 };
+        for (auto const& slot : i.taskman_.getSlots())
         {
             os<<" [slot_"<<id<<"->"<<slot.getOperator()<<": active: "<<slot.isActive()<<", using: "<<slot.isUsing()<<", tuples: "<<slot.nTuples() <<"]";
+            ++id;
         }
         return os;
     }
@@ -207,8 +209,8 @@ protected: // Son access (node_master).
     void searchNextOperatorDestinations(std::vector<OperatorLocation_t>& bag_out_port) const
     {
         // Find less lapse execution.
-        std::vector<flink::ActiveSubtask_t*>& active_execs     { this->state.taskman_.getActiveExecutions()  };
-        TIME                                  lapse_prioriry  { std::numeric_limits<TIME>::max()              };
+        std::vector<flink::ActiveSubtask_t*>& active_execs    { this->state.taskman_.getActiveExecutions() };
+        TIME                                  lapse_prioriry  { std::numeric_limits<TIME>::max()           };
         for (auto& actve_subtask : active_execs){
             if (actve_subtask->subtask_->lapse_ < lapse_prioriry) lapse_prioriry = actve_subtask->subtask_->lapse_;
         }

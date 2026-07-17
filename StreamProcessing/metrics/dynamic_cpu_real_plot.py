@@ -3,6 +3,7 @@
 import argparse
 import matplotlib.pyplot as plt
 
+plt.style.use("metrics/thesis.mplstyle")
 
 def read_file(filename):
 
@@ -33,7 +34,7 @@ def read_file(filename):
 
 def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
 
-    plt.figure(figsize=(12, 7))
+    plt.figure()
     ax = plt.gca()
 
     #
@@ -60,8 +61,6 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
         x_values,
         y_values,
         marker="o",
-        markersize=3,
-        linewidth=1.5,
         label="CPU Utilization"
     )
 
@@ -89,18 +88,14 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
     #
     plt.axvline(
         x=0,
-        linestyle=":",
-        linewidth=1,
-        alpha=0.4
+        linestyle=":"
     )
 
     for end_time in interval_end_times:
 
         plt.axvline(
             x=end_time,
-            linestyle=":",
-            linewidth=1,
-            alpha=0.4
+            linestyle=":"
         )
 
     #
@@ -126,7 +121,7 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=8,
+            fontsize=16,
             fontweight="bold"
         )
 
@@ -142,11 +137,11 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
             "axes fraction",
             "axes fraction"
         ),
-        xytext=(-35, -25),
+        xytext=(0, -25),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=9,
+        fontsize=16,
         fontweight="bold"
     )
 
@@ -169,12 +164,14 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
         f"{app}-"
         f"{nodes}-"
         f"{cores}-"
-        f"{p}.png"
+        f"{p}"
     )
 
-    plt.savefig(output_file, dpi=300)
+    plt.savefig(f"{output_file}.pdf")
+    plt.savefig(f"{output_file}.png")
+    
     plt.show()
-    print(f"Graph saved in: " f"{output_file}")
+    #print(f"Graph saved in: " f"{output_file}")
 
 
 def main():

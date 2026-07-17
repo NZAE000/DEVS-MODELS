@@ -6,7 +6,7 @@ import argparse
 import re
 
 
-
+plt.style.use("metrics/thesis.mplstyle")
 
 def read_file(filename):
 
@@ -43,7 +43,7 @@ def read_file(filename):
 
 def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data_from):
 
-    plt.figure(figsize=(14, 8))
+    plt.figure()
     ax = plt.gca()
 
     #
@@ -89,8 +89,6 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
             x_values,
             y_values,
             marker="o",
-            markersize=2,
-            linewidth=1,
             label=operator
         )
 
@@ -99,9 +97,7 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
     #
     plt.axvline(
         x=0,
-        linestyle=":",
-        linewidth=1,
-        alpha=0.3
+        linestyle=":"
     )
 
     if len(rates) == 1:
@@ -112,9 +108,7 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
     for boundary in boundaries:
         plt.axvline(
             x=boundary,
-            linestyle=":",
-            linewidth=1,
-            alpha=0.3
+            linestyle=":"
         )
 
     plt.xlabel(
@@ -164,7 +158,7 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=8,
+            fontsize=16,
             fontweight="bold"
         )
 
@@ -180,11 +174,11 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
             "axes fraction",
             "axes fraction"
         ),
-        xytext=(-35, -25),
+        xytext=(0, -25),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=9,
+        fontsize=16,
         fontweight="bold"
     )
 
@@ -205,12 +199,13 @@ def plot_utilization(rates, operators, operator_data, app, nodes, cores, p, data
         f"{app}-"
         f"{nodes}-"
         f"{cores}-"
-        f"{p}.png"
+        f"{p}"
     )
 
-    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    plt.savefig(f"{output_file}.pdf")
+    plt.savefig(f"{output_file}.png")
     plt.show()
-    print(f"Graph saved in: "f"{output_file}")
+    #print(f"Graph saved in: "f"{output_file}")
 
 def main():
 
