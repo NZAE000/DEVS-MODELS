@@ -16,8 +16,8 @@ fi
 
 echo "[INFO] Job ID found: $JOB_ID"
 
-FOLDER="operators"
-FILE="${FOLDER}/operators_list.txt"
+FOLDER="../operators"
+FILE="${FOLDER}/operator_list.txt"
 PLAN_JSON="plan_tmp.json"
 
 mkdir -p "$FOLDER"

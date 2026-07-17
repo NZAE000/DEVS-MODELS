@@ -13,9 +13,9 @@ if [ $# -ne 7 ]; then
     exit 1
 fi
 
-THROUGHPUT_PATH="../metrics/nexmark/throughput/real/dynamic"
-UTILIZATION_PATH="../metrics/nexmark/utilization/real/dynamic"
-CPU_UTIL_PATH="../metrics/nexmark/cpu_util/real/dynamic"
+THROUGHPUT_PATH="../../metrics/nexmark/throughput/real/dynamic"
+UTILIZATION_PATH="../../metrics/nexmark/utilization/real/dynamic"
+CPU_UTIL_PATH="../../metrics/nexmark/cpu_util/real/dynamic"
 
 mkdir -p "$THROUGHPUT_PATH"
 mkdir -p "$UTILIZATION_PATH"

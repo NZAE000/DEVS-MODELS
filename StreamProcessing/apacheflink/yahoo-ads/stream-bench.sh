@@ -3,42 +3,43 @@
 # Licensed under the terms of the Apache License 2.0.
 # Flink-only adaptation for the Yahoo Streaming Benchmark.
 #
-# Baseline stack:
-#   - Apache Flink 1.11.0
-#   - Apache Kafka 2.4.1
-#   - ZooKeeper bundled with Kafka
-#   - Redis 6.0.5
+# Shared-services layout:
+#   <services-root>/
+#   ├── flink-2.2.0/
+#   ├── kafka_2.12-2.4.1/
+#   ├── redis-6.0.5/
+#   ├── download-cache/
+#   ├── nexmark/
+#   └── yahoo-ads/
 #
-# Examples:
-#   ./stream-bench-flink.sh SETUP
-#   LOAD=100 TEST_TIME=30 ./stream-bench-flink.sh FLINK_TEST
-#   ./stream-bench-flink.sh STOP_ALL
-#
-# To use an existing Flink installation:
-#   USE_SYSTEM_FLINK=1 FLINK_HOME=/path/to/flink-1.11.0 \
-#       ./stream-bench-flink.sh SETUP
-#
-# The existing Flink installation must be compatible with the benchmark JAR.
-# For the first validation stage, use Flink 1.11.0.
+# Defaults:
+#   PROJECT_ROOT  = directory containing this script
+#   SERVICES_ROOT = parent directory of PROJECT_ROOT
+#   FLINK_HOME    = $SERVICES_ROOT/flink-2.2.0
 
 set -Eeuo pipefail
 
 ###############################################################################
-# Paths and configurable versions
+# Project, shared services, and Java
 ###############################################################################
 
-BENCHMARK_JAVA_HOME="${BENCHMARK_JAVA_HOME:-/usr/lib/jvm/java-11-openjdk-amd64}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="${PROJECT_ROOT:-$SCRIPT_DIR}"
+SERVICES_ROOT="${SERVICES_ROOT:-$(cd "$PROJECT_ROOT/.." && pwd)}"
 
-if [[ ! -x "$BENCHMARK_JAVA_HOME/bin/java" ]]; then
-    echo "ERROR: Java 11 not found at $BENCHMARK_JAVA_HOME" >&2
-    exit 1
+BENCHMARK_JAVA_HOME="${BENCHMARK_JAVA_HOME:-${JAVA_HOME:-}}"
+if [[ -n "$BENCHMARK_JAVA_HOME" ]]; then
+    if [[ ! -x "$BENCHMARK_JAVA_HOME/bin/java" ]]; then
+        echo "ERROR: Invalid Java installation: $BENCHMARK_JAVA_HOME" >&2
+        exit 1
+    fi
+    export JAVA_HOME="$BENCHMARK_JAVA_HOME"
+    export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
-export JAVA_HOME="$BENCHMARK_JAVA_HOME"
-export PATH="$JAVA_HOME/bin:$PATH"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="${ROOT:-$SCRIPT_DIR}"
+###############################################################################
+# Tools and configurable versions
+###############################################################################
 
 LEIN="${LEIN:-lein}"
 MVN="${MVN:-mvn}"
@@ -46,36 +47,28 @@ MAKE="${MAKE:-make}"
 
 KAFKA_VERSION="${KAFKA_VERSION:-2.4.1}"
 REDIS_VERSION="${REDIS_VERSION:-6.0.5}"
-FLINK_VERSION="${FLINK_VERSION:-1.11.0}"
+FLINK_VERSION="${FLINK_VERSION:-2.2.0}"
 SCALA_BIN_VERSION="${SCALA_BIN_VERSION:-2.12}"
 
 KAFKA_DIR_NAME="${KAFKA_DIR_NAME:-kafka_${SCALA_BIN_VERSION}-${KAFKA_VERSION}}"
 REDIS_DIR_NAME="${REDIS_DIR_NAME:-redis-${REDIS_VERSION}}"
 FLINK_DIR_NAME="${FLINK_DIR_NAME:-flink-${FLINK_VERSION}}"
 
-KAFKA_HOME="${KAFKA_HOME:-$ROOT/$KAFKA_DIR_NAME}"
-REDIS_HOME="${REDIS_HOME:-$ROOT/$REDIS_DIR_NAME}"
-#FLINK_HOME="${FLINK_HOME:-$ROOT/$FLINK_DIR_NAME}"
-
-USE_SYSTEM_FLINK="${USE_SYSTEM_FLINK:-0}"
-if [[ "$USE_SYSTEM_FLINK" == "1" ]]; then
-    : "${FLINK_HOME:?Set FLINK_HOME when USE_SYSTEM_FLINK=1}"
-    FLINK_HOME="$(cd "$FLINK_HOME" && pwd)"
-else
-    FLINK_HOME="$ROOT/$FLINK_DIR_NAME"
-fi
+KAFKA_HOME="${KAFKA_HOME:-$SERVICES_ROOT/$KAFKA_DIR_NAME}"
+REDIS_HOME="${REDIS_HOME:-$SERVICES_ROOT/$REDIS_DIR_NAME}"
+FLINK_HOME="${FLINK_HOME:-$SERVICES_ROOT/$FLINK_DIR_NAME}"
 
 APACHE_ARCHIVE="${APACHE_ARCHIVE:-https://archive.apache.org/dist}"
 REDIS_DOWNLOAD_BASE="${REDIS_DOWNLOAD_BASE:-https://download.redis.io/releases}"
 
-DOWNLOAD_CACHE="${DOWNLOAD_CACHE:-$ROOT/download-cache}"
-RUN_DIR="${RUN_DIR:-$ROOT/run}"
-LOG_DIR="${LOG_DIR:-$ROOT/logs/flink-benchmark}"
+DOWNLOAD_CACHE="${DOWNLOAD_CACHE:-$SERVICES_ROOT/download-cache}"
+RUN_DIR="${RUN_DIR:-$PROJECT_ROOT/run}"
+LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/logs/flink-benchmark}"
 
-CONF_FILE="${CONF_FILE:-$ROOT/conf/localConf.yaml}"
-BENCHMARK_CONF_FILE="${BENCHMARK_CONF_FILE:-$ROOT/conf/benchmarkConf.yaml}"
+CONF_FILE="${CONF_FILE:-$PROJECT_ROOT/conf/localConf.yaml}"
+BENCHMARK_CONF_FILE="${BENCHMARK_CONF_FILE:-$PROJECT_ROOT/conf/benchmarkConf.yaml}"
 
-FLINK_JAR="${FLINK_JAR:-$ROOT/flink-benchmarks/target/flink-benchmarks-0.1.0.jar}"
+FLINK_JAR="${FLINK_JAR:-$PROJECT_ROOT/flink-benchmarks/target/flink-benchmarks-0.1.0.jar}"
 FLINK_MAIN_CLASS="${FLINK_MAIN_CLASS:-flink.benchmark.AdvertisingTopologyNative}"
 
 ###############################################################################
@@ -87,6 +80,7 @@ ZK_PORT="${ZK_PORT:-2181}"
 KAFKA_HOST="${KAFKA_HOST:-localhost}"
 KAFKA_PORT="${KAFKA_PORT:-9092}"
 REDIS_HOST="${REDIS_HOST:-localhost}"
+REDIS_PORT="${REDIS_PORT:-6379}"
 
 TOPIC="${TOPIC:-ad-events}"
 PARTITIONS="${PARTITIONS:-1}"
@@ -102,7 +96,7 @@ FLINK_CHECKPOINT_INTERVAL="${FLINK_CHECKPOINT_INTERVAL:-}"
 ZOOKEEPER_CONFIG="${ZOOKEEPER_CONFIG:-$KAFKA_HOME/config/zookeeper.properties}"
 KAFKA_CONFIG="${KAFKA_CONFIG:-$KAFKA_HOME/config/server.properties}"
 
-mkdir -p "$DOWNLOAD_CACHE" "$RUN_DIR" "$LOG_DIR" "$(dirname "$CONF_FILE")"
+mkdir -p "$SERVICES_ROOT" "$DOWNLOAD_CACHE" "$RUN_DIR" "$LOG_DIR" "$(dirname "$CONF_FILE")"
 
 ###############################################################################
 # Utility functions
@@ -225,15 +219,14 @@ fetch_and_extract() {
     fi
 
     download_file "$url" "$archive"
-    log "Extracting $archive_name"
-    tar -xzf "$archive" -C "$ROOT"
+    log "Extracting $archive_name into $SERVICES_ROOT"
+    tar -xzf "$archive" -C "$SERVICES_ROOT"
 
-    [[ -d "$expected_dir" ]] ||
-        die "Expected directory was not created: $expected_dir"
+    [[ -d "$expected_dir" ]] || die "Expected directory was not created: $expected_dir"
 }
 
 write_local_config() {
-    cat >"$CONF_FILE" <<EOF
+    cat >"$CONF_FILE" <<EOF_CONF
 kafka.brokers:
   - "$KAFKA_HOST"
 
@@ -248,11 +241,10 @@ kafka.partitions: $PARTITIONS
 process.hosts: $PROCESS_HOSTS
 process.cores: $PROCESS_CORES
 flink.buffer-timeout: $FLINK_BUFFER_TIMEOUT
-EOF
+EOF_CONF
 
     if [[ -n "$FLINK_CHECKPOINT_INTERVAL" ]]; then
-        printf 'flink.checkpoint-interval: %s\n' \
-            "$FLINK_CHECKPOINT_INTERVAL" >>"$CONF_FILE"
+        printf 'flink.checkpoint-interval: %s\n' "$FLINK_CHECKPOINT_INTERVAL" >>"$CONF_FILE"
     fi
 
     log "Generated configuration: $CONF_FILE"
@@ -260,10 +252,10 @@ EOF
 
 build_flink_modules() {
     require_command "$MVN"
-
     log "Building streaming-benchmark-common and flink-benchmarks"
+
     (
-        cd "$ROOT"
+        cd "$PROJECT_ROOT"
         "$MVN" clean package \
             -pl flink-benchmarks \
             -am \
@@ -273,17 +265,12 @@ build_flink_modules() {
             -Dscala.binary.version="$SCALA_BIN_VERSION"
     )
 
-    [[ -f "$FLINK_JAR" ]] ||
-        die "Flink benchmark JAR was not generated: $FLINK_JAR"
+    [[ -f "$FLINK_JAR" ]] || die "Flink benchmark JAR was not generated: $FLINK_JAR"
 }
 
 install_redis() {
     local archive_name="$REDIS_DIR_NAME.tar.gz"
-    fetch_and_extract \
-        "$archive_name" \
-        "$REDIS_DOWNLOAD_BASE/$archive_name" \
-        "$REDIS_HOME"
-
+    fetch_and_extract "$archive_name" "$REDIS_DOWNLOAD_BASE/$archive_name" "$REDIS_HOME"
     require_command "$MAKE"
     log "Building Redis"
     "$MAKE" -C "$REDIS_HOME"
@@ -291,46 +278,25 @@ install_redis() {
 
 install_kafka() {
     local archive_name="$KAFKA_DIR_NAME.tgz"
-    fetch_and_extract \
-        "$archive_name" \
-        "$APACHE_ARCHIVE/kafka/$KAFKA_VERSION/$archive_name" \
-        "$KAFKA_HOME"
+    fetch_and_extract "$archive_name" "$APACHE_ARCHIVE/kafka/$KAFKA_VERSION/$archive_name" "$KAFKA_HOME"
 }
 
-install_flink() {
-    if [[ "$USE_SYSTEM_FLINK" == "1" ]]; then
-        [[ -x "$FLINK_HOME/bin/flink" ]] ||
-            die "Invalid FLINK_HOME: $FLINK_HOME"
-        log "Using external Flink installation: $FLINK_HOME"
-        return
-    fi
-
-    local archive_name="$FLINK_DIR_NAME-bin-scala_${SCALA_BIN_VERSION}.tgz"
-    fetch_and_extract \
-        "$archive_name" \
-        "$APACHE_ARCHIVE/flink/flink-$FLINK_VERSION/$archive_name" \
-        "$FLINK_HOME"
+check_shared_flink() {
+    [[ -x "$FLINK_HOME/bin/flink" ]] || die "Shared Flink installation not found at: $FLINK_HOME"
+    log "Using shared Flink installation: $FLINK_HOME"
+    "$FLINK_HOME/bin/flink" --version
 }
 
 check_installation() {
-    [[ -x "$KAFKA_HOME/bin/kafka-server-start.sh" ]] ||
-        die "Kafka is not installed. Run SETUP first."
-    [[ -x "$KAFKA_HOME/bin/zookeeper-server-start.sh" ]] ||
-        die "ZooKeeper scripts are not available in Kafka."
-    [[ -x "$REDIS_HOME/src/redis-server" ]] ||
-        die "Redis is not installed. Run SETUP first."
-    [[ -x "$FLINK_HOME/bin/flink" ]] ||
-        die "Flink is not installed or FLINK_HOME is invalid."
+    [[ -x "$KAFKA_HOME/bin/kafka-server-start.sh" ]] || die "Kafka is not installed at $KAFKA_HOME. Run SETUP first."
+    [[ -x "$KAFKA_HOME/bin/zookeeper-server-start.sh" ]] || die "ZooKeeper scripts are not available in $KAFKA_HOME."
+    [[ -x "$REDIS_HOME/src/redis-server" ]] || die "Redis is not installed at $REDIS_HOME. Run SETUP first."
+    [[ -x "$FLINK_HOME/bin/flink" ]] || die "Shared Flink installation is invalid: $FLINK_HOME"
 }
 
 create_kafka_topic() {
     local topics
-
-    topics="$(
-        "$KAFKA_HOME/bin/kafka-topics.sh" \
-            --zookeeper "$ZK_HOST:$ZK_PORT" \
-            --list
-    )"
+    topics="$("$KAFKA_HOME/bin/kafka-topics.sh" --zookeeper "$ZK_HOST:$ZK_PORT" --list)"
 
     if printf '%s\n' "$topics" | grep -Fxq "$TOPIC"; then
         log "Kafka topic '$TOPIC' already exists"
@@ -338,7 +304,6 @@ create_kafka_topic() {
     fi
 
     log "Creating Kafka topic '$TOPIC' with $PARTITIONS partition(s)"
-
     "$KAFKA_HOME/bin/kafka-topics.sh" \
         --zookeeper "$ZK_HOST:$ZK_PORT" \
         --create \
@@ -366,10 +331,16 @@ setup() {
     build_flink_modules
     install_redis
     install_kafka
-    install_flink
+    check_shared_flink
 
     log "SETUP completed"
+    log "Project root: $PROJECT_ROOT"
+    log "Services root: $SERVICES_ROOT"
+    log "Java home: ${JAVA_HOME:-<not explicitly set>}"
+    log "Flink version: $FLINK_VERSION"
     log "Flink home: $FLINK_HOME"
+    log "Kafka home: $KAFKA_HOME"
+    log "Redis home: $REDIS_HOME"
     log "Benchmark JAR: $FLINK_JAR"
 }
 
@@ -388,9 +359,7 @@ stop_zookeeper() {
     if [[ -x "$KAFKA_HOME/bin/zookeeper-server-stop.sh" ]]; then
         "$KAFKA_HOME/bin/zookeeper-server-stop.sh" >/dev/null 2>&1 || true
     fi
-    stop_process_if_needed \
-        'org.apache.zookeeper.server.quorum.QuorumPeerMain' \
-        'ZooKeeper'
+    stop_process_if_needed 'org.apache.zookeeper.server.quorum.QuorumPeerMain' 'ZooKeeper'
     rm -rf /tmp/zookeeper
 }
 
@@ -404,42 +373,57 @@ start_redis() {
         "$LOG_DIR/redis.log" \
         "$REDIS_HOME/src/redis-server" \
         --bind 127.0.0.1 \
-        --port 6379 \
+        --port "$REDIS_PORT" \
         --dir "$RUN_DIR"
 
-    [[ -f "$BENCHMARK_CONF_FILE" ]] ||
-        die "Redis initialization config not found: $BENCHMARK_CONF_FILE"
+    [[ -f "$BENCHMARK_CONF_FILE" ]] || die "Redis initialization config not found: $BENCHMARK_CONF_FILE"
 
     log "Initializing benchmark campaign data in Redis"
     (
-        cd "$ROOT/data"
+        cd "$PROJECT_ROOT/data"
         "$LEIN" run -n --configPath "$BENCHMARK_CONF_FILE"
     )
 }
 
 stop_redis() {
-    if command -v redis-cli >/dev/null 2>&1; then
-        redis-cli -h "$REDIS_HOST" -p 6379 shutdown nosave \
-            >/dev/null 2>&1 || true
+    if [[ -x "$REDIS_HOME/src/redis-cli" ]]; then
+        "$REDIS_HOME/src/redis-cli" -h "$REDIS_HOST" -p "$REDIS_PORT" shutdown nosave >/dev/null 2>&1 || true
+    elif command -v redis-cli >/dev/null 2>&1; then
+        redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" shutdown nosave >/dev/null 2>&1 || true
     fi
 
     stop_process_if_needed "$REDIS_HOME/src/redis-server" 'Redis'
     rm -f "$RUN_DIR/dump.rdb"
 }
 
+wait_for_kafka() {
+    local timeout="${1:-30}"
+    local elapsed=0
+
+    log "Waiting for Kafka broker"
+    until "$KAFKA_HOME/bin/kafka-broker-api-versions.sh" \
+        --bootstrap-server "$KAFKA_HOST:$KAFKA_PORT" >/dev/null 2>&1
+    do
+        if (( elapsed >= timeout )); then
+            die "Kafka broker was not ready within ${timeout}s"
+        fi
+        sleep 1
+        ((elapsed += 1))
+    done
+    log "Kafka broker is ready"
+}
+
 start_kafka() {
     check_installation
-
-    is_running 'org.apache.zookeeper.server.quorum.QuorumPeerMain' ||
-        die "ZooKeeper must be running before Kafka"
+    is_running 'org.apache.zookeeper.server.quorum.QuorumPeerMain' || die "ZooKeeper must be running before Kafka"
 
     start_background_if_needed \
-      'kafka\.Kafka' \
-      'Kafka' \
-      20 \
-      "$LOG_DIR/kafka.log" \
-      "$KAFKA_HOME/bin/kafka-server-start.sh" \
-      "$KAFKA_CONFIG"
+        'kafka\.Kafka' \
+        'Kafka' \
+        20 \
+        "$LOG_DIR/kafka.log" \
+        "$KAFKA_HOME/bin/kafka-server-start.sh" \
+        "$KAFKA_CONFIG"
 
     wait_for_kafka 30
     create_kafka_topic
@@ -449,30 +433,8 @@ stop_kafka() {
     if [[ -x "$KAFKA_HOME/bin/kafka-server-stop.sh" ]]; then
         "$KAFKA_HOME/bin/kafka-server-stop.sh" >/dev/null 2>&1 || true
     fi
-
     stop_process_if_needed 'kafka\.Kafka' 'Kafka'
     rm -rf /tmp/kafka-logs
-}
-
-wait_for_kafka() {
-    local timeout="${1:-30}"
-    local elapsed=0
-
-    log "Waiting for Kafka broker"
-
-    until "$KAFKA_HOME/bin/kafka-broker-api-versions.sh" \
-        --bootstrap-server "$KAFKA_HOST:$KAFKA_PORT" \
-        >/dev/null 2>&1
-    do
-        if (( elapsed >= timeout )); then
-            die "Kafka broker was not ready within ${timeout}s"
-        fi
-
-        sleep 1
-        ((elapsed += 1))
-    done
-
-    log "Kafka broker is ready"
 }
 
 start_flink() {
@@ -483,7 +445,7 @@ start_flink() {
         return
     fi
 
-    log "Starting Flink cluster"
+    log "Starting shared Flink cluster"
     "$FLINK_HOME/bin/start-cluster.sh"
     sleep 3
 
@@ -494,17 +456,20 @@ start_flink() {
 
 stop_flink() {
     if [[ -x "$FLINK_HOME/bin/stop-cluster.sh" ]]; then
-        log "Stopping Flink cluster"
+        log "Stopping shared Flink cluster"
         "$FLINK_HOME/bin/stop-cluster.sh" || true
     else
-        log "No Flink stop script found"
+        log "No Flink stop script found at $FLINK_HOME"
     fi
 }
 
 start_flink_processing() {
     check_installation
-    [[ -f "$FLINK_JAR" ]] ||
-        die "Benchmark JAR not found: $FLINK_JAR"
+    [[ -f "$FLINK_JAR" ]] || die "Benchmark JAR not found: $FLINK_JAR"
+
+    is_running "$REDIS_HOME/src/redis-server" || die "Redis is not running. Execute START_REDIS first."
+    is_running 'kafka\.Kafka' || die "Kafka is not running. Execute START_KAFKA first."
+    is_running 'org.apache.flink.runtime.entrypoint.StandaloneSessionClusterEntrypoint|org.apache.flink.runtime.jobmanager.JobManager' || die "Flink is not running. Execute START_FLINK first."
 
     if [[ -n "$(running_flink_job_id)" ]]; then
         log "Yahoo Flink benchmark job is already running"
@@ -522,8 +487,7 @@ start_flink_processing() {
 
     local job_id
     job_id="$(running_flink_job_id)"
-    [[ -n "$job_id" ]] ||
-        die "Flink benchmark job was not found after submission"
+    [[ -n "$job_id" ]] || die "Flink benchmark job was not found after submission"
 
     printf '%s\n' "$job_id" >"$RUN_DIR/flink-job.id"
     log "Flink benchmark job ID: $job_id"
@@ -553,8 +517,7 @@ stop_flink_processing() {
 }
 
 start_load() {
-    [[ -f "$CONF_FILE" ]] ||
-        die "Configuration file not found: $CONF_FILE"
+    [[ -f "$CONF_FILE" ]] || die "Configuration file not found: $CONF_FILE"
 
     if is_running 'leiningen\.core\.main.* -r '; then
         log "Load generator is already running"
@@ -563,7 +526,7 @@ start_load() {
 
     log "Starting load generator at $LOAD event(s)/s"
     (
-        cd "$ROOT/data"
+        cd "$PROJECT_ROOT/data"
         nohup "$LEIN" run -r -t "$LOAD" \
             --configPath "$CONF_FILE" \
             >"$LOG_DIR/load-generator.log" 2>&1 &
@@ -574,23 +537,33 @@ start_load() {
 }
 
 stop_load() {
+    local load_was_running=0
+
     if [[ -f "$RUN_DIR/load-generator.pid" ]]; then
         local pid
         pid="$(<"$RUN_DIR/load-generator.pid")"
+
         if kill -0 "$pid" 2>/dev/null; then
+            load_was_running=1
             log "Stopping load generator"
             kill "$pid" 2>/dev/null || true
             sleep 1
         fi
+
         rm -f "$RUN_DIR/load-generator.pid"
     fi
 
-    stop_process_if_needed 'leiningen\.core\.main.* -r ' 'Load generator'
+    if is_running 'leiningen\.core\.main.* -r '; then
+        load_was_running=1
+        stop_process_if_needed 'leiningen\.core\.main.* -r ' 'Load generator'
+    else
+        log "No Load generator process found"
+    fi
 
-    if [[ -d "$ROOT/data" && -f "$CONF_FILE" ]]; then
+    if (( load_was_running == 1 )) && [[ -d "$PROJECT_ROOT/data" && -f "$CONF_FILE" ]]; then
         log "Generating benchmark result files"
         (
-            cd "$ROOT/data"
+            cd "$PROJECT_ROOT/data"
             "$LEIN" run -g --configPath "$CONF_FILE" || true
         )
     fi
@@ -644,32 +617,44 @@ flink_test() {
 }
 
 print_help() {
-    cat <<EOF
-Yahoo Streaming Benchmark - Flink-only runner
+    cat <<EOF_HELP
+Yahoo Streaming Benchmark - Flink-only runner with shared services
 
 Usage:
   $0 OPERATION [OPERATION ...]
 
+Directory layout:
+  PROJECT_ROOT=$PROJECT_ROOT
+  SERVICES_ROOT=$SERVICES_ROOT
+
+Shared services:
+  FLINK_HOME=$FLINK_HOME
+  KAFKA_HOME=$KAFKA_HOME
+  REDIS_HOME=$REDIS_HOME
+
 Operations:
-  SETUP                    Build Flink modules and install Redis, Kafka, and
-                           Flink $FLINK_VERSION (unless USE_SYSTEM_FLINK=1).
+  SETUP                    Build Yahoo Flink modules, install Redis and Kafka
+                           in SERVICES_ROOT, and validate shared Flink.
   START_ZK                 Start ZooKeeper bundled with Kafka.
   STOP_ZK                  Stop ZooKeeper.
   START_REDIS              Start Redis and initialize campaign data.
   STOP_REDIS               Stop Redis.
   START_KAFKA              Start Kafka and create the benchmark topic.
   STOP_KAFKA               Stop Kafka.
-  START_FLINK              Start the standalone Flink cluster.
-  STOP_FLINK               Stop the standalone Flink cluster.
+  START_FLINK              Start the shared standalone Flink cluster.
+  STOP_FLINK               Stop the shared standalone Flink cluster.
   START_FLINK_PROCESSING   Submit AdvertisingTopologyNative.
-  STOP_FLINK_PROCESSING    Cancel the benchmark Flink job.
+  STOP_FLINK_PROCESSING    Cancel the Yahoo benchmark Flink job.
   START_LOAD               Start the Kafka load generator.
-  STOP_LOAD                Stop the load generator and generate result files.
+  STOP_LOAD                Stop the generator and create result files.
   FLINK_TEST               Run the complete benchmark workflow.
-  STOP_ALL                 Stop all benchmark processes.
+  STOP_ALL                 Stop all benchmark processes and services.
   HELP                     Show this message.
 
 Frequently used environment variables:
+  PROJECT_ROOT=$PROJECT_ROOT
+  SERVICES_ROOT=$SERVICES_ROOT
+  BENCHMARK_JAVA_HOME=${BENCHMARK_JAVA_HOME:-<current JAVA_HOME>}
   LOAD=$LOAD
   TEST_TIME=$TEST_TIME
   PARTITIONS=$PARTITIONS
@@ -677,19 +662,20 @@ Frequently used environment variables:
   PROCESS_CORES=$PROCESS_CORES
   TOPIC=$TOPIC
   FLINK_VERSION=$FLINK_VERSION
-  USE_SYSTEM_FLINK=$USE_SYSTEM_FLINK
+  FLINK_DIR_NAME=$FLINK_DIR_NAME
   FLINK_HOME=$FLINK_HOME
-
-Examples:
-  $0 SETUP
-  LOAD=100 TEST_TIME=30 $0 FLINK_TEST
-  PARTITIONS=8 PROCESS_CORES=8 LOAD=10000 TEST_TIME=240 \
-      $0 SETUP FLINK_TEST
+  KAFKA_HOME=$KAFKA_HOME
+  REDIS_HOME=$REDIS_HOME
 
 Important:
-  - For effective source parallelism P, use PARTITIONS >= PROCESS_HOSTS*PROCESS_CORES.
-  - The first validation stage should use Flink 1.11.0.
-EOF
+  - SETUP does not download Flink. It reuses FLINK_HOME.
+  - The default shared Flink directory is:
+        SERVICES_ROOT/flink-2.2.0
+  - Redis, Kafka, and download-cache are stored in SERVICES_ROOT.
+  - Yahoo code, logs, run files, configuration, and results remain in PROJECT_ROOT.
+  - For effective source parallelism P, use:
+        PARTITIONS >= PROCESS_HOSTS * PROCESS_CORES
+EOF_HELP
 }
 
 run() {

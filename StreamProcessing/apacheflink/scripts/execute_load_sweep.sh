@@ -4,7 +4,7 @@
 # Config file as argument
 # -------------------------
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 load-sweep/cfg/load-sweep-app.cfg"
+    echo "Use: $0 path/load-sweep/cfg/load-sweep-app.cfg"
     exit 1
 fi
 CFG=$1
@@ -19,8 +19,8 @@ APP=$(echo "$CFG" | cut -d'-' -f4 | cut -d'.' -f1 | xargs)
 # -------------------------
 # Output file name
 # -------------------------
-OUT="load-sweep/load-sweep-${APP}.txt"
-OUT_UTIL="load-sweep/load-sweep-util-${APP}.txt"
+OUT="../load-sweep/load-sweep-${APP}.txt"
+OUT_UTIL="../load-sweep/load-sweep-util-${APP}.txt"
 
 
 # -------------------------

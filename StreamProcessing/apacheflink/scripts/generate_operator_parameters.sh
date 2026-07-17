@@ -8,13 +8,13 @@
 #   topology.txt   → conexiones ordered source→sink
 # -----------------------------------------------------
 
-METRICS_DIR="metrics"
-OPERLIST_DIR="operators/operators_list.txt"
+METRICS_DIR="../operator_metrics"
+OPERLIST_DIR="../operators/operator_list.txt"
 
-OUTPUT_PROP_FILE="../input_data/operator.txt"
-OUTPUT_TOPO_FILE="../input_data/topology.txt"
-OUTPUT_DEG_FILE="../input_data/degradation.txt"
-OUTPUT_OCCUP_FILE="../input_data/extraoccupation.txt"
+OUTPUT_PROP_FILE="../../input_data/operator.txt"
+OUTPUT_TOPO_FILE="../../input_data/topology.txt"
+OUTPUT_DEG_FILE="../../input_data/degradation.txt"
+OUTPUT_OCCUP_FILE="../../input_data/extraoccupation.txt"
 
 SCALE=1000000000   # ms → ps
 

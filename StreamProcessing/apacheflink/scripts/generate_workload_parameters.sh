@@ -5,9 +5,9 @@
 #==============================================================================
 
 # Paths
-CONFIG_FILE="nexmark/conf/nexmark.yaml"
+CONFIG_FILE="../nexmark/conf/nexmark.yaml"
 #OUTPUT_FILE="parameters/reqsRate.txt"
-OUTPUT_FILE="../input_data/workload.txt"
+OUTPUT_FILE="../../input_data/workload.txt"
 
 #------------------------------------------------------------------------------
 # Check if configuration file exists

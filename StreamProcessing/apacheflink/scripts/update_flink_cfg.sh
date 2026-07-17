@@ -19,7 +19,7 @@ TASKSLOTS="$1"
 PARALLELISM="$2"
 
 # Path to the Flink configuration file
-CONFIG_FILE="flink/conf/config.yaml"
+CONFIG_FILE="../flink-2.2.0/conf/config.yaml"
 
 # Check if the configuration file exists
 if [ ! -f "$CONFIG_FILE" ]; then

@@ -17,7 +17,7 @@ fi
 
 EVENTS_NUM=$1
 TPS=$2
-CONFIG_FILE="nexmark/conf/nexmark.yaml"
+CONFIG_FILE="../nexmark/conf/nexmark.yaml"
 
 # Check file configuration
 if [ ! -f "$CONFIG_FILE" ]; then

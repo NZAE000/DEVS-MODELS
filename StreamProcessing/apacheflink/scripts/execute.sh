@@ -7,7 +7,7 @@ TPS="$5"
 
 
 if [ $# -ne 5 ]; then
-    echo "Uso: bash execute.sh <app> <taskslots> <parallelism> <events> <tps>"
+    echo "Use: bash execute.sh <app> <taskslots> <parallelism> <events> <tps>"
     exit 1
 fi
 

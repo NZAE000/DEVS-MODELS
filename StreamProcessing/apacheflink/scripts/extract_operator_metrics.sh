@@ -12,8 +12,8 @@
 
 JOB_ID=$(bash get_job_id.sh)
 FLINK_URL="http://localhost:8081"
-OPERLIST_DIR="operators/operators_list.txt"
-METRICS_DIR="metrics"
+OPERLIST_DIR="../operators/operator_list.txt"
+METRICS_DIR="../operator_metrics"
 
 if [ ! -f "${OPERLIST_DIR}" ]; then
   echo "[ERROR] ${OPERLIST_DIR} not found. Run first get_job_and_operators.sh"

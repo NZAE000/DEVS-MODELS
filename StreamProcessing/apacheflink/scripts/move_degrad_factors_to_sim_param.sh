@@ -3,20 +3,20 @@
 ###############################################################################
 # movedegradp_factors_to_sim_param.sh
 #
-# Uso:
+# Use:
 #
-#   ./move_degrad_factors_to_sim_param.sh <app> <parallelism>
+#   bash move_degrad_factors_to_sim_param.sh <app> <parallelism>
 #
-# Ejemplo:
+# e.g:
 #
-#   ./move_degrad_factors_to_sim_param.sh q3 16
+#   bash move_degrad_factors_to_sim_param.sh q3 16
 #
 ###############################################################################
 
 set -e
 
 ###############################################################################
-# VALIDACIÓN
+# VALIDATION
 ###############################################################################
 if [ $# -ne 2 ]; then
     echo "Uso: $0 <app> <parallelism>"
@@ -27,17 +27,17 @@ APP="$1"
 P="$2"
 
 ###############################################################################
-# ARCHIVO DE ENTRADA
+# INPUT FILE
 ###############################################################################
-DEGRAD_PARAMS_FILE="load-sweep/degrad-params-${APP}.txt"
+DEGRAD_PARAMS_FILE="../load-sweep/degrad-params-${APP}.txt"
 
 ###############################################################################
-# ARCHIVO DE SALIDA
+# OUTPUT FILE
 ###############################################################################
-DEGRAD_OUTPUT="../input_data/degradation.txt"
+DEGRAD_OUTPUT="../../input_data/degradation.txt"
 
 ###############################################################################
-# VALIDAR ENTRADA
+# VALIDATE INPUT
 ###############################################################################
 if [ ! -f "$DEGRAD_PARAMS_FILE" ]; then
     echo "ERROR: no existe $DEGRAD_PARAMS_FILE"
@@ -45,7 +45,7 @@ if [ ! -f "$DEGRAD_PARAMS_FILE" ]; then
 fi
 
 ###############################################################################
-# EXTRAER PARÁMETROS DE DEGRADACIÓN
+# EXTRACT DEGRADATION PARAMS
 ###############################################################################
 DEGRAD_LINE=$(awk -v p="$P" '
 $1 == p {

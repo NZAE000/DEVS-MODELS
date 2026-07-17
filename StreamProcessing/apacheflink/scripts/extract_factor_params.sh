@@ -4,7 +4,7 @@
 # Input arguments
 # -------------------------
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 l load-sweep/load-sweep-app.txt  load-sweep/load-sweep-util-app.txt"
+    echo "Use: $0 path/load-sweep/load-sweep-app.txt  path/load-sweep/load-sweep-util-app.txt"
     exit 1
 fi
 
@@ -25,9 +25,9 @@ if [ "$APP" != "$APP_UTIL" ]; then
 fi
 
 # Clean
-OUTPUT="load-sweep/degrad-params-${APP}.txt"
+OUTPUT="../load-sweep/degrad-params-${APP}.txt"
 > "$OUTPUT"
-OUTPUT_UTIL="load-sweep/w-params-${APP}.txt"
+OUTPUT_UTIL="../load-sweep/w-params-${APP}.txt"
 > "$OUTPUT_UTIL"
 
 

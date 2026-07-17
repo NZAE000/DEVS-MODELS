@@ -13,8 +13,8 @@ if [ $# -ne 7 ]; then
     exit 1
 fi
 
-THROUGHPUT_PATH="../metrics/nexmark/throughput/real/terminated"
-UTILIZATION_PATH="../metrics/nexmark/utilization/real/terminated"
+THROUGHPUT_PATH="../../metrics/nexmark/throughput/real/terminated"
+UTILIZATION_PATH="../../metrics/nexmark/utilization/real/terminated"
 THROUGHPUT_OUTFILE="terminated-throughput-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
 UTILIZATION_OUTFILE="terminated-utilization-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
 

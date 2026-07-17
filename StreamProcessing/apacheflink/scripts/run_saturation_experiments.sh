@@ -5,7 +5,7 @@
 # Reads all experiment parameters from a .cfg file
 # ============================================================
 
-CFG_FILE="experiments_cfg/saturation-experiment.cfg"
+CFG_FILE="../nxmrk_experiments_cfg/saturation-experiment.cfg"
 
 # ------------------------------------------------------------
 # Check config file exists

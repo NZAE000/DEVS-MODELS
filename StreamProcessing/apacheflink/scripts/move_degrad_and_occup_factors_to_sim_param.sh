@@ -5,11 +5,11 @@
 #
 # Use:
 #
-#   ./ move_degrad_and_occup_factors_to_sim_param.sh <app> <parallelism>
+#   bash move_degrad_and_occup_factors_to_sim_param.sh <app> <parallelism>
 #
 # e.g:
 #
-#   ./ move_degrad_and_occup_factors_to_sim_param.sh q3 16
+#   bash move_degrad_and_occup_factors_to_sim_param.sh q3 16
 #
 ###############################################################################
 
@@ -19,7 +19,7 @@ set -e
 # VALIDATION
 ###############################################################################
 if [ $# -ne 2 ]; then
-    echo "Uso: $0 <app> <parallelism>"
+    echo "Use: $0 <app> <parallelism>"
     exit 1
 fi
 
@@ -29,14 +29,14 @@ P="$2"
 ###############################################################################
 # INPUT FILES
 ###############################################################################
-DEGRAD_PARAMS_FILE="load-sweep/degrad-params-${APP}.txt"
-W_PARAMS_FILE="load-sweep/w-params-${APP}.txt"
+DEGRAD_PARAMS_FILE="../load-sweep/degrad-params-${APP}.txt"
+W_PARAMS_FILE="../load-sweep/w-params-${APP}.txt"
 
 ###############################################################################
 # OUTPUT FILES
 ###############################################################################
-DEGRAD_OUTPUT="../input_data/degradation.txt"
-EXTRA_OUTPUT="../input_data/extraoccupation.txt"
+DEGRAD_OUTPUT="../../input_data/degradation.txt"
+EXTRA_OUTPUT="../../input_data/extraoccupation.txt"
 
 ###############################################################################
 # VALIDATE IF EXISTS

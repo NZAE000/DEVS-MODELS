@@ -6,7 +6,7 @@
 # All parameters are read from a .cfg file
 # ============================================================
 
-CFG_FILE="experiments_cfg/without-saturation-experiment.cfg"
+CFG_FILE="../nxmrk_experiments_cfg/without-saturation-experiment.cfg"
 
 # ------------------------------------------------------------
 # Check config file exists

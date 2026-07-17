@@ -27,7 +27,10 @@ Please see LICENSE file in the project root for terms.
 
     <dependencies>
 
-        <!-- Logging API. Flink provides the concrete logging implementation. -->
+        <!--
+        Flink supplies its logging implementation at runtime.
+        The application only needs the SLF4J API for compilation.
+        -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -40,32 +43,33 @@ Please see LICENSE file in the project root for terms.
             <artifactId>json</artifactId>
         </dependency>
 
-        <!-- Flink runtime dependencies supplied by the cluster. -->
+        <!--
+        Flink runtime dependencies are supplied by the Flink 2.2 cluster and
+        therefore must not be packaged inside the application JAR.
+        -->
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>
-                flink-streaming-java_${scala.binary.version}
-            </artifactId>
+            <artifactId>flink-streaming-java</artifactId>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>
-                flink-clients_${scala.binary.version}
-            </artifactId>
+            <artifactId>flink-clients</artifactId>
             <scope>provided</scope>
         </dependency>
 
         <!--
-        Keep the Kafka connector inside the shaded application JAR.
-        It is not guaranteed to be included in the Flink distribution.
+        Kafka connector for the modern KafkaSource API.
+
+        This dependency is intentionally not marked as provided, so the shade
+        plugin packages the connector and its required libraries into the
+        benchmark JAR. This avoids requiring a separate connector installation
+        under flink-2.2.0/lib.
         -->
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>
-                flink-connector-kafka_${scala.binary.version}
-            </artifactId>
+            <artifactId>flink-connector-kafka</artifactId>
         </dependency>
 
         <!-- Shared event types, configuration and Redis utilities. -->
@@ -82,15 +86,17 @@ Please see LICENSE file in the project root for terms.
         <plugins>
 
             <!--
-            Adds Flink's program-class attribute to the JAR manifest.
-            This permits:
+            Adds Flink's program-class manifest entry, allowing execution with:
+
                 flink run flink-benchmarks-0.1.0.jar ...
-            without explicitly specifying -c.
+
+            The runner script still supplies -c explicitly, so this entry also
+            acts as a fallback for manual submissions.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.4.2</version>
 
                 <configuration>
                     <archive>
@@ -103,7 +109,11 @@ Please see LICENSE file in the project root for terms.
                 </configuration>
             </plugin>
 
-            <!-- Builds an executable fat JAR with non-provided dependencies. -->
+            <!--
+            Builds one deployable application JAR containing all non-provided
+            dependencies, including the Kafka connector and the shared Yahoo
+            benchmark module.
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -141,6 +151,10 @@ Please see LICENSE file in the project root for terms.
                             </filters>
 
                             <transformers>
+                                <!--
+                                Required by service-loaded components such as
+                                connector factories and serializers.
+                                -->
                                 <transformer implementation=
                                     "org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
 

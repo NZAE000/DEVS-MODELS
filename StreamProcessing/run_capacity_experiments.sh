@@ -4,7 +4,7 @@ CONFIG_FILE="capacity-experiments.cfg"
 
 # Check if the file exists
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "Error: no existe $CONFIG_FILE"
+    echo "Error: don't exists $CONFIG_FILE"
     exit 1
 fi
 
@@ -62,7 +62,7 @@ for wl in "${WL_ARRAY[@]}"; do
 
     # Execute real app and generate simulation parameters
     (
-        cd apacheflink || exit 1
+        cd apacheflink/scripts || exit 1
         bash execute_and_gen_sim_params.sh \
             "$APP" \
             "$SLOTS" \

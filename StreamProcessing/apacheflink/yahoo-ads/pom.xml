@@ -25,17 +25,22 @@ Please see LICENSE file in the project root for terms.
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <!-- Java compatibility required by the original benchmark -->
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <!--
+            Compile the application with Java 17 bytecode.
+            The benchmark can still be built and executed with JDK 21.
+        -->
+        <maven.compiler.release>17</maven.compiler.release>
 
-        <!-- Flink 1.11 baseline -->
-        <flink.version>1.11.0</flink.version>
+        <!-- Apache Flink 2.2 -->
+        <flink.version>2.2.0</flink.version>
 
-        <!-- Versions used by the original benchmark -->
+        <!-- Kafka connector release built for Flink 2.2 -->
+        <flink.kafka.connector.version>5.0.0-2.2</flink.kafka.connector.version>
+
+        <!-- Kafka service used by the benchmark infrastructure -->
+        <kafka.version>2.4.1</kafka.version>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
-        <kafka.version>2.4.1</kafka.version>
 
         <!-- Application dependencies -->
         <json.version>20180813</json.version>
@@ -45,36 +50,31 @@ Please see LICENSE file in the project root for terms.
         <snakeyaml.version>1.23</snakeyaml.version>
 
         <!-- Build plugins -->
-        <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
-        <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
+        <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+        <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
 
-            <!-- Apache Flink -->
+            <!-- Apache Flink core dependencies -->
             <dependency>
                 <groupId>org.apache.flink</groupId>
-                <artifactId>
-                    flink-streaming-java_${scala.binary.version}
-                </artifactId>
+                <artifactId>flink-streaming-java</artifactId>
                 <version>${flink.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.apache.flink</groupId>
-                <artifactId>
-                    flink-clients_${scala.binary.version}
-                </artifactId>
+                <artifactId>flink-clients</artifactId>
                 <version>${flink.version}</version>
             </dependency>
 
+            <!-- Kafka connector distributed independently from Flink core -->
             <dependency>
                 <groupId>org.apache.flink</groupId>
-                <artifactId>
-                    flink-connector-kafka_${scala.binary.version}
-                </artifactId>
-                <version>${flink.version}</version>
+                <artifactId>flink-connector-kafka</artifactId>
+                <version>${flink.kafka.connector.version}</version>
             </dependency>
 
             <!-- Shared benchmark module -->
@@ -118,7 +118,11 @@ Please see LICENSE file in the project root for terms.
                 <version>${slf4j.version}</version>
             </dependency>
 
-            <!-- Kafka libraries used by shared benchmark components -->
+            <!--
+                Kafka and Scala remain because the original Clojure load
+                generator and auxiliary benchmark components use Kafka 2.4.1.
+                They are not Flink core dependencies.
+            -->
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka_${scala.binary.version}</artifactId>
@@ -136,7 +140,6 @@ Please see LICENSE file in the project root for terms.
                 </exclusions>
             </dependency>
 
-            <!-- Scala runtime required by Kafka/Flink 1.11 artifacts -->
             <dependency>
                 <groupId>org.scala-lang</groupId>
                 <artifactId>scala-library</artifactId>
@@ -173,8 +176,7 @@ Please see LICENSE file in the project root for terms.
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
+                    <release>${maven.compiler.release}</release>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
             </plugin>

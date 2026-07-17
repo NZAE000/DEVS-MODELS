@@ -73,8 +73,8 @@ for pl in "${PL_ARRAY[@]}"; do
     echo "======================================="
 
     (
-        cd apacheflink || exit 1
-        bash  move_degrad_and_occup_factors_to_sim_param.sh \
+        cd apacheflink/scripts || exit 1
+        bash move_degrad_and_occup_factors_to_sim_param.sh \
             "$APP" \
             "$pl" 
     )

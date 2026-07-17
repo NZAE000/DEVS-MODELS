@@ -1,229 +1,385 @@
 /**
  * Copyright 2015, Yahoo Inc.
- * Licensed under the terms of the Apache License 2.0. Please see LICENSE file in the project root for terms.
+ * Licensed under the terms of the Apache License 2.0.
+ * Please see LICENSE file in the project root for terms.
  */
 package flink.benchmark;
 
-import benchmark.common.advertising.RedisAdCampaignCache;
-import benchmark.common.advertising.CampaignProcessorCommon;
 import benchmark.common.Utils;
-import org.apache.flink.api.common.functions.*;
+import benchmark.common.advertising.CampaignProcessorCommon;
+import benchmark.common.advertising.RedisAdCampaignCache;
+
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.FilterFunction;
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.OpenContext;
+import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple7;
-import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.util.Collector;
+import org.apache.flink.util.ParameterTool;
+
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 /**
- * To Run:  flink run target/flink-benchmarks-0.1.0-AdvertisingTopologyNative.jar  --confPath "../conf/benchmarkConf.yaml"
+ * Yahoo advertising benchmark migrated to Apache Flink 2.2.
+ *
+ * Run with:
+ *
+ * flink run \
+ *   -c flink.benchmark.AdvertisingTopologyNative \
+ *   target/flink-benchmarks-0.1.0.jar \
+ *   --confPath ../conf/localConf.yaml
  */
-public class AdvertisingTopologyNative {
+public final class AdvertisingTopologyNative {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AdvertisingTopologyNative.class);
+    private static final Logger LOG =
+            LoggerFactory.getLogger(AdvertisingTopologyNative.class);
 
+    private AdvertisingTopologyNative() {
+        // Utility class.
+    }
 
     public static void main(final String[] args) throws Exception {
 
-        ParameterTool parameterTool = ParameterTool.fromArgs(args);
+        final ParameterTool commandLine = ParameterTool.fromArgs(args);
+        final String confPath = commandLine.getRequired("confPath");
 
-        Map conf = Utils.findAndReadConfigFile(parameterTool.getRequired("confPath"), true);
-        int kafkaPartitions = ((Number)conf.get("kafka.partitions")).intValue();
-        int hosts = ((Number)conf.get("process.hosts")).intValue();
-        int cores = ((Number)conf.get("process.cores")).intValue();
+        @SuppressWarnings("unchecked")
+        final Map<String, Object> conf =
+                (Map<String, Object>) Utils.findAndReadConfigFile(confPath, true);
 
-        ParameterTool flinkBenchmarkParams = ParameterTool.fromMap(getFlinkConfs(conf));
+        final int kafkaPartitions =
+                ((Number) conf.get("kafka.partitions")).intValue();
+        final int hosts =
+                ((Number) conf.get("process.hosts")).intValue();
+        final int cores =
+                ((Number) conf.get("process.cores")).intValue();
 
-        LOG.info("conf: {}", conf);
-        LOG.info("Parameters used: {}", flinkBenchmarkParams.toMap());
+        final int defaultParallelism = hosts * cores;
+        final String topic = getKafkaTopic(conf);
+        final String kafkaBrokers = getKafkaBrokers(conf);
+        final String redisHost = getRedisHost(conf);
 
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.getConfig().setGlobalJobParameters(flinkBenchmarkParams);
+        LOG.info("Configuration: {}", conf);
+        LOG.info(
+                "Kafka brokers: {}, topic: {}, Redis host: {}, parallelism: {}",
+                kafkaBrokers,
+                topic,
+                redisHost,
+                defaultParallelism);
 
-		// Set the buffer timeout (default 100)
-        // Lowering the timeout will lead to lower latencies, but will eventually reduce throughput.
-        env.setBufferTimeout(flinkBenchmarkParams.getLong("flink.buffer-timeout", 100));
+        final StreamExecutionEnvironment env =
+                StreamExecutionEnvironment.getExecutionEnvironment();
 
-        if(flinkBenchmarkParams.has("flink.checkpoint-interval")) {
-            // enable checkpointing for fault tolerance
-            env.enableCheckpointing(flinkBenchmarkParams.getLong("flink.checkpoint-interval", 1000));
+        env.setBufferTimeout(
+                getLong(conf, "flink.buffer-timeout", 100L));
+
+        if (conf.containsKey("flink.checkpoint-interval")) {
+            env.enableCheckpointing(
+                    getLong(conf, "flink.checkpoint-interval", 1000L));
         }
-        // set default parallelism for all operators (recommended value: number of available worker CPU cores in the cluster (hosts * cores))
-        env.setParallelism(hosts * cores);
-        //env.enableCheckpointing(1000);
 
-        DataStream<String> messageStream = env
-                .addSource(new FlinkKafkaConsumer<>(
-                        flinkBenchmarkParams.getRequired("topic"),
-                        new SimpleStringSchema(),
-                        flinkBenchmarkParams.getProperties())).setParallelism(Math.min(hosts * cores, kafkaPartitions));
+        env.setParallelism(defaultParallelism);
+
+        final KafkaSource<String> kafkaSource =
+                KafkaSource.<String>builder()
+                        .setBootstrapServers(kafkaBrokers)
+                        .setTopics(topic)
+                        .setGroupId("yahoo-ads")
+                        .setStartingOffsets(OffsetsInitializer.earliest())
+                        .setValueOnlyDeserializer(new SimpleStringSchema())
+                        .build();
+
+        final DataStream<String> messageStream =
+                env.fromSource(
+                                kafkaSource,
+                                WatermarkStrategy.noWatermarks(),
+                                "Kafka Source")
+                        .setParallelism(
+                                Math.min(defaultParallelism, kafkaPartitions));
 
         messageStream
                 .rebalance()
-                // Parse the String as JSON
+
+                // Parse each JSON event.
                 .flatMap(new DeserializeBolt())
+                .name("Deserialize")
 
-                //Filter the records if event type is "view"
+                // Keep only ad-view events.
                 .filter(new EventFilterBolt())
+                .name("Filter Views")
 
-                // project the event
-                .<Tuple2<String, String>>project(2, 5)
+                // Select ad_id and event_time explicitly.
+                .map(new ProjectEvent())
+                .name("Project Event")
 
-                // perform join with redis data
-                .flatMap(new RedisJoinBolt())
+                // Join ad_id with campaign information stored in Redis.
+                .flatMap(new RedisJoinBolt(redisHost))
+                .name("Redis Campaign Join")
 
-                // process campaign
-                .keyBy(0)
-                .flatMap(new CampaignProcessor());
-
+                // Aggregate campaign views by campaign identifier.
+                .keyBy(value -> value.f0)
+                .flatMap(new CampaignProcessor(redisHost))
+                .name("Campaign Processor");
 
         env.execute("Yahoo-Ads");
     }
 
-    public static class DeserializeBolt implements
-            FlatMapFunction<String, Tuple7<String, String, String, String, String, String, String>> {
+    public static final class DeserializeBolt
+            implements FlatMapFunction<
+                    String,
+                    Tuple7<
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            String>> {
 
         @Override
-        public void flatMap(String input, Collector<Tuple7<String, String, String, String, String, String, String>> out)
-                throws Exception {
-            JSONObject obj = new JSONObject(input);
-            Tuple7<String, String, String, String, String, String, String> tuple =
-                    new Tuple7<String, String, String, String, String, String, String>(
+        public void flatMap(
+                String input,
+                Collector<
+                                Tuple7<
+                                        String,
+                                        String,
+                                        String,
+                                        String,
+                                        String,
+                                        String,
+                                        String>>
+                        out) {
+
+            final JSONObject obj = new JSONObject(input);
+
+            out.collect(
+                    Tuple7.of(
                             obj.getString("user_id"),
                             obj.getString("page_id"),
                             obj.getString("ad_id"),
                             obj.getString("ad_type"),
                             obj.getString("event_type"),
                             obj.getString("event_time"),
-                            obj.getString("ip_address"));
-            out.collect(tuple);
+                            obj.getString("ip_address")));
         }
     }
 
-    public static class EventFilterBolt implements
-            FilterFunction<Tuple7<String, String, String, String, String, String, String>> {
+    public static final class EventFilterBolt
+            implements FilterFunction<
+                    Tuple7<
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            String>> {
+
         @Override
-        public boolean filter(Tuple7<String, String, String, String, String, String, String> tuple) throws Exception {
-            return tuple.getField(4).equals("view");
+        public boolean filter(
+                Tuple7<
+                                String,
+                                String,
+                                String,
+                                String,
+                                String,
+                                String,
+                                String>
+                        tuple) {
+
+            return "view".equals(tuple.f4);
         }
     }
 
-    public static final class RedisJoinBolt extends RichFlatMapFunction<Tuple2<String, String>, Tuple3<String, String, String>> {
-
-        RedisAdCampaignCache redisAdCampaignCache;
+    /**
+     * Replaces the removed positional projection:
+     *
+     * project(2, 5)
+     */
+    public static final class ProjectEvent
+            implements MapFunction<
+                    Tuple7<
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            String>,
+                    Tuple2<String, String>> {
 
         @Override
-        public void open(Configuration parameters) {
-            //initialize jedis
-            ParameterTool parameterTool = (ParameterTool) getRuntimeContext().getExecutionConfig().getGlobalJobParameters();
-            parameterTool.getRequired("jedis_server");
-            LOG.info("Opening connection with Jedis to {}", parameterTool.getRequired("jedis_server"));
-            this.redisAdCampaignCache = new RedisAdCampaignCache(parameterTool.getRequired("jedis_server"));
-            this.redisAdCampaignCache.prepare();
+        public Tuple2<String, String> map(
+                Tuple7<
+                                String,
+                                String,
+                                String,
+                                String,
+                                String,
+                                String,
+                                String>
+                        tuple) {
+
+            return Tuple2.of(tuple.f2, tuple.f5);
+        }
+    }
+
+    public static final class RedisJoinBolt
+            extends RichFlatMapFunction<
+                    Tuple2<String, String>,
+                    Tuple3<String, String, String>> {
+
+        private final String redisHost;
+        private transient RedisAdCampaignCache redisAdCampaignCache;
+
+        public RedisJoinBolt(String redisHost) {
+            this.redisHost = redisHost;
         }
 
         @Override
-        public void flatMap(Tuple2<String, String> input,
-                            Collector<Tuple3<String, String, String>> out) throws Exception {
-            String ad_id = input.getField(0);
-            String campaign_id = this.redisAdCampaignCache.execute(ad_id);
-            if(campaign_id == null) {
+        public void open(OpenContext openContext) {
+            LOG.info("Opening Redis campaign cache connection to {}", redisHost);
+
+            redisAdCampaignCache = new RedisAdCampaignCache(redisHost);
+            redisAdCampaignCache.prepare();
+        }
+
+        @Override
+        public void flatMap(
+                Tuple2<String, String> input,
+                Collector<Tuple3<String, String, String>> out) {
+
+            final String adId = input.f0;
+            final String campaignId =
+                    redisAdCampaignCache.execute(adId);
+
+            if (campaignId == null) {
                 return;
             }
 
-            Tuple3<String, String, String> tuple = new Tuple3<String, String, String>(
-                    campaign_id,
-                    (String) input.getField(0),
-                    (String) input.getField(1));
-            out.collect(tuple);
+            out.collect(
+                    Tuple3.of(
+                            campaignId,
+                            adId,
+                            input.f1));
         }
     }
 
-    public static class CampaignProcessor extends RichFlatMapFunction<Tuple3<String, String, String>, String> {
+    public static final class CampaignProcessor
+            extends RichFlatMapFunction<
+                    Tuple3<String, String, String>,
+                    String> {
 
-        CampaignProcessorCommon campaignProcessorCommon;
+        private final String redisHost;
+        private transient CampaignProcessorCommon campaignProcessorCommon;
 
-        @Override
-        public void open(Configuration parameters) {
-            ParameterTool parameterTool = (ParameterTool) getRuntimeContext().getExecutionConfig().getGlobalJobParameters();
-            parameterTool.getRequired("jedis_server");
-            LOG.info("Opening connection with Jedis to {}", parameterTool.getRequired("jedis_server"));
-
-            this.campaignProcessorCommon = new CampaignProcessorCommon(parameterTool.getRequired("jedis_server"));
-            this.campaignProcessorCommon.prepare();
+        public CampaignProcessor(String redisHost) {
+            this.redisHost = redisHost;
         }
 
         @Override
-        public void flatMap(Tuple3<String, String, String> tuple, Collector<String> out) throws Exception {
+        public void open(OpenContext openContext) {
+            LOG.info("Opening Redis campaign processor connection to {}", redisHost);
 
-            String campaign_id = tuple.getField(0);
-            String event_time =  tuple.getField(2);
-            this.campaignProcessorCommon.execute(campaign_id, event_time);
+            campaignProcessorCommon =
+                    new CampaignProcessorCommon(redisHost);
+            campaignProcessorCommon.prepare();
+        }
+
+        @Override
+        public void flatMap(
+                Tuple3<String, String, String> tuple,
+                Collector<String> out) {
+
+            final String campaignId = tuple.f0;
+            final String eventTime = tuple.f2;
+
+            campaignProcessorCommon.execute(campaignId, eventTime);
         }
     }
 
-    private static Map<String, String> getFlinkConfs(Map conf) {
-        String kafkaBrokers = getKafkaBrokers(conf);
-        String zookeeperServers = getZookeeperServers(conf);
+    private static long getLong(
+            Map<String, Object> conf,
+            String key,
+            long defaultValue) {
 
-        Map<String, String> flinkConfs = new HashMap<String, String>();
-        flinkConfs.put("topic", getKafkaTopic(conf));
-        flinkConfs.put("bootstrap.servers", kafkaBrokers);
-        flinkConfs.put("zookeeper.connect", zookeeperServers);
-        flinkConfs.put("jedis_server", getRedisHost(conf));
-        flinkConfs.put("group.id", "myGroup");
+        final Object value = conf.get(key);
 
-        return flinkConfs;
+        if (value == null) {
+            return defaultValue;
+        }
+
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+
+        return Long.parseLong(value.toString());
     }
 
-    private static String getZookeeperServers(Map conf) {
-        if(!conf.containsKey("zookeeper.servers")) {
-            throw new IllegalArgumentException("Not zookeeper servers found!");
+    private static String getKafkaBrokers(Map<String, Object> conf) {
+        if (!conf.containsKey("kafka.brokers")) {
+            throw new IllegalArgumentException("No Kafka brokers found");
         }
-        return listOfStringToString((List<String>) conf.get("zookeeper.servers"), String.valueOf(conf.get("zookeeper.port")));
+
+        if (!conf.containsKey("kafka.port")) {
+            throw new IllegalArgumentException("No Kafka port found");
+        }
+
+        @SuppressWarnings("unchecked")
+        final List<String> brokers =
+                (List<String>) conf.get("kafka.brokers");
+
+        return listOfStringToString(
+                brokers,
+                String.valueOf(conf.get("kafka.port")));
     }
 
-    private static String getKafkaBrokers(Map conf) {
-        if(!conf.containsKey("kafka.brokers")) {
-            throw new IllegalArgumentException("No kafka brokers found!");
+    private static String getKafkaTopic(Map<String, Object> conf) {
+        if (!conf.containsKey("kafka.topic")) {
+            throw new IllegalArgumentException("No Kafka topic found");
         }
-        if(!conf.containsKey("kafka.port")) {
-            throw new IllegalArgumentException("No kafka port found!");
-        }
-        return listOfStringToString((List<String>) conf.get("kafka.brokers"), String.valueOf(conf.get("kafka.port")));
+
+        return String.valueOf(conf.get("kafka.topic"));
     }
 
-    private static String getKafkaTopic(Map conf) {
-        if(!conf.containsKey("kafka.topic")) {
-            throw new IllegalArgumentException("No kafka topic found!");
+    private static String getRedisHost(Map<String, Object> conf) {
+        if (!conf.containsKey("redis.host")) {
+            throw new IllegalArgumentException("No Redis host found");
         }
-        return (String)conf.get("kafka.topic");
+
+        return String.valueOf(conf.get("redis.host"));
     }
 
-    private static String getRedisHost(Map conf) {
-        if(!conf.containsKey("redis.host")) {
-            throw new IllegalArgumentException("No redis host found!");
-        }
-        return (String)conf.get("redis.host");
-    }
+    public static String listOfStringToString(
+            List<String> list,
+            String port) {
 
-    public static String listOfStringToString(List<String> list, String port) {
-        String val = "";
-        for(int i=0; i<list.size(); i++) {
-            val += list.get(i) + ":" + port;
-            if(i < list.size()-1) {
-                val += ",";
+        final StringBuilder value = new StringBuilder();
+
+        for (int index = 0; index < list.size(); index++) {
+            if (index > 0) {
+                value.append(',');
             }
+
+            value.append(list.get(index))
+                    .append(':')
+                    .append(port);
         }
-        return val;
+
+        return value.toString();
     }
 }
