@@ -96,7 +96,7 @@ public:
         return {this->current_mssg_};
     }
 
-    #if PROD_MOD // Producer has 1 or more rates with time point to change theb next rate.
+    #if PROD_MOD // Producer has 1 or more rates with time point to change the next rate.
     void internal_transition()
     {   
         // Inspect next.

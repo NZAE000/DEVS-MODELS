@@ -1,0 +1,87 @@
+#!/bin/bash
+
+###############################################################################
+# movedegradp_factors_to_sim_param.sh
+#
+# Usage:
+#
+#   bash move_degrad_factors_to_sim_param.sh <app> <parallelism>
+#
+# e.g:
+#
+#   bash move_degrad_factors_to_sim_param.sh q3 16
+#
+###############################################################################
+
+set -e
+
+###############################################################################
+# VALIDATION
+###############################################################################
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <app> <parallelism>"
+    exit 1
+fi
+
+APP="$1"
+P="$2"
+
+# -------------------------
+# Get script directory
+# -------------------------
+DIR_BASE="$(
+    cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null &&
+    pwd
+)" || exit 1
+
+###############################################################################
+# INPUT FILE
+###############################################################################
+DEGRAD_PARAMS_FILE="$DIR_BASE/../../load-sweep/nexmark/param-factors/degrad-params-${APP}.txt"
+
+###############################################################################
+# OUTPUT FILE
+###############################################################################
+DEGRAD_OUTPUT="$DIR_BASE/../../../input_data/degradation.txt"
+
+###############################################################################
+# VALIDATE INPUT
+###############################################################################
+if [ ! -f "$DEGRAD_PARAMS_FILE" ]; then
+    echo "ERROR: no existe $DEGRAD_PARAMS_FILE"
+    exit 1
+fi
+
+###############################################################################
+# EXTRACT DEGRADATION PARAMS
+###############################################################################
+DEGRAD_LINE=$(awk -v p="$P" '
+$1 == p {
+
+    printf "%s %s %s %s %s\n",
+           $2, $3, $4, $5, $6
+}
+' "$DEGRAD_PARAMS_FILE")
+
+if [ -z "$DEGRAD_LINE" ]; then
+    echo "ERROR: P=$P in $DEGRAD_PARAMS_FILE not found"
+    exit 1
+fi
+
+echo "$DEGRAD_LINE" > "$DEGRAD_OUTPUT"
+
+###############################################################################
+# INFO
+###############################################################################
+echo "========================================"
+echo "Parameters generated successfully"
+echo "========================================"
+echo ""
+echo "APP: $APP"
+echo "P:   $P"
+echo ""
+echo "Degradation params -> $DEGRAD_OUTPUT"
+echo ""
+echo "Content degradation.txt:"
+cat "$DEGRAD_OUTPUT"
+echo ""

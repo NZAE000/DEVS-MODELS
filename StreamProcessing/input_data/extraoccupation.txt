@@ -1,6 +1,6 @@
-sourcedatagen1                 8.055396
-calc2                          9.616327
-watermarkassigner3             10.834076
-minibatchassigner4             9.324313
-calc5                          11.222078
-nexmarkq146writer              26.553453
+sourcedatagen1                 1.000000
+calc2                          1.000000
+watermarkassigner3             1.000000
+minibatchassigner4             1.000000
+calc5                          1.000000
+nexmarkq16writer               1.000000

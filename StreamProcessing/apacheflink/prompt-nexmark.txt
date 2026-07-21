@@ -16492,38 +16492,29 @@ taskslot, etc.
 
 Me gustaria pasarte mi diagrama UML hecho en draw.io, para que me puedas genear una descricion presisa, potente y entendible de mi arquitectura.
 
-p=1
-Average MAE     : 0.014927
-Average RMSE    : 0.021972
-Average MAPE    : 3.36%
-Average AUC Error: 2.62%
+Vale. Para el segundo eperimento es la misma idea (aunque ya no es suma de vectores, sino aplicar sumas a cada elemento del vector), pero usando 2 modos de ejecucion de gpu: tradicional y L2 persistente. EL fuente de este experimento es L2persistence.cu:
 
-p=2
-Average MAE     : 0.030557
-Average RMSE    : 0.036853
-Average MAPE    : 6.11%
-Average AUC Error: 4.98%
 
-p=4
-Average MAE     : 0.019622
-Average RMSE    : 0.026132
-Average MAPE    : 3.34%
-Average AUC Error: 1.60%
 
-p=8
-Average MAE     : 0.039722
-Average RMSE    : 0.049748
-Average MAPE    : 8.15%
-Average AUC Error: 6.74%
+Arme un script bash llamado run_1D_l2persistent_experiments.sh para aplicar el experimento:
 
-p=16
-Average MAE     : 0.020412
-Average RMSE    : 0.033913
-Average MAPE    : 3.71%
-Average AUC Error: 2.76%
+#!/bin/bash
 
-p=32
-Average MAE     : 0.019717
-Average RMSE    : 0.036505
-Average MAPE    : 4.90%
-Average AUC Error: 2.99%
+N="${1:-30}"
+SOURCE_NAME=l2persistence
+SOURCE_PATH=examples/$SOURCE_NAME.cu
+BIN="bin/$SOURCE_NAME"
+OUT_DIR="1D_output/l2persistent"
+OUT_BASE_FILE_PATH="$OUT_DIR/gpu_times_per_blocksize_persistent"
+
+bash build.sh $SOURCE_PATH
+
+"./$BIN" > "${OUT_BASE_FILE_PATH}.txt"
+
+echo "Results generated at: $OUT_DIR"
+
+El script gputine_per_block_persistent1D.py lee el archivo de salida y geenera serie de graficso, donde cada uno es el tamaño de problema procesado. En cada
+uno de los graficos, el eje X repeseta el tamaño del bloque y en cada uno de ellos estan los 2 tiempos de gpu: tradicional y l2 persistente, en el eje Y.
+A medida que aparecen los graficos, se generan tablas con metricas de media y desviacion estandar en la terminal.
+
+Entonce, el proposito de este experimento es conocer si es mas eficiente usar procesmiento de gpu tradicional o l2persistene dado un problema y tamaño de bloque a usar.
