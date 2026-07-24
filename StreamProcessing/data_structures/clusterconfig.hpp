@@ -23,13 +23,13 @@ using TIME = streamprcss::flink::TIME;
 
 
 struct ConfigPath_t {
-    static constexpr std::string_view topo_path       {"input_data/topology.txt"};
-    static constexpr std::string_view oper_path       {"input_data/operator.txt"};
-    static constexpr std::string_view hw_path         {"input_data/hardware.txt"};
-    static constexpr std::string_view workload_path   {"input_data/workload.txt"};
-    static constexpr std::string_view arate_path      {"input_data/arrivalrates.txt"};
-    static constexpr std::string_view degrad_path     {"input_data/degradation.txt"};
-    static constexpr std::string_view extraoccup_path {"input_data/extraoccupation.txt"};
+    static constexpr std::string_view topo_path_        {"input_data/topology.txt"};
+    static constexpr std::string_view oper_path_        {"input_data/operator.txt"};
+    static constexpr std::string_view hw_path_          {"input_data/hardware.txt"};
+    static constexpr std::string_view workload_br_path_ {"input_data/workloadbyrate.txt"};
+    static constexpr std::string_view workload_bt_path_ {"input_data/workloadbytime.txt"};
+    static constexpr std::string_view degrad_path_      {"input_data/degradation.txt"};
+    static constexpr std::string_view extraoccup_path_  {"input_data/extraoccupation.txt"};
 };
 
 struct OperatorProperties_t {
@@ -51,28 +51,31 @@ struct ClusterConfig_t {
 
     explicit ClusterConfig_t(std::string_view app_n) : app_name_{app_n}
     {
-        initOperators(ConfigPath_t::oper_path); // It must inizialize first.
-        initTopology(ConfigPath_t::topo_path);
-        initHardware(ConfigPath_t::hw_path);
-        initWorkload(ConfigPath_t::workload_path);
-        initRates(ConfigPath_t::arate_path);
-        initDegradFactor(ConfigPath_t::degrad_path);
-        initExtraOccupFactors(ConfigPath_t::extraoccup_path);
+        initOperators(ConfigPath_t::oper_path_); // It must inizialize first.
+        initTopology(ConfigPath_t::topo_path_);
+        initHardware(ConfigPath_t::hw_path_);
+        initWorkloadsByReqs(ConfigPath_t::workload_br_path_);
+        initWorkloadsByTimes(ConfigPath_t::workload_bt_path_);
+        initDegradFactor(ConfigPath_t::degrad_path_);
+        initExtraOccupFactors(ConfigPath_t::extraoccup_path_);
     }
 
 // Data config
-    std::string                         app_name_           {};
-    std::vector<OperatorProperties_t>   operProps_          {};
-    std::vector<std::vector<operId_t>>  topology_           {};
-    operId_t                            begin_op_           {};
-    std::vector<operId_t>               end_ops_            {};
-    std::map<TIME, double>              arrivalRates_       {};
-    uint32_t                            requeriments_       {}; 
-    double                              rate_               {};
-    uint32_t                            n_nodes_            {};
-    uint32_t                            n_cores_            {};
-    double                              degradation_factor_ {};  // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
-    inline static operId_t              N_OPERATORS_        {0};
+    std::string                              app_name_           {};
+    std::vector<OperatorProperties_t>        operProps_          {};
+    std::vector<std::vector<operId_t>>       topology_           {};
+    operId_t                                 begin_op_           {};
+    std::vector<operId_t>                    end_ops_            {};
+    std::vector<std::pair<TIME,     double>> workloads_by_time_  {};
+    std::vector<std::pair<uint32_t, double>> workloads_by_req_   {};
+
+    mutable uint32_t                         last_requirements   {}; 
+    mutable double                           last_index_rate_    {};
+     
+    uint32_t                                 n_nodes_            {};
+    uint32_t                                 n_cores_            {};
+    double                                   degradation_factor_ {};  // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
+    inline static operId_t                   N_OPERATORS_        {0};
 
     void accumBusyTime(operId_t const operid, double time) noexcept
     {
@@ -86,6 +89,25 @@ struct ClusterConfig_t {
         operprop.sent_records_accum_ += n_rec;
     }
 
+    uint32_t countLinesFromFile(std::ifstream& file) const
+    {
+        uint32_t    lines {};
+        std::string line  {};
+
+        while (std::getline(file, line)) {
+            if (!line.empty()) {
+                ++lines;
+            }
+        }
+
+        // Restet.
+        file.clear();
+        file.seekg(0, std::ios::beg);
+
+        return lines;
+    }
+
+
 private:
     std::map<std::string, operId_t> oper_ids_ {};
 
@@ -96,23 +118,15 @@ private:
         uint32_t oper_parallelism  {};
         double   selectivity       {};
 
-        // First, count lines to know operator count.
-        std::string line        {};
-        uint32_t    n_operators {};
-        while (std::getline(file, line)){
-            if (line.empty())  continue;
-            ++n_operators;
-        }
+        // First, count lines to know operator count.        
+        uint32_t n_operators { countLinesFromFile(file) };
 
         // Then, reserve.
         //std::cout<<"n_ops: "<<n_operators <<'\n';
         this->operProps_.reserve(n_operators);
 
-        // Restet.
-        file.clear();
-        file.seekg(0, std::ios::beg);
-
         // Read operators properties.
+        std::string line {};
         while (std::getline(file, line)) 
         {    
             if (line.empty())  continue;      // Ignore empty lines.
@@ -249,25 +263,35 @@ private:
         }
     }
 
-    void initRates(std::string_view path) noexcept
+    void initWorkloadsByTimes(std::string_view path) noexcept
     {
         std::ifstream file(path.data());
         TIME time {}; double rate{};
+        uint32_t n_loads {countLinesFromFile(file)};
+        this->workloads_by_time_.reserve(n_loads);
 
         while (!file.eof())
         {
             file >> time >> rate;
-            arrivalRates_[time] = rate;
+            this->workloads_by_time_.emplace_back(time, rate);
             //std::cout<<"time: "<<time<<" rate: "<<rate<<"\n";
         }
     }
 
-    void initWorkload(std::string_view path) noexcept
+    void initWorkloadsByReqs(std::string_view path) noexcept
     {
         std::ifstream file(path.data());
-        int requriments {}; double rate{};
+        uint32_t reqs {}; double rate{};
+        uint32_t n_loads {countLinesFromFile(file)};
+        this->workloads_by_req_.reserve(n_loads);
 
-        file >> this->requeriments_ >> this->rate_;
-        //std::cout<<"requriments: "<<requeriments_<<" rate: "<<rate_<<"\n";
+        //file >> this->reqs >> this->rate_;
+        //std::cout<<"reqs: "<<reqs<<" rate: "<<rate_<<"\n";
+        while (!file.eof())
+        {
+            file >> reqs >> rate;
+            this->workloads_by_req_.emplace_back(reqs, rate);
+            //std::cout<<"time: "<<time<<" rate: "<<rate<<"\n";
+        }
     }
 };

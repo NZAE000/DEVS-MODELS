@@ -220,7 +220,7 @@ main(int arg, char** argv)
     TIME finish_time = r.run_until_passivate(); // Run the simulation until all models are passivated.
     
     // Capture and logg metrics (throughput system and operator utilizations).
-    metric_logger.captureMetrics(cluster_cfg.rate_, streamprcss::Producer_t<TIME>::to_second(finish_time), cluster_cfg.requeriments_);
+    metric_logger.captureMetrics(/*cluster_cfg.last_rate_, */streamprcss::Producer_t<TIME>::to_second(finish_time), cluster_cfg.last_requirements, cluster_cfg.last_index_rate_);
     #if APPLY_LOG
         #if LOG_MOD
             metric_logger.logDynamicMetrics();

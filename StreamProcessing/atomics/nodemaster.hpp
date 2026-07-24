@@ -8,7 +8,7 @@
 #define _NODE_MASTER_HPP__
 
 #include "node.hpp"
-#include<iostream>
+//#include<iostream>
 
 namespace streamprcss {
 
@@ -156,6 +156,7 @@ private:
                     extern_locations_.emplace_back(loc); // Location messages for elsewhere.
                 }
             }
+            //else std::cout<<"zero\n";
         }
     }
 };

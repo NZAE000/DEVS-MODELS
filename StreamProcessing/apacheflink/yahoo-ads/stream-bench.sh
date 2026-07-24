@@ -65,11 +65,11 @@ DOWNLOAD_CACHE="${DOWNLOAD_CACHE:-$SERVICES_ROOT/download-cache}"
 RUN_DIR="${RUN_DIR:-$PROJECT_ROOT/run}"
 LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/logs/flink-benchmark}"
 
-CONF_FILE="${CONF_FILE:-$PROJECT_ROOT/conf/localConf.yaml}"
-BENCHMARK_CONF_FILE="${BENCHMARK_CONF_FILE:-$PROJECT_ROOT/conf/benchmarkConf.yaml}"
-
 FLINK_JAR="${FLINK_JAR:-$PROJECT_ROOT/flink-benchmarks/target/flink-benchmarks-0.1.0.jar}"
 FLINK_MAIN_CLASS="${FLINK_MAIN_CLASS:-flink.benchmark.AdvertisingTopologyNative}"
+
+CONF_FILE="${CONF_FILE:-$PROJECT_ROOT/conf/localConf.yaml}"
+BENCHMARK_CONF_FILE="${BENCHMARK_CONF_FILE:-$PROJECT_ROOT/conf/benchmarkConf.yaml}"
 
 ###############################################################################
 # Benchmark configuration
@@ -81,6 +81,8 @@ KAFKA_HOST="${KAFKA_HOST:-localhost}"
 KAFKA_PORT="${KAFKA_PORT:-9092}"
 REDIS_HOST="${REDIS_HOST:-localhost}"
 REDIS_PORT="${REDIS_PORT:-6379}"
+
+WORKLOADS_FILE="${WORKLOADS_FILE:-$PROJECT_ROOT/conf/dynamic-workloads.txt}"
 
 TOPIC="${TOPIC:-ad-events}"
 PARTITIONS="${PARTITIONS:-1}"
@@ -696,6 +698,7 @@ run() {
         START_LOAD)             start_load ;;
         STOP_LOAD)              stop_load ;;
         FLINK_TEST)             flink_test ;;
+        WRITE_CONFIG)           write_local_config ;;
         STOP_ALL)               stop_all ;;
         HELP|-h|--help)         print_help ;;
         *)

@@ -18,50 +18,78 @@ def read_file(filename):
             rate -> [(time, throughput), ...]
     """
 
-    rate_data = defaultdict(list)
     rates_order = []
+    rate_data = []
 
-    with open(filename, "r") as f:
-
-        for line in f:
+    with open(filename, "r") as file:
+        for line in file:
             line = line.strip()
 
             if not line:
                 continue
 
-            rate_part, measurements = line.split(":", 1)
-            rate = int(rate_part)
+            rate_text, samples_text = line.split(":", 1)
+            rate = float(rate_text)
+            samples = []
+
+            for sample_text in samples_text.split():
+                time_text, throughput_text = sample_text.split(",", 1)
+
+                samples.append((float(time_text), float(throughput_text))
+                )
+
             rates_order.append(rate)
-
-            for measurement in measurements.split():
-
-                time_str, throughput_str = measurement.split(",")
-                time = float(time_str)
-                throughput = float(throughput_str)
-
-                rate_data[rate].append((time, throughput))
-
+            rate_data.append(samples)
+            
     return rates_order, rate_data
 
 
 def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
+    def format_rate(value, _position=None):
+        value = float(value)
+        abs_value = abs(value)
 
-    plt.figure()
-    ax = plt.gca()
+        if abs_value >= 1_000_000:
+            scaled = value / 1_000_000
+            return f"{scaled:.0f}M" if scaled.is_integer() else f"{scaled:g}M"
 
-    #
-    # Curva observada
-    #
+        if abs_value >= 1_000:
+            scaled = value / 1_000
+            return f"{scaled:.0f}K" if scaled.is_integer() else f"{scaled:g}K"
+
+        return f"{value:.0f}"
+
+    if len(rates) != len(rate_data):
+        raise ValueError(
+            "Each rate occurrence must have its own throughput sample list."
+        )
+
+    fig, ax = plt.subplots()
+    intervals = []
+
+    # Preserve every rate occurrence as an independent interval
+    for rate, interval_samples in zip(rates, rate_data):
+        samples = sorted(interval_samples, key=lambda sample: sample[0])
+
+        if samples:
+            intervals.append((float(rate), samples))
+
+    # Restore the chronological order of the intervals
+    intervals.sort(key=lambda interval: interval[1][0][0])
+
+    if not intervals:
+        raise ValueError(
+            "The input file does not contain valid throughput samples."
+        )
+
+    ordered_rates = []
     x_values = []
     y_values = []
-
     interval_end_times = []
 
-    for rate in rates:
-        
-        samples = sorted(rate_data[rate],key=lambda x: x[0])
-        if not samples:
-            continue
+    # Build the observed throughput curve
+    for rate, samples in intervals:
+        ordered_rates.append(rate)
 
         for time, throughput in samples:
             x_values.append(time)
@@ -69,31 +97,25 @@ def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
 
         interval_end_times.append(samples[-1][0])
 
-    #
-    # Throughput observado
-    #
-    plt.plot(
+    ax.plot(
         x_values,
         y_values,
         marker="o",
         label="Observed"
     )
 
-    #
-    # Throughput ideal
-    #
+    # Build the ideal throughput step curve
     ideal_x = [0.0]
-    ideal_y = [rates[0]]
+    ideal_y = [ordered_rates[0]]
 
-    for i in range(len(rates) - 1):
-        ideal_x.append(interval_end_times[i])
-        ideal_y.append(rates[i + 1])
+    for index in range(len(ordered_rates) - 1):
+        ideal_x.append(interval_end_times[index])
+        ideal_y.append(ordered_rates[index + 1])
 
-    # Extender el último escalón
     ideal_x.append(interval_end_times[-1])
-    ideal_y.append(rates[-1])
+    ideal_y.append(ordered_rates[-1])
 
-    plt.step(
+    ax.step(
         ideal_x,
         ideal_y,
         where="post",
@@ -101,112 +123,84 @@ def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
         label="Ideal"
     )
 
-    plt.xlabel("Time (s)", labelpad=40)
-    plt.ylabel("Throughput (req/s)")
-    plt.title(
+    ax.set_xlabel("Time (s)", labelpad=40)
+    ax.set_ylabel("Throughput (req/s)")
+    ax.set_title(
         f"Dynamic {data_from} Throughput\n"
-        f"App={app}, "
-        f"Nodes={nodes}, "
-        f"Cores={cores}, "
-        f"P={p}"
+        f"App={app}, Nodes={nodes}, Cores={cores}, P={p}"
     )
 
-    plt.grid(True)
-    plt.legend()
+    ax.grid(True)
+    ax.legend()
 
-    #
-    # Líneas verticales de cambio de tasa
-    #
-    plt.axvline(
-        x=0,
-        linestyle=":"
-    )
+    # Draw the interval boundaries
+    boundaries = [0.0] + interval_end_times
 
-    for end_time in interval_end_times:
-        plt.axvline(
-            x=end_time,
-            linestyle=":"
-        )
+    for boundary in boundaries:
+        ax.axvline(x=boundary, linestyle=":", color="grey")
 
-    #
-    # Segunda fila: Arrival Rates
-    #
+    # Draw every rate occurrence below its corresponding interval
     interval_start = 0.0
 
-    for rate, interval_end in zip(rates, interval_end_times):
-        center = (interval_start + interval_end) / 2.0
+    for rate, interval_end in zip(ordered_rates, interval_end_times):
+        interval_center = (
+            interval_start + interval_end
+        ) / 2.0
 
         ax.annotate(
-            f"{rate/1e6:.0f}M",
-            xy=(center, 0),
-            xycoords=(
-                "data",
-                "axes fraction"
-            ),
+            format_rate(rate),
+            xy=(interval_center, 0),
+            xycoords=("data", "axes fraction"),
             xytext=(0, -25),
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=16,
-            fontweight="bold"
+            color="red"
         )
 
         interval_start = interval_end
 
-    #
-    # Etiqueta segunda fila
-    #
-    ax.annotate(
+    rate_label = ax.annotate(
         "Rate (req/s)",
         xy=(0, 0),
-        xycoords=(
-            "axes fraction",
-            "axes fraction"
-        ),
-        xytext=(0, -25),
+        xycoords=("axes fraction", "axes fraction"),
+        xytext=(-5, -25),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=16,
-        fontweight="bold"
+        fontweight="bold",
+        color="red",
+        clip_on=False,
+        annotation_clip=False
     )
 
-    #
-    # Eje X: tiempos reales
-    #
+    # Show accumulated times on the X axis
     xticks = [0.0] + interval_end_times
 
     ax.set_xticks(xticks)
-    ax.set_xticklabels([f"{t:.2f}s" for t in xticks])
+    ax.set_xticklabels(
+        [f"{time:.2f}s" for time in xticks]
+    )
+    ax.set_xlim(0.0, interval_end_times[-1])
 
-    #
-    # Eje Y
-    #
-    formatter = FuncFormatter(lambda x, pos:f"{x/1e6:.0f}M")
+    # Show the arrival-rate levels on the Y axis
+    y_ticks = sorted(set([0.0] + ordered_rates))
 
-    if len(rates) == 1:
-        ax.set_yticks([0, rates[0]])
-    else:
-        ax.set_yticks([0] + rates)
+    ax.set_yticks(y_ticks)
+    ax.yaxis.set_major_formatter(FuncFormatter(format_rate))
+    ax.set_ylim(0.0, max(ordered_rates) * 1.05)
 
-    ax.yaxis.set_major_formatter(formatter)
-
-    plt.tight_layout()
-    plt.subplots_adjust(bottom=0.18)
+    fig.subplots_adjust(left=0.14, bottom=0.18)
 
     output_file = (
         f"metrics/nexmark/throughput/"
         f"plot-{data_from}/dynamic/"
-        f"dynamic-throughput-"
-        f"{data_from}-"
-        f"{app}-"
-        f"{nodes}-"
-        f"{cores}-"
-        f"{p}"
+        f"dynamic-throughput-{data_from}-"
+        f"{app}-{nodes}-{cores}-{p}"
     )
 
-    plt.savefig(f"{output_file}.pdf")
-    plt.savefig(f"{output_file}.png")
+    fig.savefig(f"{output_file}.pdf", bbox_extra_artists=(rate_label,))
+    fig.savefig(f"{output_file}.png", bbox_extra_artists=(rate_label,))
 
     plt.show()
     #print(f"Graph saved in: "f"{output_file}")

@@ -56,24 +56,24 @@ namespace streamprcss {
         using sysmetrics_t = std::vector<SysMetric_t>;
 
         struct OperMetric_t {
-            uint32_t     p_level_          {};
-            std::size_t  recv_records_     {};
-            std::size_t  sent_records_     {};
-            double       accum_busy_time_  {};
-            double       busy_time_        {};
-            double       utilization_      {};
+            uint32_t     p_level_         {};
+            std::size_t  recv_records_    {};
+            std::size_t  sent_records_    {};
+            double       accum_busy_time_ {};
+            double       busy_time_       {};
+            double       utilization_     {};
         };
         using opermetrics_t = std::vector<OperMetric_t>;
 
         explicit MetricLogger_t(ClusterConfig_t const&);
 
-        void captureMetrics(double rate, TIME elapsed_t, std::size_t procss_req) noexcept;
-        void printMetrics()                                                const noexcept;
+        void captureMetrics(/*double rate, */TIME elapsed_t, std::size_t procss_req, uint32_t index_rate) noexcept;
+        void printMetrics()      const noexcept;
 
         #if LOG_MOD
-        void logDynamicMetrics()                                           const noexcept;
+        void logDynamicMetrics() const noexcept;
         #else
-        void logMetrics()                                                  const noexcept;
+        void logMetrics()        const noexcept;
         #endif
 
         auto const& getClusterCFG() const noexcept { return cluster_cfg_; }
@@ -82,9 +82,12 @@ namespace streamprcss {
     private:
         
         ClusterConfig_t const&                       cluster_cfg_;
-        std::map<rate_t,   sysmetrics_t>             system_metrics_ {};
-        std::vector<std::map<rate_t, opermetrics_t>> oper_metrics_   {};
-        std::map<rate_t,   uint32_t>                 captures_       {};
+        //std::map<rate_t,   sysmetrics_t>             system_metrics_ {};
+        std::vector<std::pair<rate_t, sysmetrics_t>> system_metrics_             {};
+        //std::vector<std::map<rate_t, opermetrics_t>> oper_metrics_   {};
+        std::vector<std::vector<std::pair<rate_t, opermetrics_t>>> oper_metrics_ {}; // each operator has vector<parir<rate, opermetrics>>
+        //std::map<rate_t,   uint32_t>                 captures_                   {};
+        std::vector<std::pair<rate_t, uint32_t>>                   captures_     {};
 
         #if LOG_MOD
         inline static constexpr char const* DYNAMIC_THROUGHPUT_BASE_PATH_     {"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"};

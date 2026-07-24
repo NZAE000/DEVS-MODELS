@@ -44,21 +44,31 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     //std::mt19937      gen_;                              // Mersenne_twister_engine(2**19,937) generator, seeded with rd(). Initialize the generator with the device seed
     //std::uniform_real_distribution<double> uni_distr_;   // Define a range for uniform random numbers
 
-    using const_iter = typename std::map<TIME, double>::const_iterator;
+    #if PROD_MOD
+    using const_iter = typename std::vector<std::pair<TIME, double>>::const_iterator;
+    #else
+    using const_iter = typename std::vector<std::pair<uint32_t, double>>::const_iterator;
+    #endif
 
-    MLogger_t<TIME>&                metricLogger_;
-    myrandom::Uniform_t<double>     uni_distr_           {0.0, 1.0};
-    uint32_t                        requeriments_        {};
-    double                          rate_                {};
-    std::map<TIME, double> const&   arrivalRates_;
-    Message_t                       current_mssg_        {};
-    TIME                            arrival_time_        {0};
-    TIME                            current_time_        {0};
-    const_iter                      current_rate_;
-    const_iter                      next_rate_;
-    bool                            generating_          {true};
-    TIME                            step_time_           {5e11}; //  0.5 sec
-    TIME                            time_to_capture_     {step_time_};
+    MLogger_t<TIME>&            metricLogger_;
+    myrandom::Uniform_t<double> uni_distr_           {0.0, 1.0};
+    //uint32_t                          requeriments_        {};
+    //double                            rate_                {};
+    std::vector<std::pair<uint32_t, double>> const& 
+                                workloads_by_req_;
+    std::vector<std::pair<TIME, double>> const&     
+                                workloads_by_time_;
+
+    Message_t  current_mssg_          {++this->state}; // Begin in 1.
+    TIME       arrival_time_          {0};
+    TIME       current_time_          {0};
+    const_iter current_workload_;
+    const_iter next_workload_;
+    uint32_t   next_reqs_to_complete_ {};
+    uint32_t   index_rate_            {0};
+    bool       generating_            {true};
+    TIME       step_time_             {5e11}; //  0.5 sec
+    TIME       time_to_capture_       {step_time_};
 
     // Exponential distribution
     [[nodiscard]] double 
@@ -68,21 +78,24 @@ public:
 
     [[nodiscard]] static constexpr TIME to_second(TIME const& time)
     {
-        return time * 1e-12;
+        return time * 1e-12; // ps -> sec
     }
 
     Producer_t() {};
 
     Producer_t(MLogger_t<TIME>& mlogger)
     : 
-     metricLogger_ {mlogger},
-     requeriments_ {mlogger.getClusterCFG().requeriments_}, 
-     rate_         {mlogger.getClusterCFG().rate_},
-     arrivalRates_ {mlogger.getClusterCFG().arrivalRates_}
+     metricLogger_      {mlogger},
+     workloads_by_req_  {mlogger.getClusterCFG().workloads_by_req_},
+     workloads_by_time_ {mlogger.getClusterCFG().workloads_by_time_}
     {
-        current_rate_ = begin(arrivalRates_); // Init current rate.
-        ++this->state;                        // Begin in 1.
-        //std::cout<<"time: "<<this->current_time_<<" lambda: "<<current_rate_->second<<"\n";
+        // Init current rate.
+        #if PROD_MOD 
+            current_workload_ = begin(workloads_by_time_); 
+        #else
+            current_workload_      = begin(workloads_by_req_);
+            next_reqs_to_complete_ = (*current_workload_).first; // Set the first requeriments to complete.
+        #endif
     }
 
     TIME period() const override // Time between consecutive messages.
@@ -100,101 +113,110 @@ public:
     void internal_transition()
     {   
         // Inspect next.
-        next_rate_ = current_rate_;
-        ++next_rate_; 
+        this->next_workload_ = this->current_workload_;
+        ++next_workload_; 
 
         // Should be changed to the following rate?
-        if (this->current_time_ >= next_rate_->first)
+        if (current_time_ >= next_workload_->first)
         {   
             // Is the final rate?
-            if (next_rate_->second == 0) 
+            if (next_workload_->second == 0) 
             {
-                // This is the way to set the final workload.
-                metricLogger_.getClusterCFG().rate_         = current_rate_->second;
-                metricLogger_.getClusterCFG().requeriments_ = this->state;
-                
-                // Passivate
-                generating_ = false;
+                // Get the min next time from the other models.
+                TIME min_advance_time { this->min_advance_time_in_atomic_models() };
+
+                // All models has finished? Terminate too.
+                if (min_advance_time == numeric_limits<TIME>::infinity())
+                {
+                    // This is the way to set the final workload.
+                    metricLogger_.getClusterCFG().last_index_rate_  = this->index_rate_;
+                    metricLogger_.getClusterCFG().last_requirements = this->state;
+                    //std::cout<<"time(out): "<<current_time_<<", rate: "<<current_workload_->second<<'\n'; 
+                    // Passivate
+                    generating_ = false;
+                    return;
+                }
+
+                // Move forward in time to continue capturing metrics.
+                this->current_time_ += min_advance_time;
+                this->arrival_time_ = min_advance_time;
+                this->current_mssg_ = 0; // Set to zero to notify the master node that these are not requirements.
+
+                #if LOG_MOD
+                    captureMetrics();
+                #endif
                 return;
             }
-             
-            #if LOG_MOD
-            metricLogger_.captureMetrics(current_rate_->second, this->current_time_, to_second(this->current_time_), this->state); // Capture metrics!
-            #endif
-
-            current_rate_ = next_rate_; // Pass to next rate
-            //std::cout<<"time: "<<this->current_time_<<" lambda: "<<current_rate_->second<<"\n";
+            
+            current_workload_ = next_workload_; // Pass to next rate
+            ++this->index_rate_; // Update!
+            //std::cout<<"time: "<<current_time_<<", rate: "<<current_workload_->second<<'\n'; 
         }
         
         // Generate time
         TIME lapse_ps {};
         do {
-            //lapse_ps = static_cast<uint32_t>(std::round(expo_distr(uni_distr_.generate(), current_rate_->second)));
-            lapse_ps = expo_distr(uni_distr_.generate(), current_rate_->second);
+            lapse_ps = expo_distr(uni_distr_.generate(), current_workload_->second);
         } while (lapse_ps < 0);
         
-        // Descompose time
-        //int lapse_hr = lapse_ps / 3'600'000'000'000'000;  // 3.6e15
-        //lapse_ps    %=  3'600'000'000'000'000;
-//
-        //int lapse_min = lapse_ps / 60'000'000'000'000;    // 6e13
-        //lapse_ps     %= 60'000'000'000'000;
-//
-        //int lapse_s = lapse_ps / 1'000'000'000'000;       // 1e12
-        //lapse_ps   %= 1'000'000'000'000;
-//
-        //int lapse_ms = lapse_ps / 1'000'000'000;          // 1e9
-        //lapse_ps    %= 1'000'000'000;
-//
-        //int lapse_us = lapse_ps / 1'000'000;              // 1e6
-        //lapse_ps    %= 1'000'000;
-//
-        //int lapse_ns = lapse_ps / 1'000;                  // 1e3
-        //lapse_ps    %= 1'000;
-
-        //std::cout<<"lapse: "<<lapse<<"\n";
-        //std::cout<<"prod: hr: "<<lapse_hr<<" min: "<<lapse_min<<" s: "<<lapse_s<<" ms: "<<lapse_ms<<" us: "<<lapse_us<<" ns: "<<lapse_ns<<" ps: "<<lapse_ps<<"\n";
-        this->arrival_time_  = lapse_ps;//{lapse_hr, lapse_min, lapse_s, lapse_ms, lapse_us, lapse_ns, lapse_ps}; // hrs::mins:secs:mills:micrs::nns:(pcs)::fms
+        this->arrival_time_  = lapse_ps;
         this->current_time_ += this->arrival_time_;
         this->current_mssg_  = ++this->state;
 
         #if LOG_MOD
-        if (this->state % 100 == 0)
-            metricLogger_.captureMetrics(current_rate_->second, this->current_time_, to_second(this->current_time_), this->state);
+            captureMetrics();
         #endif
     }
-    #else // Producer has only 1 rate and stop when n requeriments are finished.
+    #else // New to implement: The producer has 1 or more rates with their quantity of requirements to produce.
     void internal_transition()
     {   
-        if (this->state >= this->requeriments_)  // Complete all the requirements? Keep capturing metrics.
-        {
-            // Get the min next time from the other models.
-            TIME min_advance_time { this->min_advance_time_in_atomic_models() };
+        // Inspect next.
+        this->next_workload_ = this->current_workload_;
+        ++next_workload_; 
 
-            // All models has finished? Terminate too.
-            if (min_advance_time == numeric_limits<TIME>::infinity()){
-                generating_ = false;
+        if (this->state >= this->next_reqs_to_complete_)
+        {
+            if (next_workload_ == end(this->workloads_by_req_)) // Have all the requirements for the final rate been met?
+            {
+                // Get the min next time from the other models.
+                TIME min_advance_time { this->min_advance_time_in_atomic_models() };
+
+                // All models has finished? Terminate too.
+                if (min_advance_time == numeric_limits<TIME>::infinity())
+                {
+                    // This is the way to set the final workload.
+                    metricLogger_.getClusterCFG().last_index_rate_  = this->index_rate_;
+                    metricLogger_.getClusterCFG().last_requirements = this->state;
+                    // Passivate.
+                    generating_ = false;
+                    return;
+                }
+
+                // Move forward in time to continue capturing metrics.
+                this->current_time_ += min_advance_time;
+                this->arrival_time_ = min_advance_time;
+                this->current_mssg_ = 0; // Set to zero to notify the master node that these are not requirements.
                 return;
             }
-
-            // Move forward in time to continue capturing metrics.
-            this->current_time_ += min_advance_time;
-            this->arrival_time_ = min_advance_time;
-            this->current_mssg_ = 0; // Set to zero to notify the master node that these are not requirements.
-        }
-        else {
-            // Generate time.
-            TIME lapse_ps {};
-            do {
-                lapse_ps = expo_distr(uni_distr_.generate(), this->rate_);
-            } while (lapse_ps < 0);
-            
-            this->arrival_time_  = lapse_ps;
-            this->current_time_ += this->arrival_time_;
-            this->current_mssg_  = ++this->state;
+            #if LOG_MOD == 0
+                captureMetrics();
+            #endif
+            current_workload_ = next_workload_; // Pass to next rate.
+            next_reqs_to_complete_ += (*current_workload_).first; // Pass next requirements to complete.
+            ++this->index_rate_; // Update!
         }
 
-        #if LOG_MOD
+        // Generate time.
+        TIME lapse_ps {};
+        do {
+            lapse_ps = expo_distr(uni_distr_.generate(), current_workload_->second);
+        } while (lapse_ps < 0);
+        
+        this->arrival_time_  = lapse_ps;
+        this->current_time_ += this->arrival_time_;
+        this->current_mssg_  = ++this->state;
+
+        #if LOG_MOD // Dynamic mod.
             captureMetrics();
         #endif
     }
@@ -242,7 +264,7 @@ private:
             ClusterConfig_t::operId_t source_oper_id = this->metricLogger_.getClusterCFG().begin_op_;
             uint32_t sent_rec_accum                  = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].sent_records_accum_;
 
-            metricLogger_.captureMetrics(this->rate_, to_second(this->current_time_), sent_rec_accum);
+            metricLogger_.captureMetrics(/*this->current_workload_->second,*/ to_second(this->current_time_), sent_rec_accum, this->index_rate_);
             this->time_to_capture_ += this->step_time_;
         }
     }
@@ -251,4 +273,3 @@ private:
 } // namespace streeamprcss
 
 #endif // _PRODUCER_HPP__
-
