@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+PARTITIONS="${1:-8}" \
+PARALLELISM_SOURCE="${2:-8}" \
+PARALLELISM_DESERIALIZE="${3:-4}" \
+PARALLELISM_FILTER="${4:-4}" \
+PARALLELISM_PROJECT="${5:-4}" \
+PARALLELISM_REDIS_JOIN="${6:-16}" \
+PARALLELISM_CAMPAIGN_PROCESSOR="${7:-8}" \
+"$SCRIPT_DIR/stream-bench.sh" WRITE_CONFIG

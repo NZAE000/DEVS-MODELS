@@ -7,10 +7,12 @@
   (:require [clj-kafka.new.producer :refer :all]
             [redis.core :as redis]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clj-json.core :as json]
             [clojure.tools.cli :as cli]
             [clj-yaml.core :as yaml])
-  (:gen-class))
+  (:gen-class)
+  (:refer-clojure :exclude [send]))
 
 (def num-campaigns 100)
 (def view-capacity-per-window 10)
@@ -179,6 +181,212 @@
          "\", \"event_type\": \"" (rand-nth event-types)
          "\", \"event_time\": \"" (str time)
          "\", \"ip_address\": \"1.2.3.4\"}")))
+  
+(defn parse-positive-long [text field line-number]
+  (try
+    (let [value (Long/parseLong text)]
+      (when (<= value 0)
+        (throw
+          (IllegalArgumentException.
+            (str field
+                 " must be greater than zero at line "
+                 line-number))))
+      value)
+
+    (catch NumberFormatException _
+      (throw
+        (IllegalArgumentException.
+          (str "Invalid "
+               field
+               " at line "
+               line-number
+               ": "
+               text))))))
+  
+(defn parse-workload-line [line-number line]
+  ;; Remove inline comments and surrounding whitespace.
+  (let [content (-> line
+                    (str/split #"#" 2)
+                    first
+                    str/trim)]
+
+    (when-not (str/blank? content)
+      (let [fields (str/split content #"\s+")]
+
+        (when-not (= 2 (count fields))
+          (throw
+            (IllegalArgumentException.
+              (str "Expected '<requests> <rate>' at line "
+                   line-number
+                   ": "
+                   line))))
+
+        {:requests
+         (parse-positive-long
+           (first fields)
+           "requests"
+           line-number)
+
+         :rate
+         (parse-positive-long
+           (second fields)
+           "rate"
+           line-number)}))))
+  
+(defn read-workloads [workloads-path]
+  (let [workloads
+        (->> (slurp workloads-path)
+             str/split-lines
+             (keep-indexed
+               (fn [index line]
+                 (parse-workload-line
+                   (inc index)
+                   line)))
+             vec)]
+
+    (when (empty? workloads)
+      (throw
+        (IllegalArgumentException.
+          (str "No workloads found in "
+               workloads-path))))
+
+    workloads))
+
+(defn sleep-until! [target-ns]
+  (loop []
+    (let [remaining-ns
+          (- target-ns (System/nanoTime))]
+
+      (when (pos? remaining-ns)
+        (let [millis (quot remaining-ns 1000000)
+              nanos  (int (rem remaining-ns 1000000))]
+
+          (Thread/sleep millis nanos)
+          (recur))))))
+
+(defn emit-workload!
+  [p stage-number requests rate with-skew? kafka-topic ads user-ids page-ids stage-log]
+
+  (println
+    "Starting workload"
+    stage-number
+    "- requests:"
+    requests
+    "rate:"
+    rate
+    "events/s")
+
+  (let [start-ns   (System/nanoTime)
+        start-ms   (System/currentTimeMillis)
+        period-ns  (/ 1000000000.0 rate)]
+
+    (doseq [index (range requests)]
+      (let [target-ns
+            (+ start-ns
+               (long (* index period-ns)))]
+
+        (sleep-until! target-ns)
+
+        (let [event-time
+              (+ start-ms
+                 (long
+                   (/ (* index 1000.0)
+                      rate)))]
+
+          (send
+            p
+            (record
+              kafka-topic
+              (.getBytes
+                (make-kafka-event-at
+                  event-time
+                  with-skew?
+                  ads
+                  user-ids
+                  page-ids)))))))
+
+    (let [end-ns       (System/nanoTime)
+          end-ms       (System/currentTimeMillis)
+          elapsed-sec  (/ (double (- end-ns start-ns))
+                          1000000000.0)
+          actual-rate  (/ requests elapsed-sec)]
+
+      (.write
+        stage-log
+        (format
+          "%d\t%d\t%d\t%d\t%d\t%.3f\t%.3f%n"
+          stage-number
+          requests
+          rate
+          start-ms
+          end-ms
+          elapsed-sec
+          actual-rate))
+
+      (.flush stage-log)
+
+      (println
+        "Completed workload"
+        stage-number
+        "- elapsed:"
+        elapsed-sec
+        "seconds; achieved rate:"
+        actual-rate
+        "events/s"))))
+
+(defn run-dynamic [workloads-path with-skew? kafka-hosts kafka-topic redis-host]
+  (let [workloads (read-workloads workloads-path)
+        ads       (gen-ads redis-host)
+        page-ids  (vec (make-ids 100))
+        user-ids  (vec (make-ids 100))]
+
+    (println
+      "Starting dynamic load with"
+      (count workloads)
+      "workload(s) from"
+      workloads-path)
+
+    (with-open
+      [p
+       (producer
+         {"bootstrap.servers" kafka-hosts}
+         (byte-array-serializer)
+         (byte-array-serializer))
+
+       stage-log
+       (io/writer "dynamic-load-stages.tsv")]
+
+      (.write
+        stage-log
+        (str
+          "stage\trequests\tconfigured_rate\t"
+          "start_ms\tend_ms\telapsed_seconds\t"
+          "achieved_rate\n"))
+
+      (doseq [[index workload]
+              (map-indexed vector workloads)]
+
+        (emit-workload!
+          p
+          (inc index)
+          (:requests workload)
+          (:rate workload)
+          with-skew?
+          kafka-topic
+          ads
+          user-ids
+          page-ids
+          stage-log))
+
+      ;; Ensure all buffered producer records have been delivered
+      ;; before the process finishes.
+      ;;(.flush p)
+      )
+
+    (println
+      "Dynamic load completed:"
+      (count workloads)
+      "workload(s).")))
 
 (defn run [throughput with-skew? kafka-hosts redis-host]
   (println "Running, emitting" throughput "tuples per second.")
@@ -247,13 +455,29 @@
       (write-to-redis campaigns ads))))
 
 (defn get-conf [confPath]
-  (let [conf (yaml/parse-string (slurp confPath))
-        redis-host (get conf :redis.host)
-        kafka-port (get conf :kafka.port)
-        kafka-hosts (clojure.string/join (interpose "," (for [broker (get conf :kafka.brokers)]
-                                                          (str broker ":" kafka-port))))]
-    (println {:redis-host redis-host :kakfa-brokers kafka-hosts})
-    {:redis-host redis-host :kakfa-brokers kafka-hosts}))
+  (let [conf         (yaml/parse-string (slurp confPath))
+        redis-host   (get conf :redis.host)
+        kafka-port   (get conf :kafka.port)
+        kafka-topic  (get conf :kafka.topic)
+        kafka-hosts
+        (str/join
+          ","
+          (for [broker (get conf :kafka.brokers)]
+            (str broker ":" kafka-port)))]
+
+    (when (nil? kafka-topic)
+      (throw
+        (IllegalArgumentException.
+          "Missing kafka.topic in configuration")))
+
+    (println
+      {:redis-host redis-host
+       :kakfa-brokers kafka-hosts
+       :kafka-topic kafka-topic})
+
+    {:redis-host redis-host
+     :kakfa-brokers kafka-hosts
+     :kafka-topic kafka-topic}))
 
 (def cli-options
   [["-s" "--setup" "Set up for catchup-simulation-mode (or re-setup if the .txt files exist)"]
@@ -263,6 +487,8 @@
    ["-t" "--throughput COUNT" "Should be used with '-r'. This is the number of tuples per second to emit. (Obviously it can't emit ridiculous numbers per second.)"
     :default 0
     :parse-fn #(Long/parseLong %)]
+   ["-d" "--dynamic-workloads PATH" "Path to a file containing '<requests> <rate>' workloads."
+    :parse-fn #(String/valueOf %)]
    ["-w" "--with-skew" "Add minor skew and late tuples into the mix."]
    ["-g" "--get-stats" "Read through redis and collect stats on end-to-end latency and so forth for the real-time simulation."]
    ["-a" "--configPath PATH" "Path to config yaml file"
@@ -271,15 +497,46 @@
 
 (defn -main
   [& args]
-  (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-options)
-        conf (get-conf (:configPath options))
-        kafka-hosts (get conf :kakfa-brokers)
-        redis-host (get conf :redis-host)]
+
+  (let [{:keys [options arguments errors summary]}
+        (cli/parse-opts args cli-options)
+
+        conf         (get-conf (:configPath options))
+        kafka-hosts  (get conf :kakfa-brokers)
+        kafka-topic  (get conf :kafka-topic)
+        redis-host   (get conf :redis-host)]
+
     (cond
-      (and (:setup options) (:check options)) (println "Specify either --setup OR --check")
-      (:setup options)                        (do-setup conf)
-      (:check options)                        (check-correct redis-host)
-      (:new options)                          (do-new-setup redis-host)
-      (:run options)                          (run (:throughput options) (:with-skew options) kafka-hosts redis-host)
-      (:get-stats options)                    (get-stats redis-host)
-      :else                                   (println summary))))
+      (and (:setup options) (:check options))
+      (println "Specify either --setup OR --check")
+
+      (:setup options)
+      (do-setup conf)
+
+      (:check options)
+      (check-correct redis-host)
+
+      (:new options)
+      (do-new-setup redis-host)
+
+      (and (:run options)
+           (:dynamic-workloads options))
+      (run-dynamic
+        (:dynamic-workloads options)
+        (:with-skew options)
+        kafka-hosts
+        kafka-topic
+        redis-host)
+
+      (:run options)
+      (run
+        (:throughput options)
+        (:with-skew options)
+        kafka-hosts
+        redis-host)
+
+      (:get-stats options)
+      (get-stats redis-host)
+
+      :else
+      (println summary))))

@@ -26,7 +26,7 @@ struct ConfigPath_t {
     static constexpr std::string_view topo_path_        {"input_data/topology.txt"};
     static constexpr std::string_view oper_path_        {"input_data/operator.txt"};
     static constexpr std::string_view hw_path_          {"input_data/hardware.txt"};
-    static constexpr std::string_view workload_br_path_ {"input_data/workloadbyrate.txt"};
+    static constexpr std::string_view workload_br_path_ {"input_data/workloadbyreq.txt"};
     static constexpr std::string_view workload_bt_path_ {"input_data/workloadbytime.txt"};
     static constexpr std::string_view degrad_path_      {"input_data/degradation.txt"};
     static constexpr std::string_view extraoccup_path_  {"input_data/extraoccupation.txt"};
@@ -54,8 +54,8 @@ struct ClusterConfig_t {
         initOperators(ConfigPath_t::oper_path_); // It must inizialize first.
         initTopology(ConfigPath_t::topo_path_);
         initHardware(ConfigPath_t::hw_path_);
-        initWorkloadsByReqs(ConfigPath_t::workload_br_path_);
-        initWorkloadsByTimes(ConfigPath_t::workload_bt_path_);
+        initWorkloadByReq(ConfigPath_t::workload_br_path_);
+        initWorkloadByTime(ConfigPath_t::workload_bt_path_);
         initDegradFactor(ConfigPath_t::degrad_path_);
         initExtraOccupFactors(ConfigPath_t::extraoccup_path_);
     }
@@ -263,35 +263,37 @@ private:
         }
     }
 
-    void initWorkloadsByTimes(std::string_view path) noexcept
+    void initWorkloadByTime(std::string_view path) noexcept
     {
         std::ifstream file(path.data());
         TIME time {}; double rate{};
         uint32_t n_loads {countLinesFromFile(file)};
         this->workloads_by_time_.reserve(n_loads);
 
-        while (!file.eof())
-        {
-            file >> time >> rate;
+        std::string line{};
+        while (std::getline(file, line)) 
+        {    
+            if (line.empty())  continue;      // Ignore empty lines.
+            std::istringstream iss(line);
+            iss >> time >> rate;
             this->workloads_by_time_.emplace_back(time, rate);
-            //std::cout<<"time: "<<time<<" rate: "<<rate<<"\n";
         }
     }
 
-    void initWorkloadsByReqs(std::string_view path) noexcept
+    void initWorkloadByReq(std::string_view path) noexcept
     {
         std::ifstream file(path.data());
         uint32_t reqs {}; double rate{};
         uint32_t n_loads {countLinesFromFile(file)};
         this->workloads_by_req_.reserve(n_loads);
 
-        //file >> this->reqs >> this->rate_;
-        //std::cout<<"reqs: "<<reqs<<" rate: "<<rate_<<"\n";
-        while (!file.eof())
-        {
-            file >> reqs >> rate;
+        std::string line{};
+        while (std::getline(file, line)) 
+        {    
+            if (line.empty())  continue;      // Ignore empty lines.
+            std::istringstream iss(line);
+            iss >> reqs >> rate;
             this->workloads_by_req_.emplace_back(reqs, rate);
-            //std::cout<<"time: "<<time<<" rate: "<<rate<<"\n";
         }
     }
 };

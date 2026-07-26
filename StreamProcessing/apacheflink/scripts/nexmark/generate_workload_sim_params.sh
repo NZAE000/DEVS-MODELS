@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #==============================================================================
-# Script to extract Nexmark parameters and write them to parameters/reqsRate.txt
+# Script to extract Nexmark's workload used and write them to input_data/workloadbyreq.txt
 #==============================================================================
 
 ## Get absolute path and locate.
@@ -11,7 +11,7 @@ cd "$DIR_BASE" || exit 1
 # Paths
 CONFIG_FILE="$DIR_BASE/../../nexmark/conf/nexmark.yaml"
 #OUTPUT_FILE="parameters/reqsRate.txt"
-OUTPUT_FILE="$DIR_BASE/../../../input_data/workload.txt"
+OUTPUT_FILE="$DIR_BASE/../../../input_data/workloadbyreq.txt"
 
 #------------------------------------------------------------------------------
 # Check if configuration file exists
@@ -21,6 +21,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   exit 1
 fi
 
+echo "[INFO] Generating workload from $CONFIG_FILE..."
 #------------------------------------------------------------------------------
 # Extract the number of events and tps fields
 #------------------------------------------------------------------------------
@@ -58,7 +59,7 @@ echo "$events $rate_ns" > "$OUTPUT_FILE"
 #------------------------------------------------------------------------------
 # Confirmation message
 #------------------------------------------------------------------------------
-echo "Values written to '$OUTPUT_FILE':"
+echo "[SUCCESS] Workload generated in '$OUTPUT_FILE':"
 echo "  Events = $events"
 echo "  Rate (per ns) = $rate_ns"
 

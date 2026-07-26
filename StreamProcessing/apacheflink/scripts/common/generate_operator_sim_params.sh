@@ -125,7 +125,8 @@ while IFS=';' read -r OPER_ID OPER_NAME PARALLELISM NEXTS SHIP_STRATEGY; do
 
 done < "$OPERLIST_DIR"
 
-echo "[SUCCESS] operator.txt generated."
+echo "[SUCCESS] Operator's parameters generated in $OUTPUT_PROP_FILE"
+echo ""
 
 #######################################################################
 # 2. GENERATE topology.txt using only operators_list.txt
@@ -155,6 +156,6 @@ while IFS=';' read -r ID NAME PAR NEXTS SHIP; do
 
 done < "$OPERLIST_DIR"
 
-echo "[SUCCESS] topology.txt generated."
+echo "[SUCCESS] Topology generated in $OUTPUT_TOPO_FILE"
 echo "---------------------------------------------"
 echo ""

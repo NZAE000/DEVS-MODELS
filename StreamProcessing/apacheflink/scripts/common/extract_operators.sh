@@ -10,6 +10,7 @@ FLINK_URL="http://localhost:8081"
 DIR_BASE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$DIR_BASE" || exit 1
 
+echo ""
 echo "[INFO] Search active Job ID..."
 JOB_ID=$(bash $DIR_BASE/get_job_id.sh) #$(curl -s "${FLINK_URL}/jobs" | jq -r '.jobs[0].id')
 

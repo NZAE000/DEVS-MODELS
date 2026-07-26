@@ -122,12 +122,6 @@ do
     ####################################################
     # Total requeriments
     ####################################################
-    #total_req=0
-    #for ((i=0;i<PARALLELISM;i++))
-    #do
-    #    req=$(bash get_suboperator_metrics.sh source "$i" | jq '.metrics["write-records"] // 0')
-    #    total_req=$((total_req + req))
-    #done
     total_req=$(bash $DIR_BASE/../common/get_suboperator_accum_metric.sh source numRecordsOut sum)
     total_req=${total_req:-0}
     total_req=$(awk -v x="$total_req" 'BEGIN { printf "%.0f", x + 0 }')
@@ -147,27 +141,10 @@ do
     ####################################################
     for opername in "${OPERATORS[@]}"
     do
-        #id_op=$(bash get_oper_id.sh "$opername")
-        #total_acum_busy=0
-
-        #for ((i=0;i<PARALLELISM;i++))
-        #do
-        #    echo "oper: $opername, P: $i"
-        #    METRICS=$(bash get_suboperator_metrics.sh "$id_op" "$i")
-        #    busy=$(echo "$METRICS" | jq '.metrics["accumulated-busy-time"] // 0')
-        #    total_acum_busy=$(echo "$total_acum_busy + $busy" | bc -l)
-        #done
-
-        #if [[ "${ACCUM_BUSY_MAP["$opername"]}" != "$total_acum_busy"  ]]; then
-        #    ACCUM_BUSY_MAP["$opername"]="$total_acum_busy" # Update
-
-            #ACUM_BUSY_TIME=$(echo "$total_acum_busy / 1000.0" | bc -l)
-            #BUSY_TIME=$(echo "$ACUM_BUSY_TIME / $PARALLELISM" | bc -l)
-            BUSY_TIME_MS=$(bash $DIR_BASE/../common/get_suboperator_accum_metric.sh "$opername" accumulateBusyTimeMs avg)
-            BUSY_TIME=$(echo "$BUSY_TIME_MS / 1000.0" | bc -l)
-            UTILIZATION=$(echo "scale=8; $BUSY_TIME / $ACCUM_TIME" | bc -l)
-            UTILIZATION_MAP["$opername"]+="${UTILIZATION} "
-        #fi
+        BUSY_TIME_MS=$(bash $DIR_BASE/../common/get_suboperator_accum_metric.sh "$opername" accumulateBusyTimeMs avg)
+        BUSY_TIME=$(echo "$BUSY_TIME_MS / 1000.0" | bc -l)
+        UTILIZATION=$(echo "scale=8; $BUSY_TIME / $ACCUM_TIME" | bc -l)
+        UTILIZATION_MAP["$opername"]+="${UTILIZATION} "
     done
 
     ####################################################
@@ -193,14 +170,6 @@ do
     CPU_UTIL=$(echo "scale=6; $cpu_sum / $cpu_count" | bc -l)
     CPU_UTIL_LIST+=("${ACCUM_TIME},${CPU_UTIL}")
     ####################################################
-
-    #end=$(date +%s.%N) # End time ponit
-    #elapsed=$(echo "$end - $start" | bc -l) # Elapsed time
-    #wait=$(echo "1.0 - $elapsed" | bc -l)
-#
-    #if (( $(echo "$wait > 0" | bc -l) )); then
-    #    sleep "$wait"
-    #fi
 done
 
 rm "$CPU_LOG"

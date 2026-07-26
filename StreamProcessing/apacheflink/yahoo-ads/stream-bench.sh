@@ -70,6 +70,8 @@ FLINK_MAIN_CLASS="${FLINK_MAIN_CLASS:-flink.benchmark.AdvertisingTopologyNative}
 
 CONF_FILE="${CONF_FILE:-$PROJECT_ROOT/conf/localConf.yaml}"
 BENCHMARK_CONF_FILE="${BENCHMARK_CONF_FILE:-$PROJECT_ROOT/conf/benchmarkConf.yaml}"
+WORKLOADS_FILE="${WORKLOADS_FILE:-$PROJECT_ROOT/conf/workloadbyreq.txt}"
+DRAIN_SECONDS="${DRAIN_SECONDS:-30}"
 
 ###############################################################################
 # Benchmark configuration
@@ -82,8 +84,6 @@ KAFKA_PORT="${KAFKA_PORT:-9092}"
 REDIS_HOST="${REDIS_HOST:-localhost}"
 REDIS_PORT="${REDIS_PORT:-6379}"
 
-WORKLOADS_FILE="${WORKLOADS_FILE:-$PROJECT_ROOT/conf/dynamic-workloads.txt}"
-
 TOPIC="${TOPIC:-ad-events}"
 PARTITIONS="${PARTITIONS:-1}"
 LOAD="${LOAD:-1000}"
@@ -91,6 +91,21 @@ TEST_TIME="${TEST_TIME:-240}"
 
 PROCESS_HOSTS="${PROCESS_HOSTS:-1}"
 PROCESS_CORES="${PROCESS_CORES:-1}"
+
+DEFAULT_PARALLELISM=$((PROCESS_HOSTS * PROCESS_CORES))
+
+if (( DEFAULT_PARALLELISM < PARTITIONS )); then
+    DEFAULT_SOURCE_PARALLELISM="$DEFAULT_PARALLELISM"
+else
+    DEFAULT_SOURCE_PARALLELISM="$PARTITIONS"
+fi
+
+PARALLELISM_SOURCE="${PARALLELISM_SOURCE:-$DEFAULT_SOURCE_PARALLELISM}"
+PARALLELISM_DESERIALIZE="${PARALLELISM_DESERIALIZE:-$DEFAULT_PARALLELISM}"
+PARALLELISM_FILTER="${PARALLELISM_FILTER:-$DEFAULT_PARALLELISM}"
+PARALLELISM_PROJECT="${PARALLELISM_PROJECT:-$DEFAULT_PARALLELISM}"
+PARALLELISM_REDIS_JOIN="${PARALLELISM_REDIS_JOIN:-$DEFAULT_PARALLELISM}"
+PARALLELISM_CAMPAIGN_PROCESSOR="${PARALLELISM_CAMPAIGN_PROCESSOR:-$DEFAULT_PARALLELISM}"
 
 FLINK_BUFFER_TIMEOUT="${FLINK_BUFFER_TIMEOUT:-100}"
 FLINK_CHECKPOINT_INTERVAL="${FLINK_CHECKPOINT_INTERVAL:-}"
@@ -228,6 +243,10 @@ fetch_and_extract() {
 }
 
 write_local_config() {
+    (( PARALLELISM_SOURCE > 0 )) || die "PARALLELISM_SOURCE must be greater than zero"
+
+    (( PARALLELISM_SOURCE <= PARTITIONS )) || die "PARALLELISM_SOURCE cannot exceed PARTITIONS"
+
     cat >"$CONF_FILE" <<EOF_CONF
 kafka.brokers:
   - "$KAFKA_HOST"
@@ -238,15 +257,26 @@ zookeeper.servers:
 kafka.port: $KAFKA_PORT
 zookeeper.port: $ZK_PORT
 redis.host: "$REDIS_HOST"
+
 kafka.topic: "$TOPIC"
 kafka.partitions: $PARTITIONS
+
 process.hosts: $PROCESS_HOSTS
 process.cores: $PROCESS_CORES
+
+parallelism.source: $PARALLELISM_SOURCE
+parallelism.deserialize: $PARALLELISM_DESERIALIZE
+parallelism.filter: $PARALLELISM_FILTER
+parallelism.project: $PARALLELISM_PROJECT
+parallelism.redis-join: $PARALLELISM_REDIS_JOIN
+parallelism.campaign-processor: $PARALLELISM_CAMPAIGN_PROCESSOR
+
 flink.buffer-timeout: $FLINK_BUFFER_TIMEOUT
 EOF_CONF
 
     if [[ -n "$FLINK_CHECKPOINT_INTERVAL" ]]; then
-        printf 'flink.checkpoint-interval: %s\n' "$FLINK_CHECKPOINT_INTERVAL" >>"$CONF_FILE"
+        printf 'flink.checkpoint-interval: %s\n' \
+            "$FLINK_CHECKPOINT_INTERVAL" >>"$CONF_FILE"
     fi
 
     log "Generated configuration: $CONF_FILE"
@@ -518,6 +548,139 @@ stop_flink_processing() {
     sleep 3
 }
 
+validate_workloads_file() {
+    [[ -f "$WORKLOADS_FILE" ]] ||
+        die "Dynamic workloads file not found: $WORKLOADS_FILE"
+
+    awk '
+        {
+            line = $0
+            sub(/#.*/, "", line)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+
+            if (line == "") {
+                next
+            }
+
+            count = split(line, fields, /[[:space:]]+/)
+
+            if (count != 2) {
+                printf("Invalid workload at line %d: expected <requests> <rate>\n", NR) > "/dev/stderr"
+                exit 1
+            }
+
+            if (fields[1] !~ /^[1-9][0-9]*$/ ||
+                fields[2] !~ /^[1-9][0-9]*$/) {
+                printf("Invalid workload at line %d: values must be positive integers\n", NR) > "/dev/stderr"
+                exit 1
+            }
+
+            workloads++
+        }
+
+        END {
+            if (workloads == 0) {
+                print "No workloads found" > "/dev/stderr"
+                exit 1
+            }
+        }
+    ' "$WORKLOADS_FILE" ||
+        die "Invalid workloads file: $WORKLOADS_FILE"
+}
+
+start_dynamic_load() {
+    [[ -f "$CONF_FILE" ]] ||
+        die "Configuration file not found: $CONF_FILE"
+
+    validate_workloads_file
+
+    is_running 'kafka\.Kafka' ||
+        die "Kafka is not running"
+
+    [[ -n "$(running_flink_job_id)" ]] ||
+        die "Yahoo Flink benchmark job is not running"
+
+    if is_running 'leiningen\.core\.main.*dynamic-workloads'; then
+        log "Dynamic load generator is already running"
+        return
+    fi
+
+    rm -f "$RUN_DIR/load-generator.pid"
+    rm -f "$LOG_DIR/load-generator.log"
+
+    log "Starting dynamic load from: $WORKLOADS_FILE"
+
+    (
+        cd "$PROJECT_ROOT/data"
+
+        nohup "$LEIN" run \
+            -r \
+            --dynamic-workloads "$WORKLOADS_FILE" \
+            --configPath "$CONF_FILE" \
+            >"$LOG_DIR/load-generator.log" 2>&1 &
+
+        echo $! >"$RUN_DIR/load-generator.pid"
+    )
+
+    sleep 2
+
+    [[ -f "$RUN_DIR/load-generator.pid" ]] ||
+        die "Dynamic load generator PID was not recorded"
+}
+
+wait_dynamic_load() {
+    [[ -f "$RUN_DIR/load-generator.pid" ]] ||
+        die "Dynamic load generator PID file not found"
+
+    local pid
+    pid="$(<"$RUN_DIR/load-generator.pid")"
+
+    log "Waiting for dynamic load generator PID $pid"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep 1
+    done
+
+    rm -f "$RUN_DIR/load-generator.pid"
+
+    if ! grep -q "Dynamic load completed:" \
+        "$LOG_DIR/load-generator.log"
+    then
+        tail -n 50 "$LOG_DIR/load-generator.log" >&2
+        die "Dynamic load generator did not complete successfully"
+    fi
+
+    log "All dynamic workloads were emitted"
+}
+
+generate_stats() {
+    [[ -d "$PROJECT_ROOT/data" ]] ||
+        die "Data directory not found"
+
+    [[ -f "$CONF_FILE" ]] ||
+        die "Configuration file not found: $CONF_FILE"
+
+    log "Generating benchmark result files"
+
+    (
+        cd "$PROJECT_ROOT/data"
+        "$LEIN" run -g --configPath "$CONF_FILE"
+    )
+}
+
+run_dynamic_experiment() {
+    start_dynamic_load
+    wait_dynamic_load
+
+    log "Producer completed; waiting $DRAIN_SECONDS second(s) for pipeline drain"
+    sleep "$DRAIN_SECONDS"
+
+    generate_stats
+    stop_flink_processing
+
+    log "Dynamic experiment completed"
+}
+
 start_load() {
     [[ -f "$CONF_FILE" ]] || die "Configuration file not found: $CONF_FILE"
 
@@ -650,6 +813,11 @@ Operations:
   START_LOAD               Start the Kafka load generator.
   STOP_LOAD                Stop the generator and create result files.
   FLINK_TEST               Run the complete benchmark workflow.
+  WRITE_CONFIG             Generate localConf.yaml.
+  START_DYNAMIC_LOAD       Start workloads from dynamic-workloads.txt.
+  WAIT_DYNAMIC_LOAD        Wait until all workloads have been emitted.
+  GENERATE_STATS           Generate seen.txt and updated.txt.
+  RUN_DYNAMIC_EXPERIMENT   Run, wait, drain, collect results and stop the job.
   STOP_ALL                 Stop all benchmark processes and services.
   HELP                     Show this message.
 
@@ -668,6 +836,14 @@ Frequently used environment variables:
   FLINK_HOME=$FLINK_HOME
   KAFKA_HOME=$KAFKA_HOME
   REDIS_HOME=$REDIS_HOME
+  WORKLOADS_FILE=$WORKLOADS_FILE
+  DRAIN_SECONDS=$DRAIN_SECONDS
+  PARALLELISM_SOURCE=$PARALLELISM_SOURCE
+  PARALLELISM_DESERIALIZE=$PARALLELISM_DESERIALIZE
+  PARALLELISM_FILTER=$PARALLELISM_FILTER
+  PARALLELISM_PROJECT=$PARALLELISM_PROJECT
+  PARALLELISM_REDIS_JOIN=$PARALLELISM_REDIS_JOIN
+  PARALLELISM_CAMPAIGN_PROCESSOR=$PARALLELISM_CAMPAIGN_PROCESSOR
 
 Important:
   - SETUP does not download Flink. It reuses FLINK_HOME.
@@ -699,6 +875,10 @@ run() {
         STOP_LOAD)              stop_load ;;
         FLINK_TEST)             flink_test ;;
         WRITE_CONFIG)           write_local_config ;;
+        START_DYNAMIC_LOAD)     start_dynamic_load ;;
+        WAIT_DYNAMIC_LOAD)      wait_dynamic_load ;;
+        GENERATE_STATS)         generate_stats ;;
+        RUN_DYNAMIC_EXPERIMENT) run_dynamic_experiment ;;
         STOP_ALL)               stop_all ;;
         HELP|-h|--help)         print_help ;;
         *)
