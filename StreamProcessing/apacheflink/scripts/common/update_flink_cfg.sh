@@ -23,9 +23,7 @@ DIR_BASE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$DIR_BASE" || exit 1
 
 # Path to the Flink configuration file
-FLINK_HOME="flink-2.2.0-instrumented"
-CONFIG_FILE="$DIR_BASE/../../"$FLINK_HOME"/conf/config.yaml"
-echo "$CONFIG_FILE"
+CONFIG_FILE="$DIR_BASE/../../flink-2.2.0-instrumented/conf/config.yaml"
 
 # Check if the configuration file exists
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -48,6 +46,6 @@ sed -i "s/^parallelism\.default:.*/parallelism.default: ${PARALLELISM}/" "$CONFI
 # Update the 'taskmanager.numberOfTaskSlots' field
 sed -i "s/^taskmanager\.numberOfTaskSlots:.*/taskmanager.numberOfTaskSlots: ${TASKSLOTS}/" "$CONFIG_FILE"
 
-echo "Update configuration $CONFIG_FILE:"
+echo "Configuration $CONFIG_FILE updated:"
 echo "   'taskmanager.numberOfTaskSlots: ${TASKSLOTS}"
 echo "   'parallelism.default: ${PARALLELISM}"

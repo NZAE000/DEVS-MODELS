@@ -4,4 +4,4 @@
 DIR_BASE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$DIR_BASE" || exit 1
 
-bash $DIR_BASE/../../nexmark/bin/shutdown_cluster.sh && stop-cluster.sh
+bash $DIR_BASE/../../flink-2.2.0-instrumented/bin/stop-cluster.sh

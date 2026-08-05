@@ -34,7 +34,7 @@ fi
 sed -i "s/^\(nexmark\.workload\.suite\.100m\.events\.num:\).*/\1 ${EVENTS_NUM}/" "$CONFIG_FILE"
 sed -i "s/^\(nexmark\.workload\.suite\.100m\.tps:\).*/\1 ${TPS}/" "$CONFIG_FILE"
 
-echo "Update configuration $CONFIG_FILE:"
+echo "Configuration $CONFIG_FILE updated:"
 echo "   nexmark.workload.suite.100m.events.num: ${EVENTS_NUM}"
 echo "   nexmark.workload.suite.100m.tps: ${TPS}"
 

@@ -64,9 +64,10 @@ namespace streamprcss {
 
     template<typename TIME>
     void MetricLogger_t<TIME>::
-    captureMetrics(/*double rate,*/ TIME elapsed_time, std::size_t procss_req, uint32_t index_rate) noexcept
+    captureMetrics(/*double rate,*/ TIME elapsed_time, std::size_t procss_req) noexcept
     {
         // Add system metrics.
+        uint32_t index_rate {ClusterConfig_t::WLOAD_INDEX_}; // Using current workload.
         sysmetrics_t& sys_metrics = this->system_metrics_[index_rate].second; //std::vector<std::pair<rate_t, sysmetrics_t>> system_metrics_ {};
         double        throughput  { procss_req / elapsed_time };
         sys_metrics.emplace_back(procss_req, elapsed_time, throughput);

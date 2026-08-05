@@ -67,7 +67,7 @@ namespace streamprcss {
 
         explicit MetricLogger_t(ClusterConfig_t const&);
 
-        void captureMetrics(/*double rate, */TIME elapsed_t, std::size_t procss_req, uint32_t index_rate) noexcept;
+        void captureMetrics(/*double rate, */TIME elapsed_t, std::size_t procss_req) noexcept;
         void printMetrics()      const noexcept;
 
         #if LOG_MOD

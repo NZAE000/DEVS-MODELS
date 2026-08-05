@@ -21,8 +21,8 @@ fi
 
 echo "[INFO] Job ID found: $JOB_ID"
 
-FOLDER="$DIR_BASE/../../operators"
-FILE="${FOLDER}/operator_list.txt"
+FOLDER="$DIR_BASE/../../subtasks"
+FILE="${FOLDER}/subtask_topology.txt"
 PLAN_JSON="plan_tmp.json"
 
 mkdir -p "$FOLDER"
@@ -122,7 +122,7 @@ jq -r '.plan.nodes[].id' "$PLAN_JSON" | tac | while read -r ID; do
     echo "${ID};${NAME};${PAR};${NEXT};${SHIP}" >> "$FILE"
 done
 
-echo "[SUCCESS] File generated"
+echo "[SUCCESS] Substak topolgy generated in $FILE"
 echo ""
 
 rm -f "$PLAN_JSON"

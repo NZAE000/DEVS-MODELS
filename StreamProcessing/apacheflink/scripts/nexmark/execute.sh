@@ -20,12 +20,12 @@ CPU_LOG="/tmp/cpu_${APP_NAME}_${TASKSLOTS}_${PARALLELISM}_${EVENTS}_${TPS}.log"
 # ============================
 # Update flink parameters
 # ============================
-bash $DIR_BASE/../common/update_flink_cfg.sh $TASKSLOTS $PARALLELISM && bash $DIR_BASE/update_nexmark_cfg.sh $EVENTS $TPS
+bash "$DIR_BASE/../common/update_flink_cfg.sh" $TASKSLOTS $PARALLELISM && bash "$DIR_BASE/update_nexmark_cfg.sh" $EVENTS $TPS
 
 # ============================
 # Stop and init
 # ============================
-bash $DIR_BASE/../common/stop.sh && bash $DIR_BASE/../common/start.sh
+bash $DIR_BASE/shutdown_and_stop.sh && bash $DIR_BASE/start_and_setup_cluster.sh
 
 # =======================================
 # Start CPU monitoring while app execute

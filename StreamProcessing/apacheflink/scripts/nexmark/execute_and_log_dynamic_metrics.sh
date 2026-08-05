@@ -55,8 +55,8 @@ bash $DIR_BASE/update_nexmark_cfg.sh "$EVENTS" "$TPS"
 ########################################################
 # Reset cluster
 ########################################################
-bash $DIR_BASE/../common/stop.sh
-bash $DIR_BASE/../common/start.sh
+bash $DIR_BASE/shutdown_and_stop.sh
+bash $DIR_BASE/start_and_setup_cluster.sh
 
 ########################################################
 # execute query in background

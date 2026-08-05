@@ -2,6 +2,7 @@
 
 Repository with models implemented using Discrete Event Specification (DEVS) formalism, through the Cadmium DEVS engine, whose installation can be found in the user guide: https://cell-devs.sce.carleton.ca/index.php/cadmium/.
 Anyway, don't worry, the repository already integrates the Cadmium.
+This work has been partially supported by Fondecyt de Iniciación 11230961 from ANID, Chile
 
 This project is licensed under the MIT License. See LICENSE.
 

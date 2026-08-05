@@ -52,8 +52,7 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
 
     MLogger_t<TIME>&            metricLogger_;
     myrandom::Uniform_t<double> uni_distr_           {0.0, 1.0};
-    //uint32_t                          requeriments_        {};
-    //double                            rate_                {};
+
     std::vector<std::pair<uint32_t, double>> const& 
                                 workloads_by_req_;
     std::vector<std::pair<TIME, double>> const&     
@@ -65,7 +64,6 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     const_iter current_workload_;
     const_iter next_workload_;
     uint32_t   next_reqs_to_complete_ {};
-    uint32_t   index_rate_            {0};
     bool       generating_            {true};
     TIME       step_time_             {5e11}; //  0.5 sec
     TIME       time_to_capture_       {step_time_};
@@ -75,6 +73,8 @@ class Producer_t : public basic_models::pdevs::generator<Message_t, TIME> {
     expo_distr(double rd, double lambda) const noexcept { return -(1/lambda)*std::log(1-rd); }
 
 public:
+
+    uint32_t last_requirements_{};
 
     [[nodiscard]] static constexpr TIME to_second(TIME const& time)
     {
@@ -129,8 +129,7 @@ public:
                 if (min_advance_time == numeric_limits<TIME>::infinity())
                 {
                     // This is the way to set the final workload.
-                    metricLogger_.getClusterCFG().last_index_rate_  = this->index_rate_;
-                    metricLogger_.getClusterCFG().last_requirements = this->state;
+                    this->last_requirements_ = this->state;
                     //std::cout<<"time(out): "<<current_time_<<", rate: "<<current_workload_->second<<'\n'; 
                     // Passivate
                     generating_ = false;
@@ -149,7 +148,7 @@ public:
             }
             
             current_workload_ = next_workload_; // Pass to next rate
-            ++this->index_rate_; // Update!
+            this->metricLogger_.getClusterCFG().nextWorkload(); // Update!
             //std::cout<<"time: "<<current_time_<<", rate: "<<current_workload_->second<<'\n'; 
         }
         
@@ -185,8 +184,7 @@ public:
                 if (min_advance_time == numeric_limits<TIME>::infinity())
                 {
                     // This is the way to set the final workload.
-                    metricLogger_.getClusterCFG().last_index_rate_  = this->index_rate_;
-                    metricLogger_.getClusterCFG().last_requirements = this->state;
+                    this->last_requirements_ = this->state;
                     // Passivate.
                     generating_ = false;
                     return;
@@ -203,7 +201,7 @@ public:
             #endif
             current_workload_ = next_workload_; // Pass to next rate.
             next_reqs_to_complete_ += (*current_workload_).first; // Pass next requirements to complete.
-            ++this->index_rate_; // Update!
+            this->metricLogger_.getClusterCFG().nextWorkload(); // Update!
         }
 
         // Generate time.
@@ -264,7 +262,7 @@ private:
             ClusterConfig_t::operId_t source_oper_id = this->metricLogger_.getClusterCFG().begin_op_;
             uint32_t sent_rec_accum                  = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].sent_records_accum_;
 
-            metricLogger_.captureMetrics(/*this->current_workload_->second,*/ to_second(this->current_time_), sent_rec_accum, this->index_rate_);
+            metricLogger_.captureMetrics(to_second(this->current_time_), sent_rec_accum);
             this->time_to_capture_ += this->step_time_;
         }
     }

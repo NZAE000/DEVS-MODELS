@@ -69,13 +69,13 @@ namespace streamprcss {
         TIME     prod_improd_lapse {}; // Productive + Improductive time.
         
         do {
-            exec_lapse        = jobMan.getTimeExecution(operid);            // Get avg time excecution of some distribution.
+            exec_lapse        = jobMan.getExecutionTime(operid);            // Get avg time excecution of some distribution.
             prod_improd_lapse = exec_lapse * jobMan.getDegradationFactor(); // Increase the time to degrade the system
         } 
         while (prod_improd_lapse < 0 || prod_improd_lapse >= std::numeric_limits<TIME>::max());
 
         // Accumulate operator busy time (to sec).
-        jobMan.accumBusyTime(operid, exec_lapse / 1000000000000);
+        jobMan.accumBusyTime(operid, exec_lapse);
         
         // Search core buffer with less congestion.
         ExecutionBuffer_t* less_loaded_buff { nullptr };

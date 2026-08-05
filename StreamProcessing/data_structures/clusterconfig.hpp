@@ -17,7 +17,7 @@
 #include "flink/typealiases.hpp"
 #include "../util/random.hpp"
 #include "../input_data/hardware.hpp"
-//#include <iostream>
+#include <iostream>
 
 using TIME = streamprcss::flink::TIME;
 
@@ -36,13 +36,16 @@ struct OperatorProperties_t {
 
     std::string                             name_               {};
     uint32_t                                replication_        {};
-    std::unique_ptr
-    <myrandom::RandomBase_t<TIME>>          random_time_        {};
+    std::pair<myrandom::distribution, 
+    std::unique_ptr<myrandom::RandomBase_t<TIME>>>
+                                            random_time_        {};
+    std::vector<double>                     params_             {};
     std::string                             ship_strategy_      {};
     double                                  selectivity_        {};
     uint32_t                                sent_records_accum_ {};
     double                                  busy_time_accum_    {};     // To calculate operator utilization.
     double                                  extra_occup_factor_ {};     // Extra internal occupation factor.
+    void (*accumBusyTime)(double& busy_time_accum, double time, double extra_occup_factor)  { nullptr }; // callback.
 };
 
 struct ClusterConfig_t {
@@ -58,6 +61,8 @@ struct ClusterConfig_t {
         initWorkloadByTime(ConfigPath_t::workload_bt_path_);
         initDegradFactor(ConfigPath_t::degrad_path_);
         initExtraOccupFactors(ConfigPath_t::extraoccup_path_);
+
+        updateSourcePeriod();
     }
 
 // Data config
@@ -68,25 +73,104 @@ struct ClusterConfig_t {
     std::vector<operId_t>                    end_ops_            {};
     std::vector<std::pair<TIME,     double>> workloads_by_time_  {};
     std::vector<std::pair<uint32_t, double>> workloads_by_req_   {};
-
-    mutable uint32_t                         last_requirements   {}; 
-    mutable double                           last_index_rate_    {};
-     
     uint32_t                                 n_nodes_            {};
     uint32_t                                 n_cores_            {};
-    double                                   degradation_factor_ {};  // Degradation phenomenon factor (interference + saturation + inefficiency of parallelism).
+    double                                   degradation_factor_ {};  // Degradation phenomenon factor (interference + saturation +  parallelism inefficiency).
     inline static operId_t                   N_OPERATORS_        {0};
+    inline static uint32_t                   WLOAD_INDEX_        {0}; // Producer model will control the workload index.
+    inline static double                     SOURCE_PERIOD_      {};
+
+    double getExecutionTime(operId_t const oper_id) const noexcept
+    {   
+        auto const& oper_prop = this->operProps_[oper_id];
+
+        if (oper_id == begin_op_) return oper_prop.random_time_.second->generate() * SOURCE_PERIOD_;
+        return oper_prop.random_time_.second->generate();
+    }
 
     void accumBusyTime(operId_t const operid, double time) noexcept
     {
         auto& oper_prop = operProps_[operid];
-        oper_prop.busy_time_accum_ += time * oper_prop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
+        oper_prop.accumBusyTime(oper_prop.busy_time_accum_, time, oper_prop.extra_occup_factor_); // callback
+        //oper_prop.busy_time_accum_ += (time / 1000000000000) * oper_prop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
     }
 
     void accumSentRecords(operId_t const operid, uint32_t n_rec) noexcept
     {
         auto& operprop = operProps_[operid];
         operprop.sent_records_accum_ += n_rec;
+    }
+
+    void nextWorkload() const noexcept
+    {
+        ++WLOAD_INDEX_;
+        this->updateSourcePeriod();
+    }
+
+private:
+    std::map<std::string, operId_t> oper_ids_ {};
+
+    void updateSourcePeriod() const noexcept
+    {   
+        OperatorProperties_t const& operprop { operProps_[begin_op_] };
+        uint32_t             const P         { operprop.replication_ };
+        #if PROD_MOD
+            SOURCE_PERIOD_ = P / (this->workloads_by_time_[WLOAD_INDEX_].second * getMeanServiceTime(operprop));
+        #else
+            SOURCE_PERIOD_ = P / (this->workloads_by_req_[WLOAD_INDEX_].second * getMeanServiceTime(operprop));
+            //std::cout<<"period: "<<SOURCE_PERIOD_<<'\n';
+            //std::cout<<"avg: "<<getMeanServiceTime(operprop)<<'\n';
+        #endif
+    }
+
+    static void accumBusyTimeSource(double& busytime_accum, double time, double extra_occup_factor)
+    {   
+        double time_with_pacing { time };
+        //std::cout<<"max: "<<time_with_pacing<<'\n';
+        //std::cout<<"period: "<<SOURCE_PERIOD_<<'\n';
+        accumBusyTime_impl(busytime_accum, time_with_pacing, extra_occup_factor);
+    }
+
+    static void accumBusyTime_impl(double& busytime_accum, double time, double extra_occup_factor)
+    {
+        busytime_accum += time * extra_occup_factor * 1e-12; // to second.
+    }
+
+    double getMeanServiceTime(OperatorProperties_t const& oper_prop) const
+    {   
+        //OperatorProperties_t const& oper_prop { this->operProps_[operid]     };
+        myrandom::distribution distrib_type { oper_prop.random_time_.first };
+        double mean {};
+
+        switch (distrib_type) {
+            case myrandom::distribution::constant: {
+                mean = oper_prop.params_[0];
+                break;
+            }
+            case myrandom::distribution::normal: {
+                mean = oper_prop.params_[0];  // mean
+                break;
+            }
+            case myrandom::distribution::lognormal:{
+                mean = std::exp(
+                    oper_prop.params_[0] +
+                    0.5 * oper_prop.params_[1] * oper_prop.params_[1]);
+                break;
+            }
+            case myrandom::distribution::gamma:{
+                mean = oper_prop.params_[0] * oper_prop.params_[1]; // shape × scale
+                break;
+            }
+            case myrandom::distribution::exponential:{
+                mean = 1.0 / oper_prop.params_[0]; // si el parámetro es scale/mean
+                break;
+            }
+            default:{
+                mean=2.0;
+                break;
+            }
+        }
+        return mean;
     }
 
     uint32_t countLinesFromFile(std::ifstream& file) const
@@ -106,10 +190,6 @@ struct ClusterConfig_t {
 
         return lines;
     }
-
-
-private:
-    std::map<std::string, operId_t> oper_ids_ {};
 
     void initOperators(std::string_view path) noexcept
     {
@@ -134,31 +214,27 @@ private:
             iss >> name >> oper_parallelism >> distr;
 
             if (PARALLELISM_L > 1) oper_parallelism = PARALLELISM_L; // Priority.
+            double param1{}, param2{};
 
             if (distr == "norm"){
-                double param1{}, param2{};
                 iss >> param1 >> param2 >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Normal_t<TIME>>(param1, param2), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::pair{myrandom::distribution::normal, std::make_unique<myrandom::Normal_t<TIME>>(param1, param2)}, std::vector{param1, param2}, strategy, selectivity);
             }
             else if (distr == "fix"){
-                double param{};
-                iss >> param >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Constant_t<TIME>>(param), strategy, selectivity);
+                iss >> param1 >> strategy >> selectivity;
+                operProps_.emplace_back(name, oper_parallelism, std::pair{myrandom::distribution::constant, std::make_unique<myrandom::Constant_t<TIME>>(param1)}, std::vector{param1, param2}, strategy, selectivity);
             }
             else if (distr == "expo"){
-                double param{};
-                iss >> param >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Exponential_t<TIME>>(param), strategy, selectivity);
+                iss >> param1 >> strategy >> selectivity;
+                operProps_.emplace_back(name, oper_parallelism, std::pair{myrandom::distribution::exponential, std::make_unique<myrandom::Exponential_t<TIME>>(param1)}, std::vector{param1, param2}, strategy, selectivity);
             }
             else if (distr == "lnorm"){
-                double param1{}, param2{};
                 iss >> param1 >> param2 >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Lognormal_t<TIME>>(param1, param2), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::pair{myrandom::distribution::lognormal, std::make_unique<myrandom::Lognormal_t<TIME>>(param1, param2)}, std::vector{param1, param2}, strategy, selectivity);
             }
             else if (distr == "gamm"){
-                double param1{}, param2{};
                 iss >> param1 >> param2 >> strategy >> selectivity;
-                operProps_.emplace_back(name, oper_parallelism, std::make_unique<myrandom::Gamma_t<TIME>>(param1, param2), strategy, selectivity);
+                operProps_.emplace_back(name, oper_parallelism, std::pair{myrandom::distribution::gamma, std::make_unique<myrandom::Gamma_t<TIME>>(param1, param2)}, std::vector{param1, param2}, strategy, selectivity);
             }
 
             this->oper_ids_[operProps_[N_OPERATORS_].name_] = N_OPERATORS_; // Store name reerences.
@@ -260,7 +336,10 @@ private:
 
             operId_t op_id = this->oper_ids_.find(name)->second;
             operProps_[op_id].extra_occup_factor_ = extra_occ_factor;
+            operProps_[op_id].accumBusyTime = accumBusyTime_impl;
         }
+
+        operProps_[begin_op_].accumBusyTime = accumBusyTimeSource;
     }
 
     void initWorkloadByTime(std::string_view path) noexcept

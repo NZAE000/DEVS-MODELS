@@ -22,7 +22,7 @@
 #include <util/metriclogger.tpp>
 
 //C++ libraries
-#include <iostream>
+//#include <iostream>
 #include <string>
 #include <iomanip>
 
@@ -220,7 +220,7 @@ main(int arg, char** argv)
     TIME finish_time = r.run_until_passivate(); // Run the simulation until all models are passivated.
     
     // Capture and logg metrics (throughput system and operator utilizations).
-    metric_logger.captureMetrics(/*cluster_cfg.last_rate_, */streamprcss::Producer_t<TIME>::to_second(finish_time), cluster_cfg.last_requirements, cluster_cfg.last_index_rate_);
+    metric_logger.captureMetrics(streamprcss::Producer_t<TIME>::to_second(finish_time), producer->last_requirements_);
     #if APPLY_LOG
         #if LOG_MOD
             metric_logger.logDynamicMetrics();

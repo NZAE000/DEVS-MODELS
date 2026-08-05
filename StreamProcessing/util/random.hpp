@@ -7,6 +7,8 @@
 
 namespace myrandom {
 
+	enum distribution { constant, uniform, exponential, normal, poisson, lognormal, gamma, bernoulli};
+
 	template<typename T>
 	struct RandomBase_t {
 
