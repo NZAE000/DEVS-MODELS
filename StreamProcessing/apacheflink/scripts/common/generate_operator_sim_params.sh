@@ -14,12 +14,11 @@
 #
 # Service-time parameters are calculated only from intervals marked as:
 #   phase == STEADY
-#   regime == UNSATURATED
 #   stable == true
 #   baseline_eligible == true
 #
-# For regular operators, the full mean service time is estimated from Flink's
-# accumulated busy time and the number of processElement invocations:
+# For all operators, including sources, the full mean service time is estimated
+# from Flink's accumulated busy time and the number of observed invocations:
 #
 #   busy_mean_ns = sum(delta_busy_ms) * 1e6 / sum(delta_observed)
 #
@@ -35,24 +34,14 @@
 #   sampled_stddev_ns = sqrt(sampled_variance_ns)
 #   sampled_cv        = sampled_stddev_ns / sampled_mean_ns
 #
-# The full operator standard deviation is scaled to the busy-time mean:
+# The full standard deviation is scaled to the busy-time mean:
 #
-#   operator_stddev_ns = sampled_cv * busy_mean_ns
-#
-# For sources, the full invocation time is estimated from sampled source
-# invocations and the source rate-wait time is removed:
-#
-#   estimated_invocation_time_ns =
-#       sum(delta_time_ns * delta_observed / delta_samples)
-#
-#   source_functional_time_ns =
-#       max(0, estimated_invocation_time_ns - source_rate_wait_time_ns)
-#
-#   source_mean_ns = source_functional_time_ns / sum(delta_observed)
-#   source_stddev_ns = sampled_cv * source_mean_ns
+#   full_stddev_ns = sampled_cv * busy_mean_ns
 #
 # Instrumented percentiles are scaled by the same mean ratio. This preserves
-# the observed relative shape while matching the complete service-time mean.
+# the observed relative shape while matching the complete busy-time mean.
+# Source rate-wait metrics are retained only as diagnostics and are not used
+# to define the source service-time mean.
 # extraoccupation.txt remains 1.0 for the P=1 base model.
 #
 # Nanoseconds are converted to picoseconds before writing operator.txt.
@@ -96,8 +85,9 @@ fi
 > "$OUTPUT_OCCUP_FILE"
 
 # Write default degradation factors.
-printf "%d %d %d %d %f\n" "0" "0" "0" "0" "1.0" >> "$OUTPUT_DEG_FILE"
+printf "%f %f %f %f %f\n" "1.0" "1.0" "1.0" "1.0" "1.0" >> "$OUTPUT_DEG_FILE"
 
+echo ""
 echo "[INFO] Generating operator parameters..."
 
 #######################################################################
@@ -256,7 +246,6 @@ def eligible_intervals(intervals: list[dict[str, Any]]) -> list[dict[str, Any]]:
         interval
         for interval in intervals
         if interval.get("phase") == "STEADY"
-        and interval.get("regime") == "UNSATURATED"
         and interval.get("stable") is True
         and interval.get("baseline_eligible") is True
     ]
@@ -416,6 +405,7 @@ def aggregate_operator(
     busy_mean_ns = None
     if busy_available and total_busy_ms > 0 and service_count is not None and service_count > 0:
         busy_mean_ns = total_busy_ms * 1_000_000.0 / service_count
+        print("total_busy_ms:", total_busy_ms, "busy_mean_ns:", busy_mean_ns, "service_count:", service_count, "total_records_in:", total_records_in)
 
     # Preserve the relative variability measured by the invocation timer, but
     # scale it to the complete mean demand represented by Flink busy time.
@@ -466,6 +456,8 @@ def aggregate_source(
     total_samples = 0.0
     total_time_ns = 0.0
     total_squared_time_ns = 0.0
+    total_busy_ms = 0.0
+    busy_available = False
     estimated_invocation_time_ns = 0.0
     total_rate_wait_time_ns = 0.0
     rate_wait_available = False
@@ -480,12 +472,17 @@ def aggregate_source(
 
             records_in = as_number(subtask.get("records_in_delta"))
             records_out = as_number(subtask.get("records_out_delta"))
+            busy_ms = as_number(subtask.get("busy_ms_delta"))
+
             if records_in is not None and records_in >= 0:
                 total_records_in += records_in
                 records_in_available = True
             if records_out is not None and records_out >= 0:
                 total_records_out += records_out
                 records_out_available = True
+            if busy_ms is not None and busy_ms >= 0:
+                total_busy_ms += busy_ms
+                busy_available = True
 
             # Source stability is already represented by the source-rate rules
             # used to mark the parent interval as baseline eligible. Requiring
@@ -546,18 +543,19 @@ def aggregate_source(
         if sampled_mean_ns > 0:
             sampled_cv = sampled_stddev_ns / sampled_mean_ns
 
-    functional_time_ns = None
+    # Use the same hybrid estimator as regular operators: the absolute mean
+    # comes from exact accumulated busy time, while the instrumented samples
+    # preserve the relative variability and distribution shape.
     source_mean_ns = None
+    if busy_available and total_busy_ms > 0 and total_observed > 0:
+        source_mean_ns = total_busy_ms * 1_000_000.0 / total_observed
+
     source_stddev_ns = None
     scaled_p95_ns = None
     scaled_p99_ns = None
-    if total_observed > 0 and estimated_invocation_time_ns > 0:
-        functional_time_ns = max(0.0, estimated_invocation_time_ns - total_rate_wait_time_ns)
-        source_mean_ns = functional_time_ns / total_observed
-
     raw_p95_ns = weighted_median(p95_values)
     raw_p99_ns = weighted_median(p99_values)
-    if source_mean_ns is not None and source_mean_ns > 0 and sampled_cv is not None:
+    if source_mean_ns is not None and sampled_cv is not None:
         source_stddev_ns = sampled_cv * source_mean_ns
         if sampled_mean_ns is not None and sampled_mean_ns > 0:
             scale_factor = source_mean_ns / sampled_mean_ns
@@ -569,6 +567,7 @@ def aggregate_source(
     return {
         "total_observed": total_observed if total_observed > 0 else None,
         "total_samples": total_samples,
+        "total_busy_ms": total_busy_ms if busy_available else None,
         "valid_service_entries": valid_service_entries,
         "records_in": total_records_in if records_in_available else None,
         "records_out": total_records_out if records_out_available else None,
@@ -578,7 +577,6 @@ def aggregate_source(
         "sampled_cv": sampled_cv,
         "estimated_invocation_time_ns": estimated_invocation_time_ns if estimated_invocation_time_ns > 0 else None,
         "source_rate_wait_time_ns": total_rate_wait_time_ns if rate_wait_available else 0.0,
-        "source_functional_time_ns": functional_time_ns,
         "source_mean_ns": source_mean_ns,
         "source_stddev_ns": source_stddev_ns,
         "p95_ns": scaled_p95_ns,
@@ -605,6 +603,11 @@ if not source_vertex_ids:
     }
 
 metadata, all_intervals = load_intervals()
+
+baseline_mode = str(metadata.get("baseline_mode", "capacity")).strip().lower()
+if baseline_mode not in {"capacity", "scalability"}:
+    abort(f"unsupported baseline mode in interval metadata: {baseline_mode!r}")
+
 baseline_intervals = eligible_intervals(all_intervals)
 
 if not baseline_intervals:
@@ -620,10 +623,12 @@ if not baseline_intervals:
     suffix = f" ({', '.join(details)})" if details else ""
     abort(
         "no baseline-eligible intervals were found. Operator service-time "
-        "parameters must be generated from a stable STEADY/UNSATURATED run "
-        f"that satisfies the configured arrival rate{suffix}."
+        "parameters must be generated from intervals accepted by "
+        "generate_metrics_intervals_from_snapshots.py for "
+        f"baseline_mode={baseline_mode!r}{suffix}."
     )
 
+print(f"[INFO] Baseline mode: {baseline_mode}")
 print(
     "[INFO] Using "
     f"{len(baseline_intervals)} baseline-eligible interval(s) "
@@ -661,7 +666,7 @@ with (
                 distribution = "fix"
                 arguments = [1.0]
                 print(
-                    "  -> no valid instrumented source mean could be estimated; "
+                    "  -> no valid source busy-time mean could be estimated; "
                     "using technical fallback fix 1 ps"
                 )
             elif source_stddev_ns is None or sampled_cv is None:
@@ -669,9 +674,9 @@ with (
                 distribution = "fix"
                 arguments = [mean_ps]
                 print(
-                    f"  -> source mean available without a valid instrumented CV: "
-                    f"observed={aggregate['total_observed']:.0f}, "
-                    f"samples={aggregate['total_samples']:.0f}, "
+                    f"  -> source busy-time mean available without a valid "
+                    f"instrumented CV: observed={aggregate['total_observed']:.0f}, "
+                    f"busy={aggregate['total_busy_ms']:.6f} ms, "
                     f"mean={mean_ps:.6f} ps, distribution=fix"
                 )
             else:
@@ -686,14 +691,13 @@ with (
                 sampled_mean_ps = float(aggregate["sampled_mean_ns"]) * NS_TO_PS
                 estimated_ns = aggregate["estimated_invocation_time_ns"]
                 rate_wait_ns = aggregate["source_rate_wait_time_ns"]
-                functional_ns = aggregate["source_functional_time_ns"]
                 print(
                     f"  -> source entries={aggregate['valid_service_entries']}, "
                     f"observed={aggregate['total_observed']:.0f}, "
                     f"samples={aggregate['total_samples']:.0f}, "
+                    f"busy={aggregate['total_busy_ms']:.6f} ms, "
                     f"estimated_invocation={estimated_ns:.3f} ns, "
                     f"rate_wait={rate_wait_ns:.3f} ns, "
-                    f"functional_time={functional_ns:.3f} ns, "
                     f"sampled_mean={sampled_mean_ps:.6f} ps, "
                     f"full_mean={mean_ps:.6f} ps, "
                     f"full_stddev={stddev_ps:.6f} ps, "
@@ -701,6 +705,7 @@ with (
                     f"distribution={distribution}"
                 )
         else:
+            print("name:", name)
             aggregate = aggregate_operator(operator, baseline_intervals)
             selectivity = float(aggregate["selectivity"])
             busy_mean_ns = aggregate["busy_mean_ns"]

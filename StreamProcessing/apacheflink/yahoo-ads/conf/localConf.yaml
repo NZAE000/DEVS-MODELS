@@ -9,16 +9,16 @@ zookeeper.port: 2181
 redis.host: "localhost"
 
 kafka.topic: "ad-events"
-kafka.partitions: 8
+kafka.partitions: 32
 
 process.hosts: 1
 process.cores: 1
 
-parallelism.source: 8
-parallelism.deserialize: 4
-parallelism.filter: 4
-parallelism.project: 4
-parallelism.redis-join: 16
-parallelism.campaign-processor: 8
+parallelism.source: 1
+parallelism.deserialize: 1
+parallelism.filter: 1
+parallelism.project: 1
+parallelism.redis-join: 1
+parallelism.campaign-processor: 1
 
 flink.buffer-timeout: 100

@@ -41,6 +41,7 @@ Expected location:
 Parameters:
     1. request_count: total number of workload requests/events.
     2. arrival_rate: configured arrival rate in records per second.
+    3. baseline_mode: optional extraction mode (capacity or scalability).
 
 Inputs:
     subtask/subtask_metrics_snapshots.json
@@ -113,7 +114,7 @@ MIN_DRAIN_CONFIRMATION_MS = 1_000
 NATIVE_COUNTERS = {
     "records_in": "numRecordsIn",
     "records_out": "numRecordsOut",
-    "busy_ms": "accumulateBusyTimeMs",
+    "busy_ms": "exactAccumulateBusyTimeMs",
     "idle_ms": "accumulateIdleTimeMs",
     "backpressure_ms": "accumulateBackPressuredTimeMs",
     "fired_timers": "numFiredTimers",
@@ -208,6 +209,13 @@ def positive_integer_argument(value: str, name: str) -> int:
         abort(f"{name} must be greater than zero: {value}")
 
     return number
+
+
+def baseline_mode_argument(value: str) -> str:
+    mode = value.strip().lower()
+    if mode not in {"capacity", "scalability"}:
+        abort("baseline_mode must be one of: 'capacity', 'scalability'")
+    return mode
 
 
 def to_float(value: Any) -> Optional[float]:
@@ -1194,6 +1202,7 @@ def apply_classification(
     steady_start: Optional[int],
     drain_start_index: Optional[int],
     configured_arrival_rate: int,
+    baseline_mode: str,
 ) -> None:
     all_parallelism_one = all(operator["parallelism"] == 1 for operator in topology)
 
@@ -1288,17 +1297,27 @@ def apply_classification(
             interval["regime"] = "UNKNOWN"
 
         rate_error = interval["source_rate_relative_error"]
-        interval["baseline_eligible"] = bool(
+        common_baseline_conditions = bool(
             all_parallelism_one
             and interval["phase"] == "STEADY"
             and interval["stable"]
-            and interval["regime"] == "UNSATURATED"
-            and configured_rate_satisfied
-            and max_backpressure is not None
-            and max_backpressure <= BASELINE_MAX_BACKPRESSURE_RATIO
-            and rate_error is not None
-            and rate_error <= SOURCE_RATE_RELATIVE_TOLERANCE
         )
+
+        if baseline_mode == "capacity":
+            interval["baseline_eligible"] = bool(
+                common_baseline_conditions
+                and interval["regime"] == "UNSATURATED"
+                and configured_rate_satisfied
+                and max_backpressure is not None
+                and max_backpressure <= BASELINE_MAX_BACKPRESSURE_RATIO
+                and rate_error is not None
+                and rate_error <= SOURCE_RATE_RELATIVE_TOLERANCE
+            )
+        else:
+            interval["baseline_eligible"] = bool(
+                common_baseline_conditions
+                and interval["regime"] == "SATURATED"
+            )
 
         for subtask in interval["subtasks"]:
             subtask["baseline_eligible"] = bool(
@@ -1313,6 +1332,7 @@ def classify(
     topology: list[dict[str, Any]],
     request_count: int,
     configured_arrival_rate: int,
+    baseline_mode: str,
 ) -> dict[str, Any]:
     warnings: list[str] = []
     source_ids = detect_source_vertices(topology)
@@ -1367,6 +1387,7 @@ def classify(
         steady_start,
         drain_start_index,
         configured_arrival_rate,
+        baseline_mode,
     )
 
     steady_start_timestamp = None
@@ -1422,6 +1443,7 @@ def classify(
     return {
         "configured_request_count": request_count,
         "configured_arrival_rate_records_per_second": configured_arrival_rate,
+        "baseline_mode": baseline_mode,
         "source_vertex_ids": source_ids,
         "source_reference_rate_records_per_second": rounded(reference_rate),
         "source_reference_capacity_ratio": rounded(reference_capacity_ratio),
@@ -1501,15 +1523,18 @@ def write_output(
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in {3, 4}:
         abort(
             f"usage: {Path(sys.argv[0]).name} "
-            "<request_count> <arrival_rate_records_per_second>"
+            "<request_count> <arrival_rate_records_per_second> [capacity|scalability]"
         )
 
     request_count = positive_integer_argument(sys.argv[1], "request_count")
     configured_arrival_rate = positive_integer_argument(
         sys.argv[2], "arrival_rate_records_per_second"
+    )
+    baseline_mode = (
+        baseline_mode_argument(sys.argv[3]) if len(sys.argv) == 4 else "capacity"
     )
 
     topology = load_topology()
@@ -1520,11 +1545,13 @@ def main() -> None:
         topology,
         request_count,
         configured_arrival_rate,
+        baseline_mode,
     )
     write_output(snapshots, intervals, classification)
 
     print(f"Generated intervals: {len(intervals)}")
     print(f"Configured requests: {request_count}")
+    print(f"Baseline mode: {classification['baseline_mode']}")
     print(
         "Configured arrival rate: "
         f"{configured_arrival_rate} records/s"

@@ -1,6 +1,8 @@
 #!/bin/bash
 
 CONFIG_FILE="scalability-experiments-nexmark.cfg"
+OUTPUT_FILE="scalability-result.txt"
+> $OUTPUT_FILE # clear
 
 # Check if the file exists
 if [[ ! -f "$CONFIG_FILE" ]]; then
@@ -22,8 +24,9 @@ while IFS=':' read -r key value; do
         nodes)      NODES="$value" ;;
         cores)      CORES="$value" ;;
         slots)      SLOTS="$value" ;;
-        workload)   WORKLOAD="$value" ;;
         p_levels)   P_LEVELS="$value" ;;
+        workload)   WORKLOAD="$value" ;;
+        snap_ims)   SNAP_IMS="$value" ;;
         prod_mod)   PROD_MOD="$value" ;;
         per_exec)   PER_EXEC="$value" ;;
         log)        LOG="$value" ;;
@@ -37,7 +40,9 @@ echo "Application : $APP"
 echo "Nodes       : $NODES"
 echo "Cores       : $CORES"
 echo "Slots       : $SLOTS"
+echo "P-Levels    : $P_LEVELS"
 echo "Workload    : $WORKLOAD"
+echo "Snap_ims    : $SNAP_IMS"
 echo "Prod Mod    : $PROD_MOD"
 echo "Per Exec    : $PER_EXEC"
 echo "Log         : $LOG"
@@ -55,15 +60,17 @@ IFS=',' read -ra PL_ARRAY <<< "$P_LEVELS"
 
 
 # Before, execute real app and generate simulation parameters
-(
-    cd apacheflink/scripts/nexmark || exit 1
-    bash execute_and_gen_sim_params.sh \
-        "$APP" \
-        "$SLOTS" \
-        "1" \
-        "$REQS" \
-        "$RATE"
-)
+#(
+#    cd apacheflink/scripts/nexmark || exit 1
+#    bash execute_and_gen_sim_params.sh \
+#        "$APP" \
+#        "$SLOTS" \
+#        "1" \
+#        "$REQS" \
+#        "$RATE" \
+#        "$SNAP_IMS" \
+#        scalability
+#)
 
 for pl in "${PL_ARRAY[@]}"; do
     pl=$(echo "$pl" | xargs)  # trim spaces
@@ -88,8 +95,8 @@ for pl in "${PL_ARRAY[@]}"; do
         "$PROD_MOD" \
         "$PER_EXEC" \
         "$LOG" \
-        "$LOG_MOD"\
-        "$PRINT_LOG"
+        "$LOG_MOD" \
+        "$PRINT_LOG" >> $OUTPUT_FILE
 
     if [[ $? -ne 0 ]]; then
         echo "Error running simulation for workload $wl"
@@ -97,6 +104,26 @@ for pl in "${PL_ARRAY[@]}"; do
     fi
 
 done
+
+# Clean compilation/build output and ANSI escape sequences from output results.
+TEMP_FILE=$(mktemp)
+
+awk '
+{
+    # Remove ANSI escape sequences
+    gsub(/\033\[[0-9;]*[[:alpha:]]/, "")
+
+    # Ignore build/compilation commands
+    if ($0 ~ /^[[:space:]]*rm[[:space:]]/)      next
+    if ($0 ~ /^[[:space:]]*clang\+\+/)          next
+    if ($0 ~ /^[[:space:]]*ar[[:space:]]/)      next
+    if ($0 ~ /^[[:space:]]*ranlib[[:space:]]/)  next
+
+    print
+}
+' "$OUTPUT_FILE" > "$TEMP_FILE"
+
+mv "$TEMP_FILE" "$OUTPUT_FILE"
 
 echo
 echo "Scalability experiments finished."

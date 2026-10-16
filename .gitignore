@@ -6,6 +6,7 @@ StreamProcessing/distribution_test/lognorm_test
 StreamProcessing/distribution_test/uniform_test
 StreamProcessing/apacheflink/flink-2.2.0
 StreamProcessing/apacheflink/flink-2.2.0-instrumented
+StreamProcessing/apacheflink/flink-2.3.0
 StreamProcessing/apacheflink/kafka_2.12-2.4.1
 StreamProcessing/apacheflink/redis-6.0.5
 StreamProcessing/apacheflink/nexmark

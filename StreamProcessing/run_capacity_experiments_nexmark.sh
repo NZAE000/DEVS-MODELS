@@ -22,8 +22,9 @@ while IFS=':' read -r key value; do
         nodes)      NODES="$value" ;;
         cores)      CORES="$value" ;;
         slots)      SLOTS="$value" ;;
-        workloads)  WORKLOADS="$value" ;;
         p_level)    P_LEVEL="$value" ;;
+        workloads)  WORKLOADS="$value" ;;
+        snap_ims)   SNAP_IMS="$value" ;;
         prod_mod)   PROD_MOD="$value" ;;
         per_exec)   PER_EXEC="$value" ;;
         log)        LOG="$value" ;;
@@ -38,6 +39,8 @@ echo "Nodes       : $NODES"
 echo "Cores       : $CORES"
 echo "Slots       : $SLOTS"
 echo "P-Level     : $P_LEVEL"
+echo "Workloads   : $WORKLOADS"
+echo "Snap_ims    : $SNAP_IMS"
 echo "Prod Mod    : $PROD_MOD"
 echo "Per Exec    : $PER_EXEC"
 echo "Log         : $LOG"
@@ -68,7 +71,8 @@ for wl in "${WL_ARRAY[@]}"; do
             "$SLOTS" \
             "$P_LEVEL" \
             "$REQS" \
-            "$RATE"
+            "$RATE" \
+            "$SNAP_IMS"
     )
 
     if [[ $? -ne 0 ]]; then

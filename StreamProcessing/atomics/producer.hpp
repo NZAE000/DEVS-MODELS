@@ -196,7 +196,7 @@ public:
                 this->current_mssg_ = 0; // Set to zero to notify the master node that these are not requirements.
                 return;
             }
-            #if LOG_MOD == 0
+            #if LOG_MOD
                 captureMetrics();
             #endif
             current_workload_ = next_workload_; // Pass to next rate.
@@ -260,9 +260,9 @@ private:
         if (this->current_time_ >= this->time_to_capture_) // Capture?
         {
             ClusterConfig_t::operId_t source_oper_id = this->metricLogger_.getClusterCFG().begin_op_;
-            uint32_t sent_rec_accum                  = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].sent_records_accum_;
+            uint32_t recs_out_accum                  = this->metricLogger_.getClusterCFG().operProps_[source_oper_id].records_out_accum_;
 
-            metricLogger_.captureMetrics(to_second(this->current_time_), sent_rec_accum);
+            metricLogger_.captureMetrics(to_second(this->current_time_), recs_out_accum);
             this->time_to_capture_ += this->step_time_;
         }
     }

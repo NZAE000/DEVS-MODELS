@@ -47,6 +47,29 @@ declare -A ACCUM_BUSY_MAP
 CURRENT_REQS=-1
 
 ########################################################
+# Function to extract aggregated metric value
+########################################################
+get_metric_value() {
+    local opername="$1"
+    local metric="$2"
+    local aggregation="$3"
+
+    bash "$DIR_BASE/../common/get_subtask_metrics_acc.sh" "$opername" "$metric" "$aggregation" |
+        awk -v metric="$metric" '
+            $1 == metric {
+                print $NF
+                found = 1
+                exit
+            }
+
+            END {
+                if (!found)
+                    print "0"
+            }
+        '
+}
+
+########################################################
 # Config
 ########################################################
 bash $DIR_BASE/../common/update_flink_cfg.sh "$TASKSLOTS" "$PARALLELISM"
@@ -56,7 +79,7 @@ bash $DIR_BASE/update_nexmark_cfg.sh "$EVENTS" "$TPS"
 # Reset cluster
 ########################################################
 bash $DIR_BASE/shutdown_and_stop.sh
-bash $DIR_BASE/start_and_setup_cluster.sh
+bash $DIR_BASE/start_and_setup.sh
 
 ########################################################
 # execute query in background
@@ -120,10 +143,9 @@ do
     ACCUM_TIME=$(echo "scale=6; $ACCUM_TIME_MS / 1000.0" | bc -l)
 
     ####################################################
-    # Total requeriments
+    # Total requirements
     ####################################################
-    total_req=$(bash $DIR_BASE/../common/get_suboperator_accum_metric.sh source numRecordsOut sum)
-    total_req=${total_req:-0}
+    total_req=$(get_metric_value "source" "numRecordsOut" "sum")
     total_req=$(awk -v x="$total_req" 'BEGIN { printf "%.0f", x + 0 }')
 
     ####################################################
@@ -134,45 +156,45 @@ do
         THROUGHPUT=$(echo "scale=6; $total_req / $ACCUM_TIME" | bc -l)
         THROUGHPUT_LIST+=("${ACCUM_TIME},${THROUGHPUT}")
     fi
-    
 
     ####################################################
-    # Operator Utilizations: calculate if accumbusy change
+    # Calculate operator Utilization
     ####################################################
     for opername in "${OPERATORS[@]}"
     do
-        BUSY_TIME_MS=$(bash $DIR_BASE/../common/get_suboperator_accum_metric.sh "$opername" accumulateBusyTimeMs avg)
+        BUSY_TIME_MS=$(get_metric_value "$opername" "exactAccumulateBusyTimeMs" "avg")
         BUSY_TIME=$(echo "$BUSY_TIME_MS / 1000.0" | bc -l)
         UTILIZATION=$(echo "scale=8; $BUSY_TIME / $ACCUM_TIME" | bc -l)
+
         UTILIZATION_MAP["$opername"]+="${UTILIZATION} "
     done
 
     ####################################################
     # CPU Utilization
     ####################################################
-    mpstat -P ALL > "$CPU_LOG"
-    cpu_sum=0
-    cpu_count=0
-
-    while read -r line
-    do
-        cpu=$(echo "$line" | awk '{print $2}')
-        if [[ "$cpu" =~ ^[0-9]+$ ]]; then
-
-            idle=$(echo "$line" | awk '{print $NF}')
-            util=$(echo "100 - $idle" | bc -l)
-            cpu_sum=$(echo "$cpu_sum + $util" | bc -l)
-            cpu_count=$((cpu_count + 1))
-        fi
-
-    done < "$CPU_LOG"
-
-    CPU_UTIL=$(echo "scale=6; $cpu_sum / $cpu_count" | bc -l)
-    CPU_UTIL_LIST+=("${ACCUM_TIME},${CPU_UTIL}")
+    #mpstat -P ALL > "$CPU_LOG"
+    #cpu_sum=0
+    #cpu_count=0
+#
+    #while read -r line
+    #do
+    #    cpu=$(echo "$line" | awk '{print $2}')
+    #    if [[ "$cpu" =~ ^[0-9]+$ ]]; then
+#
+    #        idle=$(echo "$line" | awk '{print $NF}')
+    #        util=$(echo "100 - $idle" | bc -l)
+    #        cpu_sum=$(echo "$cpu_sum + $util" | bc -l)
+    #        cpu_count=$((cpu_count + 1))
+    #    fi
+#
+    #done < "$CPU_LOG"
+#
+    #CPU_UTIL=$(echo "scale=6; $cpu_sum / $cpu_count" | bc -l)
+    #CPU_UTIL_LIST+=("${ACCUM_TIME},${CPU_UTIL}")
     ####################################################
 done
 
-rm "$CPU_LOG"
+#rm "$CPU_LOG"
 
 ########################################################
 # Wait for the process to finish
@@ -186,18 +208,18 @@ printf "%s " "${THROUGHPUT_LIST[@]}" >> "$THROUGHPUT_OUTFILE"
 echo "" >> "$THROUGHPUT_OUTFILE"
 
 ########################################################
-# Write CPU
-########################################################
-printf "%s " "${CPU_UTIL_LIST[@]}" >> "$CPU_UTIL_OUTFILE"
-echo "" >> "$CPU_UTIL_OUTFILE"
-
-########################################################
 # Write utilizacions
 ########################################################
 for op in "${OPERATORS[@]}"
 do
     echo "${op}:[${UTILIZATION_MAP[$op]}]" >> "$UTILIZATION_OUTFILE"
 done
+
+########################################################
+# Write CPU
+########################################################
+#printf "%s " "${CPU_UTIL_LIST[@]}" >> "$CPU_UTIL_OUTFILE"
+#echo "" >> "$CPU_UTIL_OUTFILE"
 
 echo "Dynamic metrics successfully. Written to:"
 echo "'$THROUGHPUT_OUTFILE'"

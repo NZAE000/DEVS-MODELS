@@ -26,6 +26,8 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$SCRIPT_DIR}"
 SERVICES_ROOT="${SERVICES_ROOT:-$(cd "$PROJECT_ROOT/.." && pwd)}"
+COMMON_DIR="$SERVICES_ROOT/scripts/common"
+readonly COMMON_DIR
 
 BENCHMARK_JAVA_HOME="${BENCHMARK_JAVA_HOME:-${JAVA_HOME:-}}"
 if [[ -n "$BENCHMARK_JAVA_HOME" ]]; then
@@ -72,6 +74,25 @@ CONF_FILE="${CONF_FILE:-$PROJECT_ROOT/conf/localConf.yaml}"
 BENCHMARK_CONF_FILE="${BENCHMARK_CONF_FILE:-$PROJECT_ROOT/conf/benchmarkConf.yaml}"
 WORKLOADS_FILE="${WORKLOADS_FILE:-$PROJECT_ROOT/conf/workloadbyreq.txt}"
 DRAIN_SECONDS="${DRAIN_SECONDS:-30}"
+FLINK_REST_URL="${FLINK_REST_URL:-http://localhost:8081}"
+DRAIN_POLL_SECONDS="${DRAIN_POLL_SECONDS:-1}"
+DRAIN_STABLE_POLLS="${DRAIN_STABLE_POLLS:-5}"
+DRAIN_TIMEOUT_SECONDS="${DRAIN_TIMEOUT_SECONDS:-900}"
+SAVEPOINT_DIR="${SAVEPOINT_DIR:-/tmp/yahoo-flink-savepoints}"
+
+MAX_SPEED="${MAX_SPEED:-false}"
+FIXED_PAYLOAD="${FIXED_PAYLOAD:-false}"
+PAYLOAD_POOL="${PAYLOAD_POOL:-true}"
+PAYLOAD_POOL_SIZE="${PAYLOAD_POOL_SIZE:-65536}"
+
+if [[ "${FIXED_PAYLOAD,,}" == "true" &&
+      "${PAYLOAD_POOL,,}" == "true" ]]; then
+    die "FIXED_PAYLOAD and PAYLOAD_POOL cannot both be enabled"
+fi
+
+if ! [[ "$PAYLOAD_POOL_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+    die "PAYLOAD_POOL_SIZE must be a positive integer: $PAYLOAD_POOL_SIZE"
+fi
 
 ###############################################################################
 # Benchmark configuration
@@ -548,6 +569,366 @@ stop_flink_processing() {
     sleep 3
 }
 
+get_yahoo_job_id() {
+    [[ -f "$RUN_DIR/flink-job.id" ]] ||
+        die "Flink job ID file not found"
+
+    local job_id
+    job_id="$(<"$RUN_DIR/flink-job.id")"
+
+    [[ -n "$job_id" ]] ||
+        die "Empty Flink job ID"
+
+    printf '%s\n' "$job_id"
+}
+
+get_acc_metric_sum() {
+    local job_id=$1
+    local subtask_name=$2
+    local metric_name=$3
+
+    local response="[]"
+    local value=""
+    local attempt
+
+    local -r max_attempts=10
+    local -r retry_sleep=0.5
+
+    for ((attempt = 1; attempt <= max_attempts; attempt++))
+    do
+        response="$(
+            JOB_ID_OVERRIDE="$job_id" \
+            RAW_OUTPUT=true \
+            bash "$COMMON_DIR/get_subtask_metrics_acc.sh" \
+                "$subtask_name" \
+                "$metric_name" \
+                "sum" \
+            2>/dev/null || printf '[]'
+        )"
+
+        value="$(
+            jq -r \
+                --arg metric "$metric_name" '
+                    [
+                        .[]
+                        | select(.id == $metric)
+                        | .sum
+                    ][0] // empty
+                ' <<< "$response" \
+            2>/dev/null || true
+        )"
+
+        if [[ -n "$value" && "$value" != "null" ]]; then
+            printf '%s\n' "$value"
+            return 0
+        fi
+
+        echo \
+            "[DEBUG] Metric $metric_name for $subtask_name unavailable " \
+            "(attempt $attempt/$max_attempts): $response" \
+            >&2
+
+        sleep "$retry_sleep"
+    done
+
+    echo \
+        "[ERROR] Metric '$metric_name' for '$subtask_name' unavailable after $max_attempts attempts" \
+        >&2
+
+    printf 'NA\n'
+}
+
+get_downstream_signature() {
+    local job_id=$1
+
+    local operator
+    local records_in
+    local records_out
+    local busy_ms
+
+    local -a operators=(
+        "deserialize"
+        "filterviews"
+        "projectevent"
+        "rediscampaignjoin"
+        "campaignprocessor"
+    )
+
+    for operator in "${operators[@]}"
+    do
+        records_in="$(
+            get_acc_metric_sum \
+                "$job_id" \
+                "$operator" \
+                "numRecordsIn"
+        )"
+
+        records_out="$(
+            get_acc_metric_sum \
+                "$job_id" \
+                "$operator" \
+                "numRecordsOut"
+        )"
+
+        busy_ms="$(
+            get_acc_metric_sum \
+                "$job_id" \
+                "$operator" \
+                "exactAccumulateBusyTimeMs"
+        )"
+
+        if [[ "$records_in" == "NA" ||
+              "$records_out" == "NA" ||
+              "$busy_ms" == "NA" ]]; then
+
+            echo \
+                "[WARN] Incomplete downstream metrics for $operator" \
+                >&2
+
+            return 1
+        fi
+
+        printf '%s|%s|%s|%s\n' \
+            "$operator" \
+            "$records_in" \
+            "$records_out" \
+            "$busy_ms"
+    done
+}
+
+wait_pipeline_drain() {
+    local job_id
+    job_id="$(get_yahoo_job_id)"
+
+    local expected_events
+    expected_events="$(get_expected_event_count)"
+
+    log "Waiting for pipeline drain"
+    log "Expected source records: $expected_events"
+    log "Drain stability requirement: $DRAIN_STABLE_POLLS poll(s)"
+
+    local start_wait
+    start_wait="$(date +%s)"
+
+    local source_records
+    local stable_polls=0
+
+    local previous_signature=""
+    local current_signature=""
+
+    local stable_candidate_ms=""
+
+    while true
+    do
+        local now
+        now="$(date +%s)"
+
+        if (( now - start_wait > DRAIN_TIMEOUT_SECONDS )); then
+            die \
+                "Pipeline drain timeout after ${DRAIN_TIMEOUT_SECONDS}s"
+        fi
+
+        #
+        # Job must remain RUNNING while we measure the drain.
+        #
+        local state
+        state="$(
+            curl -fsS \
+                "$FLINK_REST_URL/jobs/$job_id" |
+            jq -r '.state // empty'
+        )"
+
+        [[ "$state" == "RUNNING" ]] ||
+            die \
+                "Yahoo Flink job is no longer RUNNING: $state"
+
+        #
+        # Aggregate Kafka Source output across all source subtasks.
+        #
+        source_records="$(
+            get_acc_metric_sum \
+                "$job_id" \
+                "sourcekafkasource" \
+                "numRecordsOut"
+        )"
+
+        if [[ "$source_records" == "NA" ]]; then
+            die \
+                "Kafka Source numRecordsOut could not be retrieved after retries"
+        fi
+
+        source_records="$(
+            awk \
+                -v value="$source_records" \
+                'BEGIN { printf "%.0f", value }'
+        )"
+
+        log \
+            "Drain check: source=$source_records/$expected_events stable=$stable_polls/$DRAIN_STABLE_POLLS"
+
+        #
+        # Kafka Source has not emitted all expected records yet.
+        #
+        if (( source_records < expected_events )); then
+            stable_polls=0
+            previous_signature=""
+
+            sleep "$DRAIN_POLL_SECONDS"
+            continue
+        fi
+
+        #
+        # This would indicate contamination of the Kafka topic or another
+        # producer writing into it.
+        #
+        if (( source_records > expected_events )); then
+            die \
+                "Kafka Source consumed more records than expected: $source_records > $expected_events"
+        fi
+
+        #
+        # All expected records have crossed Kafka Source.
+        # Now detect downstream quiescence.
+        #
+        if ! current_signature="$(
+            get_downstream_signature "$job_id"
+        )"; then
+            log \
+                "Downstream metrics temporarily unavailable; retrying"
+
+            stable_polls=0
+            previous_signature=""
+
+            sleep "$DRAIN_POLL_SECONDS"
+            continue
+        fi
+
+        if [[ -n "$previous_signature" &&
+            "$current_signature" == "$previous_signature" ]]; then
+
+            stable_polls=$((stable_polls + 1))
+
+        else
+            #
+            # A new downstream state was observed.
+            # This timestamp becomes the candidate drain completion time.
+            #
+            stable_polls=0
+            stable_candidate_ms="$(date +%s%3N)"
+        fi
+
+        previous_signature="$current_signature"
+
+        log \
+            "Downstream stability: $stable_polls/$DRAIN_STABLE_POLLS"
+
+        if (( stable_polls >= DRAIN_STABLE_POLLS )); then
+            #
+            # The current signature has now been confirmed stable.
+            # Use the timestamp at which this final signature was first observed,
+            # not the later confirmation timestamp.
+            #
+            PIPELINE_DRAINED_MS="$stable_candidate_ms"
+            export PIPELINE_DRAINED_MS
+
+            printf '%s\n' \
+                "$PIPELINE_DRAINED_MS" \
+                >"$RUN_DIR/pipeline-drained.ms"
+
+            local confirmation_ms
+            confirmation_ms="$(date +%s%3N)"
+
+            log \
+                "Pipeline drain confirmed at $confirmation_ms ms"
+
+            log \
+                "Estimated pipeline completion at $PIPELINE_DRAINED_MS ms"
+
+            break
+        fi
+
+        sleep "$DRAIN_POLL_SECONDS"
+    done
+}
+
+write_dynamic_experiment_summary() {
+    local stage_file="$PROJECT_ROOT/data/dynamic-load-stages.tsv"
+
+    [[ -f "$stage_file" ]] ||
+        die "Dynamic stage file not found: $stage_file"
+
+    [[ -f "$RUN_DIR/pipeline-drained.ms" ]] ||
+        die "Pipeline drain timestamp not found"
+
+    local experiment_start_ms
+    experiment_start_ms="$(
+        awk -F'\t' '
+            NR == 2 {
+                print $4
+                exit
+            }
+        ' "$stage_file"
+    )"
+
+    local emission_end_ms
+    emission_end_ms="$(
+        awk -F'\t' '
+            NR > 1 {
+                value = $5
+            }
+
+            END {
+                print value
+            }
+        ' "$stage_file"
+    )"
+
+    local pipeline_end_ms
+    pipeline_end_ms="$(<"$RUN_DIR/pipeline-drained.ms")"
+
+    local total_events
+    total_events="$(get_expected_event_count)"
+
+    local finish_time
+    finish_time="$(
+        awk \
+            -v start="$experiment_start_ms" \
+            -v end="$pipeline_end_ms" \
+            'BEGIN {
+                printf "%.6f", (end - start) / 1000.0
+            }'
+    )"
+
+    local throughput
+    throughput="$(
+        awk \
+            -v events="$total_events" \
+            -v time="$finish_time" \
+            'BEGIN {
+                printf "%.6f", events / time
+            }'
+    )"
+
+    local drain_time
+    drain_time="$(
+        awk \
+            -v producer="$emission_end_ms" \
+            -v end="$pipeline_end_ms" \
+            'BEGIN {
+                printf "%.6f", (end - producer) / 1000.0
+            }'
+    )"
+
+    cat >"$RUN_DIR/dynamic-experiment-summary.tsv" <<EOF
+requests	start_ms	emission_end_ms	pipeline_end_ms	finish_time_s	drain_time_s	throughput
+$total_events	$experiment_start_ms	$emission_end_ms	$pipeline_end_ms	$finish_time	$drain_time	$throughput
+EOF
+
+    log "Experimental finish time: $finish_time s"
+    log "Experimental throughput: $throughput event(s)/s"
+    log "Observed drain time: $drain_time s"
+}
+
 validate_workloads_file() {
     [[ -f "$WORKLOADS_FILE" ]] ||
         die "Dynamic workloads file not found: $WORKLOADS_FILE"
@@ -588,6 +969,27 @@ validate_workloads_file() {
         die "Invalid workloads file: $WORKLOADS_FILE"
 }
 
+get_expected_event_count() {
+    awk '
+        {
+            line = $0
+            sub(/#.*/, "", line)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+
+            if (line == "") {
+                next
+            }
+
+            split(line, fields, /[[:space:]]+/)
+            total += fields[1]
+        }
+
+        END {
+            printf "%.0f\n", total
+        }
+    ' "$WORKLOADS_FILE"
+}
+
 start_dynamic_load() {
     [[ -f "$CONF_FILE" ]] ||
         die "Configuration file not found: $CONF_FILE"
@@ -609,14 +1011,58 @@ start_dynamic_load() {
     rm -f "$LOG_DIR/load-generator.log"
 
     log "Starting dynamic load from: $WORKLOADS_FILE"
+    log "MAX_SPEED=$MAX_SPEED"
+    log "FIXED_PAYLOAD=$FIXED_PAYLOAD"
+    log "PAYLOAD_POOL=$PAYLOAD_POOL"
+    log "PAYLOAD_POOL_SIZE=$PAYLOAD_POOL_SIZE"
+
+    local -a load_args=(
+        -r
+        --dynamic-workloads "$WORKLOADS_FILE"
+        --configPath "$CONF_FILE"
+    )
+
+    case "${MAX_SPEED,,}" in
+        true|1|yes|on)
+            load_args+=(--max-speed)
+            ;;
+        false|0|no|off)
+            ;;
+        *)
+            die "MAX_SPEED must be true or false: $MAX_SPEED"
+            ;;
+    esac
+
+    case "${FIXED_PAYLOAD,,}" in
+        true|1|yes|on)
+            load_args+=(--fixed-payload)
+            ;;
+        false|0|no|off)
+            ;;
+        *)
+            die "FIXED_PAYLOAD must be true or false: $FIXED_PAYLOAD"
+            ;;
+    esac
+
+    case "${PAYLOAD_POOL,,}" in
+        true|1|yes|on)
+            load_args+=(
+                --payload-pool
+                --payload-pool-size "$PAYLOAD_POOL_SIZE"
+            )
+            ;;
+        false|0|no|off)
+            ;;
+        *)
+            die "PAYLOAD_POOL must be true or false: $PAYLOAD_POOL"
+            ;;
+    esac
 
     (
         cd "$PROJECT_ROOT/data"
 
         nohup "$LEIN" run \
-            -r \
-            --dynamic-workloads "$WORKLOADS_FILE" \
-            --configPath "$CONF_FILE" \
+            "${load_args[@]}" \
             >"$LOG_DIR/load-generator.log" 2>&1 &
 
         echo $! >"$RUN_DIR/load-generator.pid"
@@ -668,15 +1114,89 @@ generate_stats() {
     )
 }
 
+cleanup_yahoo_savepoints() {
+    if [[ ! -d "$SAVEPOINT_DIR" ]]; then
+        return
+    fi
+
+    log "Removing temporary Yahoo savepoints from $SAVEPOINT_DIR"
+
+    find "$SAVEPOINT_DIR" \
+        -mindepth 1 \
+        -maxdepth 1 \
+        -type d \
+        -name 'savepoint-*' \
+        -exec rm -rf {} +
+}
+
+stop_flink_processing_gracefully() {
+    local job_id
+    job_id="$(get_yahoo_job_id)"
+
+    mkdir -p "$SAVEPOINT_DIR"
+
+    log "Gracefully stopping Flink job $job_id with drain"
+
+    "$FLINK_HOME/bin/flink" stop \
+        --drain \
+        --savepointPath "$SAVEPOINT_DIR" \
+        "$job_id"
+
+    local state=""
+
+    while true
+    do
+        state="$(
+            curl -fsS \
+                "$FLINK_REST_URL/jobs/$job_id" |
+            jq -r '.state // empty'
+        )"
+
+        log "Flink job state: $state"
+
+        case "$state" in
+            FINISHED)
+                break
+                ;;
+
+            FAILED|CANCELED|SUSPENDED)
+                die \
+                    "Graceful Flink stop terminated with unexpected state: $state"
+                ;;
+
+            *)
+                sleep 1
+                ;;
+        esac
+    done
+
+    rm -f "$RUN_DIR/flink-job.id"
+
+    cleanup_yahoo_savepoints
+
+    log "Flink job finished gracefully"
+}
+
 run_dynamic_experiment() {
+    rm -f \
+        "$RUN_DIR/pipeline-drained.ms" \
+        "$RUN_DIR/dynamic-experiment-summary.tsv"
+
     start_dynamic_load
     wait_dynamic_load
 
-    log "Producer completed; waiting $DRAIN_SECONDS second(s) for pipeline drain"
-    sleep "$DRAIN_SECONDS"
+    log "Producer completed; waiting for actual pipeline drain"
+
+    wait_pipeline_drain
+    write_dynamic_experiment_summary
+
+    #
+    # HERE we will capture the complete terminal metrics.
+    # The job is still RUNNING, but we know it has already been drained.
+    #
 
     generate_stats
-    stop_flink_processing
+    stop_flink_processing_gracefully
 
     log "Dynamic experiment completed"
 }
@@ -838,6 +1358,7 @@ Frequently used environment variables:
   REDIS_HOME=$REDIS_HOME
   WORKLOADS_FILE=$WORKLOADS_FILE
   DRAIN_SECONDS=$DRAIN_SECONDS
+  MAX_SPEED=$MAX_SPEED
   PARALLELISM_SOURCE=$PARALLELISM_SOURCE
   PARALLELISM_DESERIALIZE=$PARALLELISM_DESERIALIZE
   PARALLELISM_FILTER=$PARALLELISM_FILTER

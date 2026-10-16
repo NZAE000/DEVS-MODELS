@@ -1,0 +1,13 @@
+rm -f bin/* build/*
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . test/system/main.cpp -o build/main_top.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . util/random.cpp -o build/random.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . data_structures/operatorlocation.cpp -o build/operatorlocation.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . data_structures/message.cpp -o build/message.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . data_structures/flink/jobmanager.cpp -o build/jobmanager.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . data_structures/flink/resourcemanager.cpp -o build/resourcemanager.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . data_structures/flink/jobmaster.cpp -o build/jobmaster.o
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 -std=c++23 -O3 -c -I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include -I . data_structures/flink/taskmanager.cpp -o build/taskmanager.o
+ar -crs build/libflink.a  build/jobmanager.o build/resourcemanager.o build/jobmaster.o build/taskmanager.o
+ranlib build/libflink.a
+clang++ -DN_NODES=1 -DN_CORES=32 -DPARALLELISM_L=32 -DPROD_MOD=0 -DAPPLY_LOG=0 -DLOG_MOD=0 -DPRINT_LOG=1 build/main_top.o build/random.o build/operatorlocation.o build/message.o build/libflink.a -o bin/STREAM_PROCESSING 
+Run 1 / 1

@@ -1,0 +1,11 @@
+sourcedatagen1:0.999982;calc2:0.478483;watermarkassigner3:0.328148;minibatchassigner4:0.445838;calc7:0.226995;calc5:0.213746;join9:0.024718;calc10:0.00210242;nexmarkq311writer:0.000777955;
+sourcedatagen1:0.999923;calc2:0.478179;watermarkassigner3:0.32819;minibatchassigner4:0.445756;calc7:0.226992;calc5:0.213675;join9:0.024683;calc10:0.00210094;nexmarkq311writer:0.00077517;
+sourcedatagen1:0.999989;calc2:0.478197;watermarkassigner3:0.328121;minibatchassigner4:0.445854;calc7:0.226959;calc5:0.213751;join9:0.0247315;calc10:0.0021;nexmarkq311writer:0.000775284;
+sourcedatagen1:0.999993;calc2:0.477989;watermarkassigner3:0.327938;minibatchassigner4:0.445579;calc7:0.227005;calc5:0.213757;join9:0.0246114;calc10:0.00209965;nexmarkq311writer:0.000776391;
+sourcedatagen1:0.99997;calc2:0.478117;watermarkassigner3:0.32824;minibatchassigner4:0.445994;calc7:0.227043;calc5:0.213731;join9:0.0247092;calc10:0.00209902;nexmarkq311writer:0.000777021;
+sourcedatagen1:0.999999;calc2:0.478055;watermarkassigner3:0.328025;minibatchassigner4:0.445856;calc7:0.22695;calc5:0.21358;join9:0.0247438;calc10:0.00208905;nexmarkq311writer:0.000775301;
+sourcedatagen1:0.999922;calc2:0.478137;watermarkassigner3:0.328107;minibatchassigner4:0.445967;calc7:0.227078;calc5:0.213785;join9:0.0247167;calc10:0.00209752;nexmarkq311writer:0.000775881;
+sourcedatagen1:0.999981;calc2:0.47818;watermarkassigner3:0.32808;minibatchassigner4:0.446054;calc7:0.227088;calc5:0.213767;join9:0.0247041;calc10:0.00210116;nexmarkq311writer:0.000775812;
+sourcedatagen1:0.999997;calc2:0.478098;watermarkassigner3:0.328078;minibatchassigner4:0.445929;calc7:0.226969;calc5:0.213768;join9:0.024693;calc10:0.00210134;nexmarkq311writer:0.000776775;
+sourcedatagen1:0.999998;calc2:0.478218;watermarkassigner3:0.328088;minibatchassigner4:0.446327;calc7:0.226983;calc5:0.213699;join9:0.0247179;calc10:0.00209404;nexmarkq311writer:0.00077607;
+sourcedatagen1:0.999999;calc2:0.478123;watermarkassigner3:0.328131;minibatchassigner4:0.445955;calc7:0.227069;calc5:0.213756;join9:0.0247497;calc10:0.00209631;nexmarkq311writer:0.000775574;

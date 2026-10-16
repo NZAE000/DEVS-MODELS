@@ -4,6 +4,7 @@
 (ns setup.core
   (:import java.util.UUID)
   (:import java.io.FileNotFoundException)
+  (:import java.nio.charset.StandardCharsets)
   (:require [clj-kafka.new.producer :refer :all]
             [redis.core :as redis]
             [clojure.java.io :as io]
@@ -181,6 +182,111 @@
          "\", \"event_type\": \"" (rand-nth event-types)
          "\", \"event_time\": \"" (str time)
          "\", \"ip_address\": \"1.2.3.4\"}")))
+
+(defn make-payload-template
+  [ads user-ids page-ids]
+
+  (let [ad-types    ["banner" "modal" "sponsored-search" "mail" "mobile"]
+        event-types ["view" "click" "purchase"]
+
+        user-id      (rand-nth user-ids)
+        page-id      (rand-nth page-ids)
+        ad-id        (rand-nth ads)
+        ad-type      (rand-nth ad-types)
+        event-type   (rand-nth event-types)
+
+        prefix
+        (str
+          "{\"user_id\": \"" user-id
+          "\", \"page_id\": \"" page-id
+          "\", \"ad_id\": \"" ad-id
+          "\", \"ad_type\": \"" ad-type
+          "\", \"event_type\": \"" event-type
+          "\", \"event_time\": \"")
+
+        suffix
+        "\", \"ip_address\": \"1.2.3.4\"}"]
+
+    {:prefix
+     (.getBytes prefix StandardCharsets/UTF_8)
+
+     :suffix
+     (.getBytes suffix StandardCharsets/UTF_8)
+
+     :event-type
+     event-type}))
+
+(defn make-payload-pool
+  [pool-size ads user-ids page-ids]
+
+  (when (<= pool-size 0)
+    (throw
+      (IllegalArgumentException.
+        "payload-pool-size must be greater than zero")))
+
+  (println
+    "Generating payload template pool with"
+    pool-size
+    "entries")
+
+  (let [pool
+        (vec
+          (repeatedly
+            pool-size
+            #(make-payload-template
+               ads
+               user-ids
+               page-ids)))
+
+        event-counts
+        (frequencies
+          (map :event-type pool))]
+
+    (println
+      "Payload pool event types:"
+      "view ="     (get event-counts "view" 0)
+      "click ="    (get event-counts "click" 0)
+      "purchase =" (get event-counts "purchase" 0))
+
+    pool))
+
+(defn payload-from-template
+  [template event-time]
+
+  (let [prefix     ^bytes (:prefix template)
+        suffix     ^bytes (:suffix template)
+
+        time-bytes
+        (.getBytes
+          (Long/toString (long event-time))
+          StandardCharsets/UTF_8)
+
+        prefix-len (alength prefix)
+        time-len   (alength time-bytes)
+        suffix-len (alength suffix)
+
+        result
+        (byte-array
+          (+ prefix-len
+             time-len
+             suffix-len))]
+
+    (System/arraycopy
+      prefix 0
+      result 0
+      prefix-len)
+
+    (System/arraycopy
+      time-bytes 0
+      result prefix-len
+      time-len)
+
+    (System/arraycopy
+      suffix 0
+      result (+ prefix-len time-len)
+      suffix-len)
+
+    result))
   
 (defn parse-positive-long [text field line-number]
   (try
@@ -265,7 +371,7 @@
           (recur))))))
 
 (defn emit-workload!
-  [p stage-number requests rate with-skew? kafka-topic ads user-ids page-ids stage-log]
+  [p stage-number requests rate max-speed? fixed-payload payload-pool with-skew? kafka-topic ads user-ids page-ids stage-log]
 
   (println
     "Starting workload"
@@ -277,33 +383,59 @@
     "events/s")
 
   (let [start-ns   (System/nanoTime)
-        start-ms   (System/currentTimeMillis)
-        period-ns  (/ 1000000000.0 rate)]
+      start-ms   (System/currentTimeMillis)
+      period-ns  (/ 1000000000.0 rate)
+
+      pool-size
+      (if payload-pool
+        (count payload-pool)
+        0)]
 
     (doseq [index (range requests)]
-      (let [target-ns
-            (+ start-ns
-               (long (* index period-ns)))]
+        (let [target-ns
+              (+ start-ns
+                (long (* index period-ns)))]
 
-        (sleep-until! target-ns)
+          (when-not max-speed?
+            (sleep-until! target-ns))
 
-        (let [event-time
-              (+ start-ms
-                 (long
-                   (/ (* index 1000.0)
-                      rate)))]
+          (let [event-time
+                (+ start-ms
+                  (long
+                    (/ (* index 1000.0)
+                        rate)))
+
+                payload
+                (cond
+
+                  ;; Diagnostic mode.
+                  fixed-payload
+                  fixed-payload
+
+                  ;; Optimized real workload.
+                  payload-pool
+                  (payload-from-template
+                    (nth
+                      payload-pool
+                      (mod index pool-size))
+                    event-time)
+
+                  ;; Original implementation.
+                  :else
+                  (.getBytes
+                    (make-kafka-event-at
+                      event-time
+                      with-skew?
+                      ads
+                      user-ids
+                      page-ids)
+                    StandardCharsets/UTF_8))]
 
           (send
             p
             (record
               kafka-topic
-              (.getBytes
-                (make-kafka-event-at
-                  event-time
-                  with-skew?
-                  ads
-                  user-ids
-                  page-ids)))))))
+              payload)))))
 
     (let [end-ns       (System/nanoTime)
           end-ms       (System/currentTimeMillis)
@@ -334,17 +466,52 @@
         actual-rate
         "events/s"))))
 
-(defn run-dynamic [workloads-path with-skew? kafka-hosts kafka-topic redis-host]
+(defn run-dynamic [workloads-path max-speed? fixed-payload? payload-pool? payload-pool-size with-skew? kafka-hosts kafka-topic redis-host]
   (let [workloads (read-workloads workloads-path)
         ads       (gen-ads redis-host)
         page-ids  (vec (make-ids 100))
-        user-ids  (vec (make-ids 100))]
+        user-ids  (vec (make-ids 100))
+
+        fixed-payload
+        (when fixed-payload?
+          (.getBytes
+            (make-kafka-event-at
+              (System/currentTimeMillis)
+              false
+              ads
+              user-ids
+              page-ids)
+            StandardCharsets/UTF_8))
+
+        payload-pool
+        (when payload-pool?
+          (make-payload-pool
+            payload-pool-size
+            ads
+            user-ids
+            page-ids))]
 
     (println
       "Starting dynamic load with"
       (count workloads)
       "workload(s) from"
       workloads-path)
+    
+    (println
+      "Dynamic generator mode:"
+      (cond
+        fixed-payload?
+        "FIXED_PAYLOAD"
+
+        payload-pool?
+        (str "PAYLOAD_POOL(size=" payload-pool-size ")")
+
+        :else
+        "DYNAMIC_PAYLOAD")
+      "-"
+      (if max-speed?
+        "MAX_SPEED"
+        "RATE_CONTROLLED"))
 
     (with-open
       [p
@@ -371,6 +538,9 @@
           (inc index)
           (:requests workload)
           (:rate workload)
+          max-speed?
+          fixed-payload
+          payload-pool
           with-skew?
           kafka-topic
           ads
@@ -489,6 +659,12 @@
     :parse-fn #(Long/parseLong %)]
    ["-d" "--dynamic-workloads PATH" "Path to a file containing '<requests> <rate>' workloads."
     :parse-fn #(String/valueOf %)]
+   ["-m" "--max-speed" "Emit dynamic workload events as fast as possible, ignoring configured rate pacing."]
+   ["-f" "--fixed-payload" "Reuse one pre-generated Kafka payload for generator benchmarking."]
+   [nil "--payload-pool" "Reuse a pool of pre-generated event templates with dynamic event_time."]
+   [nil "--payload-pool-size COUNT" "Number of pre-generated event templates." 
+    :default 65536 
+    :parse-fn #(Long/parseLong %)]
    ["-w" "--with-skew" "Add minor skew and late tuples into the mix."]
    ["-g" "--get-stats" "Read through redis and collect stats on end-to-end latency and so forth for the real-time simulation."]
    ["-a" "--configPath PATH" "Path to config yaml file"
@@ -523,6 +699,10 @@
            (:dynamic-workloads options))
       (run-dynamic
         (:dynamic-workloads options)
+        (:max-speed options)
+        (:fixed-payload options)
+        (:payload-pool options)
+        (:payload-pool-size options)
         (:with-skew options)
         kafka-hosts
         kafka-topic

@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PARTITIONS="${1:-8}" \
+PARTITIONS="${1:-32}" \
 PARALLELISM_SOURCE="${2:-8}" \
 PARALLELISM_DESERIALIZE="${3:-4}" \
 PARALLELISM_FILTER="${4:-4}" \

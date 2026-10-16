@@ -57,8 +57,8 @@ namespace streamprcss {
 
         struct OperMetric_t {
             uint32_t     p_level_         {};
-            std::size_t  recv_records_    {};
-            std::size_t  sent_records_    {};
+            std::size_t  in_records_      {};
+            std::size_t  out_records_     {};
             double       accum_busy_time_ {};
             double       busy_time_       {};
             double       utilization_     {};
@@ -67,7 +67,7 @@ namespace streamprcss {
 
         explicit MetricLogger_t(ClusterConfig_t const&);
 
-        void captureMetrics(/*double rate, */TIME elapsed_t, std::size_t procss_req) noexcept;
+        void captureMetrics(/*double rate, */TIME elapsed_t, std::size_t out_recs) noexcept;
         void printMetrics()      const noexcept;
 
         #if LOG_MOD

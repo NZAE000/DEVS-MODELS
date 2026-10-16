@@ -4,19 +4,28 @@ set -Eeuo pipefail
 
 subtask_name=$1
 subtask_index=$2
-list_metric_names=$3
+list_metric_names=${3:-}
 
-## Get absolute path and locate.
-DIR_BASE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Get absolute path and locate.
+DIR_BASE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 cd "$DIR_BASE" || exit 1
 
 job_id=$(bash "$DIR_BASE/../common/get_job_id.sh")
 operator_id=$(bash "$DIR_BASE/../common/get_subtask_id.sh" "$subtask_name")
 
-encoded_metrics=$(
-    printf '%s' "$list_metric_names" |
-    jq -sRr @uri
-)
+metrics_endpoint="$job_id/vertices/$operator_id/subtasks/$subtask_index/metrics"
 
-bash "$DIR_BASE/../common/get_query.sh" \
-    "$job_id/vertices/$operator_id/subtasks/$subtask_index/metrics?get=$encoded_metrics"
+if [[ -z "$list_metric_names" ]]; then
+    # No metrics specified: show all available metrics.
+    bash "$DIR_BASE/../common/get_query.sh" \
+        "$metrics_endpoint"
+else
+    # Metrics specified: request only those metrics.
+    encoded_metrics=$(
+        printf '%s' "$list_metric_names" |
+        jq -sRr @uri
+    )
+
+    bash "$DIR_BASE/../common/get_query.sh" \
+        "$metrics_endpoint?get=$encoded_metrics"
+fi

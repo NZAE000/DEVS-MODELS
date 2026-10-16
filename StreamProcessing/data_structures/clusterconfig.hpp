@@ -42,10 +42,11 @@ struct OperatorProperties_t {
     std::vector<double>                     params_             {};
     std::string                             ship_strategy_      {};
     double                                  selectivity_        {};
-    uint32_t                                sent_records_accum_ {};
+    uint32_t                                records_in_accum_   {};
+    uint32_t                                records_out_accum_  {};
     double                                  busy_time_accum_    {};     // To calculate operator utilization.
     double                                  extra_occup_factor_ {};     // Extra internal occupation factor.
-    void (*accumBusyTime)(double& busy_time_accum, double time, double extra_occup_factor)  { nullptr }; // callback.
+    //void (*accumBusyTime)(double& busy_time_accum, double time, double extra_occup_factor)  { nullptr }; // callback.
 };
 
 struct ClusterConfig_t {
@@ -62,7 +63,7 @@ struct ClusterConfig_t {
         initDegradFactor(ConfigPath_t::degrad_path_);
         initExtraOccupFactors(ConfigPath_t::extraoccup_path_);
 
-        updateSourcePeriod();
+        //updateSourcePeriod();
     }
 
 // Data config
@@ -83,58 +84,67 @@ struct ClusterConfig_t {
     double getExecutionTime(operId_t const oper_id) const noexcept
     {   
         auto const& oper_prop = this->operProps_[oper_id];
+        //double fact = (oper_id == begin_op_)? SOURCE_PERIOD_ : 1.0;
 
-        if (oper_id == begin_op_) return oper_prop.random_time_.second->generate() * SOURCE_PERIOD_;
-        return oper_prop.random_time_.second->generate();
+        return oper_prop.random_time_.second->generate();// * fact;
     }
 
     void accumBusyTime(operId_t const operid, double time) noexcept
     {
         auto& oper_prop = operProps_[operid];
-        oper_prop.accumBusyTime(oper_prop.busy_time_accum_, time, oper_prop.extra_occup_factor_); // callback
-        //oper_prop.busy_time_accum_ += (time / 1000000000000) * oper_prop.extra_occup_factor_; //* ( 1 + lamda * (degradation_factor_ - 1) + beta * operprop.w_);//extrawork();
+        oper_prop.busy_time_accum_ += time * oper_prop.extra_occup_factor_ * 1e-12; // to second.
+        //oper_prop.accumBusyTime(oper_prop.busy_time_accum_, time, oper_prop.extra_occup_factor_); // callback
     }
 
-    void accumSentRecords(operId_t const operid, uint32_t n_rec) noexcept
+    void accumInRecords(operId_t const operid, uint32_t n_rec) noexcept
     {
         auto& operprop = operProps_[operid];
-        operprop.sent_records_accum_ += n_rec;
+        operprop.records_in_accum_ += n_rec;
+    }
+
+    void accumOutRecords(operId_t const operid, uint32_t n_rec) noexcept
+    {
+        auto& operprop = operProps_[operid];
+        operprop.records_out_accum_ += n_rec;
     }
 
     void nextWorkload() const noexcept
     {
         ++WLOAD_INDEX_;
-        this->updateSourcePeriod();
+        //this->updateSourcePeriod();
     }
 
 private:
-    std::map<std::string, operId_t> oper_ids_ {};
+    std::map<std::string, operId_t> oper_ids_ {}; // aux
 
-    void updateSourcePeriod() const noexcept
-    {   
-        OperatorProperties_t const& operprop { operProps_[begin_op_] };
-        uint32_t             const P         { operprop.replication_ };
-        #if PROD_MOD
-            SOURCE_PERIOD_ = P / (this->workloads_by_time_[WLOAD_INDEX_].second * getMeanServiceTime(operprop));
-        #else
-            SOURCE_PERIOD_ = P / (this->workloads_by_req_[WLOAD_INDEX_].second * getMeanServiceTime(operprop));
-            //std::cout<<"period: "<<SOURCE_PERIOD_<<'\n';
-            //std::cout<<"avg: "<<getMeanServiceTime(operprop)<<'\n';
-        #endif
-    }
+    //void updateSourcePeriod() const noexcept
+    //{   
+    //    OperatorProperties_t const& operprop { operProps_[begin_op_]        };
+    //    uint32_t             const P         { operprop.replication_        };
+    //    double               const s_m       { getMeanServiceTime(operprop) };
+    //    double               const max       { std::max(P / this->workloads_by_time_[WLOAD_INDEX_].second, s_m) };
+    //    
+    //    #if PROD_MOD
+    //        SOURCE_PERIOD_ = std::max(P / this->workloads_by_time_[WLOAD_INDEX_].second, s_m) / s_m;
+    //    #else
+    //        SOURCE_PERIOD_ = std::max(P / this->workloads_by_req_[WLOAD_INDEX_].second, s_m) / s_m;
+    //        //std::cout<<"period: "<<SOURCE_PERIOD_<<'\n';
+    //        //std::cout<<"avg: "<<getMeanServiceTime(operprop)<<'\n';
+    //    #endif
+    //}
 
-    static void accumBusyTimeSource(double& busytime_accum, double time, double extra_occup_factor)
-    {   
-        double time_with_pacing { time };
-        //std::cout<<"max: "<<time_with_pacing<<'\n';
-        //std::cout<<"period: "<<SOURCE_PERIOD_<<'\n';
-        accumBusyTime_impl(busytime_accum, time_with_pacing, extra_occup_factor);
-    }
-
-    static void accumBusyTime_impl(double& busytime_accum, double time, double extra_occup_factor)
-    {
-        busytime_accum += time * extra_occup_factor * 1e-12; // to second.
-    }
+    //static void accumBusyTimeSource(double& busytime_accum, double time, double extra_occup_factor)
+    //{   
+    //    //double time_with_pacing { time };
+    //    //std::cout<<"max: "<<time_with_pacing<<'\n';
+    //    //std::cout<<"period: "<<SOURCE_PERIOD_<<'\n';
+    //    accumBusyTime_impl(busytime_accum, time, extra_occup_factor);
+    //}
+//
+    //static void accumBusyTime_impl(double& busytime_accum, double time, double extra_occup_factor)
+    //{
+    //    busytime_accum += time * extra_occup_factor * 1e-12; // to second.
+    //}
 
     double getMeanServiceTime(OperatorProperties_t const& oper_prop) const
     {   
@@ -310,13 +320,19 @@ private:
 
     void initDegradFactor(std::string_view path) noexcept
     {
-        double cpuu_{}, u_thr_{}, alpha_{}, u_sat_{}, b_{0.05}, e_{};
-        std::ifstream file(path.data());
-        file >> cpuu_ >> u_thr_ >> alpha_ >> u_sat_ >> e_;
+        //double cpuu_{}, u_thr_{}, alpha_{}, u_sat_{}, b_{0.05}, e_{};
+        //std::ifstream file(path.data());
+        //file >> cpuu_ >> u_thr_ >> alpha_ >> u_sat_ >> e_;
+//
+        //double interferency_   { (1 + alpha_ * std::max(0.0, cpuu_ - u_thr_)) };
+        //double saturation_     { (1 + b_     * std::max(0.0, cpuu_ - u_sat_)) };
+        //double p_inefficiency_ { 1 / e_ };
+//
+        //degradation_factor_ = interferency_ * saturation_ * p_inefficiency_;
+        double cpuu_{}, interferency_{}, saturation_{}, p_inefficiency_{}, fdegrad_{};
 
-        double interferency_   { (1 + alpha_ * std::max(0.0, cpuu_ - u_thr_)) };
-        double saturation_     { (1 + b_     * std::max(0.0, cpuu_ - u_sat_)) };
-        double p_inefficiency_ { 1 / e_ };
+        std::ifstream file(path.data());
+        file >> cpuu_ >> interferency_ >> saturation_ >> p_inefficiency_ >> fdegrad_;
 
         degradation_factor_ = interferency_ * saturation_ * p_inefficiency_;
     }
@@ -336,10 +352,10 @@ private:
 
             operId_t op_id = this->oper_ids_.find(name)->second;
             operProps_[op_id].extra_occup_factor_ = extra_occ_factor;
-            operProps_[op_id].accumBusyTime = accumBusyTime_impl;
+            //operProps_[op_id].accumBusyTime = accumBusyTime_impl;
         }
 
-        operProps_[begin_op_].accumBusyTime = accumBusyTimeSource;
+        //operProps_[begin_op_].accumBusyTime = accumBusyTimeSource;
     }
 
     void initWorkloadByTime(std::string_view path) noexcept

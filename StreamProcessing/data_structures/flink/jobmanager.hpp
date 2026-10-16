@@ -36,7 +36,8 @@ namespace streamprcss {
         [[nodiscard]] double                        getExecutionTime(operId_t const)         const noexcept;
         [[nodiscard]] double                        getDegradationFactor()                   const noexcept;
                     void                            accumBusyTime(operId_t const, double)          noexcept;
-                    void                            accumSentRecords(operId_t const, uint32_t)     noexcept;
+                    void                            accumInRecords(operId_t const, uint32_t)       noexcept;
+                    void                            accumOutRecords(operId_t const, uint32_t)      noexcept;
 
     private:
 

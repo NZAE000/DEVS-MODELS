@@ -33,31 +33,31 @@ namespace streamprcss {
         }
 
     // Methods
-        [[nodiscard]] slotId_t                  reserveSlot(operId_t)                           noexcept;
-        TaskSlot_t const&                       getSlot(slotId_t)                         const noexcept;
-        TaskSlot_t&                             getSlot(slotId_t)                               noexcept;
-        std::vector<TaskSlot_t> const&          getSlots()                                const noexcept;
-        void                                    scheduleExec(mssgId_t, slotId_t, JobManager_t&) noexcept; 
-        void                                    checkQueuedExecution(slotId_t, JobManager_t&)   noexcept;
-        std::vector<ActiveSubtask_t*>&          getActiveExecutions()                           noexcept;
-        std::vector<slotId_t> const&            terminateActiveExecutions()                     noexcept;
-        std::size_t                             pendingExecutions()                       const noexcept;
-        std::size_t                             executing()                               const noexcept;
-        std::vector<ExecutionBuffer_t> const&   getExecutionBuffers()                     const noexcept 
+        [[nodiscard]] slotId_t                reserveSlot(operId_t)                           noexcept;
+        TaskSlot_t const&                     getSlot(slotId_t)                         const noexcept;
+        TaskSlot_t&                           getSlot(slotId_t)                               noexcept;
+        std::vector<TaskSlot_t> const&        getSlots()                                const noexcept;
+        void                                  scheduleExec(mssgId_t, slotId_t, JobManager_t&) noexcept; 
+        void                                  checkQueuedExecution(slotId_t, JobManager_t&)   noexcept;
+        std::vector<ActiveSubtask_t*>&        getActiveExecutions()                           noexcept;
+        std::vector<slotId_t> const&          terminateActiveExecutions()                     noexcept;
+        std::size_t                           pendingExecutions()                       const noexcept;
+        std::size_t                           executing()                               const noexcept;
+        std::vector<ExecutionBuffer_t> const& getExecutionBuffers()                     const noexcept 
         { return exec_buffers_; }
 
     private:
         void createSubTask(JobManager_t&, TaskSlot_t&, mssgId_t, slotId_t) noexcept;
 
-        std::vector<ExecutionBuffer_t>            exec_buffers_       {};           // Cores here!.
-        std::vector<TaskSlot_t>                   taskslots_          {};           // Slots here!. 
-        std::vector<ActiveSubtask_t*>             active_subtasks_    {};
-        std::vector<slotId_t>                     slots_used_         {};
-        coreId_t                                  n_cores_            { 1 };
-        slotId_t                                  next_slot_id_       { 0 };
-        std::size_t                               pending_execs_      { 0 };
-        inline static constexpr std::size_t       SUBTASKS_CAPACITY_  { 100000 };
-        inline static constexpr std::size_t       TASKSLOTS_CAPACITY_ { 1000   };
+        std::vector<ExecutionBuffer_t>      exec_buffers_       {};           // Cores here!.
+        std::vector<TaskSlot_t>             taskslots_          {};           // Slots here!. 
+        std::vector<ActiveSubtask_t*>       active_subtasks_    {};
+        std::vector<slotId_t>               slots_used_         {};
+        coreId_t                            n_cores_            { 1 };
+        slotId_t                            next_slot_id_       { 0 };
+        std::size_t                         pending_execs_      { 0 };
+        inline static constexpr std::size_t SUBTASKS_CAPACITY_  { 100000 };
+        inline static constexpr std::size_t TASKSLOTS_CAPACITY_ { 1000   };
     };
 
     } // namespace flink

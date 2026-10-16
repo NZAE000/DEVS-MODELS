@@ -22,7 +22,6 @@ namespace streamprcss {
             buffer_.reserve(TUPLES_CAPACITY);
         }
 
-    // Method 
         constexpr void pushTuple(mssgId_t mssg) noexcept 
         { 
             if (buffer_.size() == buffer_.capacity())

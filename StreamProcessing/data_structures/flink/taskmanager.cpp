@@ -76,6 +76,8 @@ namespace streamprcss {
 
         // Accumulate operator busy time (to sec).
         jobMan.accumBusyTime(operid, exec_lapse);
+        // Accumulate input record to proccess.
+        jobMan.accumInRecords(operid, 1);
         
         // Search core buffer with less congestion.
         ExecutionBuffer_t* less_loaded_buff { nullptr };
@@ -136,50 +138,6 @@ namespace streamprcss {
         slotId_t    slot_id_used {};
         std::size_t size         {this->active_subtasks_.size()};
 
-        //for (std::size_t i{}; i < size; ++i)
-        //{
-        //    // Subtract the shortest execution time from the active subtask.
-        //    ActiveSubtask_t* active_subtask = this->active_subtasks_[i];
-        //    Subtask_t* subtask              = active_subtask->subtask_;
-        //    subtask->lapse_                -= less_exec_time;
-        //    
-        //    if (subtask->lapse_ == t_zero) // Finished?
-        //    {
-        //        // Free slot.
-        //        //std::cout<<"drop:\n";
-        //        slot_id_used     = subtask->slot_id_;
-        //        TaskSlot_t& slot = getSlot(slot_id_used);
-        //        slot.setActive(false);
-        //        slot.setUsing(false);
-        //        this->slots_used_.emplace_back(slot_id_used);
-        //        
-        //        // Delete execution from priorities.
-        //        uint32_t idx_priority { active_subtask->idx_priority_ };
-        //        if (idx_priority != this->active_subtasks_.size() - 1)  // Isn't the end?, copy the end to current.
-        //        {  
-        //            this->active_subtasks_[idx_priority] = this->active_subtasks_.back();
-        //            this->active_subtasks_[idx_priority]->idx_priority_= idx_priority; // Update!
-        //        }
-        //        this->active_subtasks_.pop_back(); // And drop last.
-        //        --size; // Update!
-//
-        //        //buffer.erase(buffer.begin()); // Very slow !!
-        //        auto& buffer { this->exec_buffers_[active_subtask->core_id_] };
-        //        buffer.pop();
-        //        
-        //        // Is there queued execution?
-        //        if ( buffer.size() ) 
-        //        {
-        //            Subtask_t& subtask { buffer.front() };                                                  // Get priority.
-        //            getSlot(subtask.slot_id_).setActive(true);                                              // setUsing(true) is already in buffer.
-        //            buffer.activateSubtask(active_subtask->core_id_, this->active_subtasks_.size());        // Activate the subprocess with stored core id and position index.
-        //            this->active_subtasks_.emplace_back(&buffer.getActiveSubtask());                        // Add active subtask to priorities.
-        //        }
-//
-        //        --this->pending_execs_; // Update!
-        //    }
-        //}
-
         //std::cout<<"substract exec: ";
         for (coreId_t core_id=0; core_id < this->n_cores_; ++core_id)
         {
@@ -226,6 +184,49 @@ namespace streamprcss {
                 }
             }
         }
+                //for (std::size_t i{}; i < size; ++i)
+        //{
+        //    // Subtract the shortest execution time from the active subtask.
+        //    ActiveSubtask_t* active_subtask = this->active_subtasks_[i];
+        //    Subtask_t* subtask              = active_subtask->subtask_;
+        //    subtask->lapse_                -= less_exec_time;
+        //    
+        //    if (subtask->lapse_ == t_zero) // Finished?
+        //    {
+        //        // Free slot.
+        //        //std::cout<<"drop:\n";
+        //        slot_id_used     = subtask->slot_id_;
+        //        TaskSlot_t& slot = getSlot(slot_id_used);
+        //        slot.setActive(false);
+        //        slot.setUsing(false);
+        //        this->slots_used_.emplace_back(slot_id_used);
+        //        
+        //        // Delete execution from priorities.
+        //        uint32_t idx_priority { active_subtask->idx_priority_ };
+        //        if (idx_priority != this->active_subtasks_.size() - 1)  // Isn't the end?, copy the end to current.
+        //        {  
+        //            this->active_subtasks_[idx_priority] = this->active_subtasks_.back();
+        //            this->active_subtasks_[idx_priority]->idx_priority_= idx_priority; // Update!
+        //        }
+        //        this->active_subtasks_.pop_back(); // And drop last.
+        //        --size; // Update!
+//
+        //        //buffer.erase(buffer.begin()); // Very slow !!
+        //        auto& buffer { this->exec_buffers_[active_subtask->core_id_] };
+        //        buffer.pop();
+        //        
+        //        // Is there queued execution?
+        //        if ( buffer.size() ) 
+        //        {
+        //            Subtask_t& subtask { buffer.front() };                                                  // Get priority.
+        //            getSlot(subtask.slot_id_).setActive(true);                                              // setUsing(true) is already in buffer.
+        //            buffer.activateSubtask(active_subtask->core_id_, this->active_subtasks_.size());        // Activate the subprocess with stored core id and position index.
+        //            this->active_subtasks_.emplace_back(&buffer.getActiveSubtask());                        // Add active subtask to priorities.
+        //        }
+//
+        //        --this->pending_execs_; // Update!
+        //    }
+        //}
         return this->slots_used_;
     }
 

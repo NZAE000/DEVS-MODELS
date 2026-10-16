@@ -20,7 +20,7 @@ CC += -DPROD_MOD=$(PROD_MOD)#Producer transmition method.
 CC += -DAPPLY_LOG=${APPLY_LOG}#Log metrics in file (1) or not (0).
 CC += -DLOG_MOD=${LOG_MOD}#If metrics logger is dynamic (1) (log in execution time) or only log when the execution is terminated (0).
 CC += -DPRINT_LOG=${PRINT_LOG}#when the simualtion is completed, print logs or not.
-CFLAGS=-std=c++23 -O3 -g #-Wall -Wextra -Wpedantic -Wconvertions
+CFLAGS=-std=c++23 -O3# -g #-Wall -Wextra -Wpedantic -Wconvertions
 
 INCLUDECADMIUM=-I ../cadmium/include/ -I /opt/homebrew/Cellar/boost/1.88.0/include
 #INCLUDEDESTIMES=-I DESTimes/include/

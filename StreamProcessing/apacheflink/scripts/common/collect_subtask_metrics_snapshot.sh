@@ -64,7 +64,7 @@ get_requested_metric_names()
             | select(
                 endswith("numRecordsIn")
                 or endswith("numRecordsOut")
-                or endswith("accumulateBusyTimeMs")
+                or endswith("exactAccumulateBusyTimeMs")
                 or endswith("accumulateIdleTimeMs")
                 or endswith("accumulateBackPressuredTimeMs")
                 or endswith("softBackPressuredTimeMsPerSecond")

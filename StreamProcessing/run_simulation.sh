@@ -17,6 +17,7 @@ fi
 
 make clean && make STREAM_PROCESSING N_NODES=${n_nodes} N_CORES=${n_cores} PARALLELISM_L=${p_level} PROD_MOD=${prod_mod} APPLY_LOG=${apply_log} LOG_MOD=${log_mod} PRINT_LOG=${print_log} -j
 
-for E in $(seq 1 $n_exec); do
+for ((i=1; i<=n_exec; i++)); do
+    echo "Run $i / $n_exec"
     ./bin/STREAM_PROCESSING ${app}
 done

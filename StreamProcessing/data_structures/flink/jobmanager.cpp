@@ -83,9 +83,15 @@ namespace streamprcss {
     }
 
     void JobManager_t::
-    accumSentRecords(operId_t const operid, uint32_t n_rec) noexcept
+    accumInRecords(operId_t const operid, uint32_t n_rec) noexcept
     {
-        this->cluster_cfg_.accumSentRecords(operid, n_rec);
+        this->cluster_cfg_.accumInRecords(operid, n_rec);
+    }
+
+    void JobManager_t::
+    accumOutRecords(operId_t const operid, uint32_t n_rec) noexcept
+    {
+        this->cluster_cfg_.accumOutRecords(operid, n_rec);
     }
 
 

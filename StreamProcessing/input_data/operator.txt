@@ -1,6 +1,6 @@
-sourcedatagen1       1 lnorm    14.650591984832 0.728522695885 forward 1.000002719515
-calc2                1 lnorm    12.575385644568 1.160611574151 forward 1.000016997437
-watermarkassigner3   1 lnorm    11.157749021393 1.80656330087 forward 0.999987357854
-minibatchassigner4   1 lnorm    11.463513015707 1.589639954776 forward 1
-calc5                1 lnorm    12.082060689331 1.368343332303 forward 0.920000568513
-nexmarkq16writer     1 lnorm    10.898336274051 1.34169729886 none 1
+sourcedatagen1       1 lnorm    11.999920001555 1.679590074631 forward 1.0
+calc2                1 lnorm    8.941066697207 2.855000008638 forward 1.0
+watermarkassigner3   1 lnorm    10.049290224256 2.228380361634 forward 1.0
+minibatchassigner4   1 lnorm    9.583205630659 2.451654946566 forward 1.0
+calc5                1 lnorm    11.694130941739 1.459825211606 forward 0.2605
+nexmarkq146writer    1 lnorm    11.162750122576 1.152379255049 none 1

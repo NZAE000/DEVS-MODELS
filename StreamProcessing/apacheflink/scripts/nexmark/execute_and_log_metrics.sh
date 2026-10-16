@@ -19,77 +19,89 @@ cd "$DIR_BASE" || exit 1
 
 THROUGHPUT_PATH="$DIR_BASE/../../../metrics/nexmark/throughput/real/terminated"
 UTILIZATION_PATH="$DIR_BASE/../../../metrics/nexmark/utilization/real/terminated"
+
 THROUGHPUT_OUTFILE="terminated-throughput-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
 UTILIZATION_OUTFILE="terminated-utilization-real-${APP_NAME}-${NUM_MACHINES}-${NUM_CORES}-${PARALLELISM}-${EVENTS}-${TPS}.txt"
+
+EXEC_OUTPUT=$(mktemp)
+
+# Always remove the temporary output file.
+trap 'rm -f "$EXEC_OUTPUT"' EXIT
 
 # ============================
 # Execute app
 # ============================
-bash $DIR_BASE/execute.sh "$APP_NAME" "$TASKSLOTS" "$PARALLELISM" "$EVENTS" "$TPS"
+#
+# execute.sh writes directly to the temporary file. At the same time, tail
+# follows that file so the output remains visible in real time.
+#
+# This avoids using a pipe with tee, which could remain open because of
+# background Flink processes inheriting the pipe descriptor.
+bash "$DIR_BASE/execute.sh" "$APP_NAME" "$TASKSLOTS" "$PARALLELISM" "$EVENTS" "$TPS" > "$EXEC_OUTPUT" 2>&1 &
+EXEC_PID=$!
 
+# Show execute.sh output in real time until the process finishes.
+tail --pid="$EXEC_PID" -n +1 -f "$EXEC_OUTPUT"
 
-# =======================================================
-# Capture timestamps and calcule metrics when app finish
-# =======================================================
-FLINK_URL="http://localhost:8081"
-JOB_ID=$(bash $DIR_BASE/../common/get_job_id.sh) #$(curl -s "${FLINK_URL}/jobs" | jq -r '.jobs[0].id')
-if [ -z "$JOB_ID" ] || [ "$JOB_ID" == "null" ]; then
-  echo "[ERROR] There are no active or completed jobs."
-  exit 1
+# Obtain the real exit status of execute.sh.
+wait "$EXEC_PID"
+EXEC_STATUS=$?
+
+if [ "$EXEC_STATUS" -ne 0 ]; then
+    exit "$EXEC_STATUS"
 fi
 
-start_time=$(curl -s "${FLINK_URL}/jobs/${JOB_ID}" | jq -r '.timestamps.RUNNING')
-end_time=$(curl -s "${FLINK_URL}/jobs/${JOB_ID}" | jq -r '.timestamps.FINISHED')
-finish_time_ms=$(echo "$end_time - $start_time" | bc -l)
-FINISH_TIME=$(echo "$finish_time_ms / 1000" | bc -l)
-THROUGHPUT=$(echo "$EVENTS / $FINISH_TIME" | bc -l)
+# =======================================================
+# Extract finishing time and throughput from execute.sh
+# =======================================================
+read -r FINISH_TIME THROUGHPUT < <(
+    awk -F'[:, ]+' '/^FTime:/ { print $2, $5; exit }' "$EXEC_OUTPUT"
+)
+
+if [[ -z "$FINISH_TIME" || -z "$THROUGHPUT" ]]; then
+    echo "[ERROR] Could not extract finishing time or throughput from execute.sh output."
+    exit 1
+fi
 
 # ============================
-# Store f_time and throughbput
+# Store f_time and throughput
 # ============================
 printf "%.4f %.4f\n" "$FINISH_TIME" "$THROUGHPUT" >> "$THROUGHPUT_PATH/$THROUGHPUT_OUTFILE"
 
 # =======================================================
-# Obtain metrics per operator to calculate utilization
+# Store operator busy time and utilization
+#
+# Input format from execute.sh:
+#
+#   Operator P InRecords OutRecords AccumBusyTime BusyTime Utilization
+#
+# BusyTime is:
+#
+#   BusyTime = AccumBusyTime / P
+#
+# Output format:
+#
+#   operator1:busyTime1-utilization1;
+#   operator2:busyTime2-utilization2;
+#   ...
+#
+# Stored in a single line.
 # =======================================================
-PLAN_JSON="plan_tmp.json"
-
-# Get job with plan
-curl -s "${FLINK_URL}/jobs/${JOB_ID}" > "$PLAN_JSON"
-
-# ---------------------------------------------------------------------------------
-# Extract data from .vertices[]  →  ID, name, parallelism TO CALCULATE UTILIZATION
-# ---------------------------------------------------------------------------------
-normalize() {
-    echo "$1" | tr -d '_[]: ' | tr '[:upper:]' '[:lower:]'
+awk '
+$1 == "Operator" && $2 == "P" && $3 == "InRecords" && $4 == "OutRecords" && $5 == "Select" && $6 == "AccumBusyTime" && $7 == "BusyTime" && $8 == "Utilization" {
+    operator_table = 1
+    next
 }
 
-TOTAL_ACUM_BUSY_TIME=0.0
-#echo "Record added:"
-#printf "%-25s %-15s %-15s %-15s %-15s\n" "Operator" "Parallelism" "AccumBusyTime" "BusyTime" "Utilization"
-while IFS=';' read -r OPER_ID RAW_NAME PAR; do
-    NAME=$(normalize "$RAW_NAME")
-    total_acum_busy=0.0
-    for ((i=0; i<PARALLELISM; i++)); do
-        JSON=$(curl -s "${FLINK_URL}/jobs/${JOB_ID}/vertices/${OPER_ID}/subtasks/${i}") 
-        busy=$(echo "$JSON" | jq '.metrics["accumulated-busy-time"] // 0')
-        total_acum_busy=$(echo "$total_acum_busy + $busy" | bc -l)
-    done
-    ACUM_BUSY_TIME=$(echo "$total_acum_busy / 1000.0" | bc -l)  # To second.
-    TOTAL_ACUM_BUSY_TIME=$(echo "$TOTAL_ACUM_BUSY_TIME + $ACUM_BUSY_TIME" | bc -l)
-    BUSY_TIME=$(echo "$ACUM_BUSY_TIME / $PAR" | bc -l)          # Avg
-    UTILIZATION=$(echo "($BUSY_TIME) / $FINISH_TIME" | bc -l)
-    
-    # Store in file.
-    #printf "%-25s %-15s %-15.4f %-15.4f %-15s\n" "$NAME" "$PAR" "$ACUM_BUSY_TIME" "$BUSY_TIME" "$UTILIZATION"
-    printf "%s:%s;" "$NAME" "$UTILIZATION" >> "$UTILIZATION_PATH/$UTILIZATION_OUTFILE"
+operator_table && NF >= 8 && $2 ~ /^[0-9]+$/ {
+    printf "%s:%s;", $1, $8
+}
 
-done < <(jq -r '.vertices[] | "\(.id);\(.name);\(.parallelism)"' "$PLAN_JSON")
-printf "\n" >> "$UTILIZATION_PATH/$UTILIZATION_OUTFILE"
-#echo "Total time: $TOTAL_ACUM_BUSY_TIME" 
+END {
+    if (operator_table)
+        printf "\n"
+}
+' "$EXEC_OUTPUT" >> "$UTILIZATION_PATH/$UTILIZATION_OUTFILE"
 
-rm $PLAN_JSON
-
-printf "\nRecords added: \n" # %.4f s %.4f req/s\n" "$FINISH_TIME" "$THROUGHPUT"
-printf "\t$THROUGHPUT_PATH/$THROUGHPUT_OUTFILE\n\t$UTILIZATION_PATH/$UTILIZATION_OUTFILE\n"
-
+printf "\nRecords added:\n"
+printf "\t%s/%s\n\t%s/%s\n" "$THROUGHPUT_PATH" "$THROUGHPUT_OUTFILE" "$UTILIZATION_PATH" "$UTILIZATION_OUTFILE"

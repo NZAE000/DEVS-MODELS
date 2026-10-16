@@ -23,7 +23,8 @@ DIR_BASE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$DIR_BASE" || exit 1
 
 # Path to the Flink configuration file
-CONFIG_FILE="$DIR_BASE/../../flink-2.2.0-instrumented/conf/config.yaml"
+FLINK_HOME="${FLINK_HOME:-$DIR_BASE/../../flink-2.2.0}"
+CONFIG_FILE="$FLINK_HOME/conf/config.yaml"
 
 # Check if the configuration file exists
 if [ ! -f "$CONFIG_FILE" ]; then

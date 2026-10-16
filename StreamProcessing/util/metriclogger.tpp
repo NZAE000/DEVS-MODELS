@@ -64,13 +64,13 @@ namespace streamprcss {
 
     template<typename TIME>
     void MetricLogger_t<TIME>::
-    captureMetrics(/*double rate,*/ TIME elapsed_time, std::size_t procss_req) noexcept
+    captureMetrics(/*double rate,*/ TIME elapsed_time, std::size_t recs_out) noexcept
     {
         // Add system metrics.
         uint32_t index_rate {ClusterConfig_t::WLOAD_INDEX_}; // Using current workload.
         sysmetrics_t& sys_metrics = this->system_metrics_[index_rate].second; //std::vector<std::pair<rate_t, sysmetrics_t>> system_metrics_ {};
-        double        throughput  { procss_req / elapsed_time };
-        sys_metrics.emplace_back(procss_req, elapsed_time, throughput);
+        double        throughput  { recs_out / elapsed_time };
+        sys_metrics.emplace_back(recs_out, elapsed_time, throughput);
 
         // Add operator metrics.
         uint32_t const n_oper { this->cluster_cfg_.N_OPERATORS_ };
@@ -80,7 +80,7 @@ namespace streamprcss {
             double       busy_time   { props.busy_time_accum_ / props.replication_ };
             double       utilization { busy_time / elapsed_time };
             opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][index_rate].second; // std::vector<std::vector<std::pair<rate_t, opermetrics_t>>> oper_metrics_ {};
-            oper_metrics.emplace_back(props.replication_, 0, props.sent_records_accum_, props.busy_time_accum_, busy_time, utilization);
+            oper_metrics.emplace_back(props.replication_, props.records_in_accum_, props.records_out_accum_, props.busy_time_accum_, busy_time, utilization);
         }
         ++this->captures_[index_rate].second;
     }
@@ -148,7 +148,8 @@ namespace streamprcss {
             std::cout << std::left
             << std::setw(25) << "Operator"
             << std::setw(5)  << "P"
-            //<< std::setw(15) << "RecordsSend"
+            << std::setw(15) << "RecordsIn"
+            << std::setw(15) << "RecordsOut"
             << std::setw(15) << "AccumBusyTime"
             << std::setw(15) << "BusyTime"
             << std::setw(15) << "Utilization"
@@ -163,7 +164,8 @@ namespace streamprcss {
                     std::cout << std::left
                     << std::setw(25) << this->cluster_cfg_.operProps_[oper_id].name_
                     << std::setw(5)  << oper_metrics[i].p_level_
-                    //<< std::setw(15) << oper_metrics[i].sent_records_accum_
+                    << std::setw(15) << oper_metrics[i].in_records_
+                    << std::setw(15) << oper_metrics[i].out_records_
                     << std::setw(15) << oper_metrics[i].accum_busy_time_
                     << std::setw(15) << oper_metrics[i].busy_time_
                     << std::setw(15) << oper_metrics[i].utilization_ << '\n';
@@ -254,7 +256,7 @@ namespace streamprcss {
 
             for (uint32_t i=0; i < captures; ++i)
             {
-                std::size_t total_reqs { sys_metrics[i].processed_req_ }; 
+                std::size_t total_reqs { sys_metrics[i].processed_req_ };
                 
                 // Paths.
                 file_throughput  = TERMINATED_THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 

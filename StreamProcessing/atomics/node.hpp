@@ -227,7 +227,7 @@ protected: // Son access (node_master).
                 
                 if (!this->jobman_.lastOperator(oper_id))       // Haven't reached the last operator?
                 {
-                    this->jobman_.accumSentRecords(oper_id, 1); // Accumulate send messages.
+                    this->jobman_.accumOutRecords(oper_id, 1); // Accumulate send messages.
                     
                     std::vector<flink::operId_t> const& 
                     operDestinations = this->jobman_.getOperatorDestinations(oper_id);
