@@ -164,6 +164,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("app")
+    parser.add_argument("app_dir")
     parser.add_argument("nodes", type=int)
     parser.add_argument("cores", type=int)
     parser.add_argument("p", type=int)
@@ -171,7 +172,7 @@ def main():
     args = parser.parse_args()
 
     filename_real = (
-        f"metrics/nexmark/utilization/real/dynamic/"
+        f"metrics/{args.app_dir}/utilization/real/dynamic/"
         f"dynamic-utilization-real-"
         f"{args.app}-"
         f"{args.nodes}-"
@@ -180,7 +181,7 @@ def main():
     )
 
     filename_sim = (
-        f"metrics/nexmark/utilization/sim/dynamic/"
+        f"metrics/{args.app_dir}/utilization/sim/dynamic/"
         f"dynamic-utilization-sim-"
         f"{args.app}-"
         f"{args.nodes}-"
@@ -189,7 +190,7 @@ def main():
     )
 
     output_file = (
-        f"metrics/nexmark/utilization/"
+        f"metrics/{args.app_dir}/utilization/"
         f"statistics-real-sim/dynamic/"
         f"dynamic-utilization-real-sim-statistics-"
         f"{args.app}-"
