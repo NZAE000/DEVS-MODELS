@@ -8,9 +8,6 @@ from collections import OrderedDict
 
 plt.style.use("metrics/thesis.mplstyle")
 
-BASE_DIR = "metrics/nexmark/utilization"
-THROUGHPUT_BASE_DIR = "metrics/nexmark/throughput"
-
 
 def read_util_file(path):
     """
@@ -103,28 +100,27 @@ def parse_identifier_from_filename(filename, appname, data_from):
 
 
 def main():
-    if len(sys.argv) < 7:
+    if len(sys.argv) < 8:
         print(
-            "Use: python utilization_plot_by_parallelism.py "
-            "<app> <nodes> <cores> <events> <arrival> <real|sim>"
-        )
-        print(
-            "e.g: python utilization_plot_by_parallelism.py "
-            "q3 1 32 100000 5000 real"
+            "Use: python utilization_plot_by_parallelism.py <app> <app_dir> <nodes> <cores> <events> <arrival> <real|sim>"
         )
         sys.exit(1)
 
     app = sys.argv[1]
-    nodes = sys.argv[2]
-    cores = sys.argv[3]
-    events = sys.argv[4]
-    arrival = sys.argv[5]
-    data_from = sys.argv[6].lower()
+    app_dir = sys.argv[2]
+    nodes = sys.argv[3]
+    cores = sys.argv[4]
+    events = sys.argv[5]
+    arrival = sys.argv[6]
+    data_from = sys.argv[7].lower()
 
     # Validate data source
     if data_from not in ("real", "sim"):
         print("The last parameter must be 'real' or 'sim'.")
         sys.exit(1)
+        
+    BASE_DIR = "metrics/" + app_dir + "/utilization"
+    THROUGHPUT_BASE_DIR = "metrics/" + app_dir + "/throughput"
 
     # Select input directories
     input_dir = os.path.join(BASE_DIR, data_from, "terminated")

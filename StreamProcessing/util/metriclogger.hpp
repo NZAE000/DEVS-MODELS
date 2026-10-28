@@ -65,7 +65,7 @@ namespace streamprcss {
         };
         using opermetrics_t = std::vector<OperMetric_t>;
 
-        explicit MetricLogger_t(ClusterConfig_t const&);
+        explicit MetricLogger_t(ClusterConfig_t const&, std::string_view m_dir);
 
         void captureMetrics(/*double rate, */TIME elapsed_t, std::size_t out_recs) noexcept;
         void printMetrics()      const noexcept;
@@ -81,21 +81,16 @@ namespace streamprcss {
          
     private:
         
-        ClusterConfig_t const&                       cluster_cfg_;
-        //std::map<rate_t,   sysmetrics_t>             system_metrics_ {};
-        std::vector<std::pair<rate_t, sysmetrics_t>> system_metrics_             {};
-        //std::vector<std::map<rate_t, opermetrics_t>> oper_metrics_   {};
-        std::vector<std::vector<std::pair<rate_t, opermetrics_t>>> oper_metrics_ {}; // each operator has vector<parir<rate, opermetrics>>
-        //std::map<rate_t,   uint32_t>                 captures_                   {};
-        std::vector<std::pair<rate_t, uint32_t>>                   captures_     {};
+        std::string                                   metric_dir_     {};
+        ClusterConfig_t const&                        cluster_cfg_;
+        std::vector<std::pair<rate_t, sysmetrics_t>>  system_metrics_ {};
+        std::vector<
+        std::vector<std::pair<rate_t, opermetrics_t>>> oper_metrics_  {}; // each operator has vector<parir<rate, opermetrics>>{};
+        std::vector<std::pair<rate_t, uint32_t>>       captures_      {};
 
-        #if LOG_MOD
-        inline static constexpr char const* DYNAMIC_THROUGHPUT_BASE_PATH_     {"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"};
-        inline static constexpr char const* DYNAMIC_UTILIZATION_BASE_PATH_    {"metrics/nexmark/utilization/sim/dynamic/dynamic-utilization-sim-"};
-        #else
-        inline static constexpr char const* TERMINATED_THROUGHPUT_BASE_PATH_  {"metrics/nexmark/throughput/sim/terminated/terminated-throughput-sim-"};
-        inline static constexpr char const* TERMINATED_UTILIZATION_BASE_PATH_ {"metrics/nexmark/utilization/sim/terminated/terminated-utilization-sim-"};
-        #endif
+        std::string const THROUGHPUT_BASE_PATH_  {};
+        std::string const UTILIZATION_BASE_PATH_ {};
+
         inline static constexpr std::size_t MAX_NUM_METRICS_ { 100000000 };
         inline static constexpr double      PS_TO_S_         { 1e12      };
     };

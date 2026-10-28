@@ -4,11 +4,6 @@ import numpy as np
 import random
 import csv
 
-# Paths
-BASE_DIR = "metrics/nexmark/utilization"
-REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
-
 # -------------------------
 # LOAD
 # -------------------------
@@ -84,9 +79,9 @@ def compute_spearman(x, y):
 # -------------------------
 # PARSE
 # -------------------------
-def parse_identifier(filename, appname):
+def parse_identifier(filename, app):
     base = filename.replace(".txt", "").replace("terminated-utilization-sim-", "").replace("terminated-utilization-real-", "")
-    return base[len(appname) + 1:]
+    return base[len(app) + 1:]
 
 
 def scenario_key(identifier):
@@ -98,17 +93,23 @@ def scenario_key(identifier):
 # MAIN
 # -------------------------
 def main():
-    if len(sys.argv) < 2:
-        print("Use: python3 calculate_terminated_utilization_statistics_real_sim.py <app>")
+    if len(sys.argv) < 3:
+        print("Use: python3 calculate_terminated_utilization_statistics_real_sim.py <app> <app_dir>")
         return
 
-    appname = sys.argv[1]
+    app     = sys.argv[1]
+    app_dir = sys.argv[2]
+    
+    # Paths
+    BASE_DIR = "metrics/" + app_dir + "/utilization"
+    REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+    SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
-    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-utilization-real-" + appname)]
-    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith("terminated-utilization-sim-" + appname)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-utilization-real-" + app)]
+    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith("terminated-utilization-sim-" + app)]
 
-    real_ids = {parse_identifier(f, appname): f for f in real_files}
-    sim_ids  = {parse_identifier(f, appname): f for f in sim_files}
+    real_ids = {parse_identifier(f, app): f for f in real_files}
+    sim_ids  = {parse_identifier(f, app): f for f in sim_files}
 
     common_ids = sorted(real_ids.keys() & sim_ids.keys(), key=scenario_key)
 
@@ -331,7 +332,7 @@ def main():
     # CSV
     # -------------------------
     csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim/terminated")
-    csv_name = f"terminated-utilization-real-sim-statics-{appname}.csv"
+    csv_name = f"terminated-utilization-real-sim-statics-{app}.csv"
     csv_path = os.path.join(csv_dir, csv_name)
 
     with open(csv_path, "w", newline="") as f:

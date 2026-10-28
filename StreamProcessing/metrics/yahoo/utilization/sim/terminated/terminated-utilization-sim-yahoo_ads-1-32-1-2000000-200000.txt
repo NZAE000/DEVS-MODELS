@@ -1,0 +1,10 @@
+sourcekafkasource:0.143757;deserialize:0.847856;filterviews:0.0853441;projectevent:0.0323844;rediscampaignjoin:0.0260371;campaignprocessor:0.0380583;
+sourcekafkasource:0.143868;deserialize:0.848815;filterviews:0.0851547;projectevent:0.0327129;rediscampaignjoin:0.0260647;campaignprocessor:0.0380539;
+sourcekafkasource:0.143661;deserialize:0.847188;filterviews:0.0852622;projectevent:0.0324682;rediscampaignjoin:0.026233;campaignprocessor:0.037923;
+sourcekafkasource:0.143729;deserialize:0.8471;filterviews:0.0851162;projectevent:0.032644;rediscampaignjoin:0.0260255;campaignprocessor:0.0379826;
+sourcekafkasource:0.143895;deserialize:0.846885;filterviews:0.0858935;projectevent:0.0327951;rediscampaignjoin:0.026157;campaignprocessor:0.0379257;
+sourcekafkasource:0.144268;deserialize:0.848517;filterviews:0.0853495;projectevent:0.0325467;rediscampaignjoin:0.0260411;campaignprocessor:0.038024;
+sourcekafkasource:0.143812;deserialize:0.84786;filterviews:0.0857662;projectevent:0.0327442;rediscampaignjoin:0.0261111;campaignprocessor:0.0382435;
+sourcekafkasource:0.144168;deserialize:0.848178;filterviews:0.085475;projectevent:0.0324554;rediscampaignjoin:0.0261621;campaignprocessor:0.0382083;
+sourcekafkasource:0.143879;deserialize:0.848619;filterviews:0.0856746;projectevent:0.0324735;rediscampaignjoin:0.0261859;campaignprocessor:0.0378035;
+sourcekafkasource:0.143951;deserialize:0.847735;filterviews:0.085415;projectevent:0.0325936;rediscampaignjoin:0.0260284;campaignprocessor:0.0381428;

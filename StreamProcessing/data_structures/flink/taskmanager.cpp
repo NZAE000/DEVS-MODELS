@@ -65,17 +65,19 @@ namespace streamprcss {
     TaskManager_t::createSubTask(JobManager_t& jobMan, TaskSlot_t& slot, mssgId_t mssg_id, slotId_t slot_id) noexcept 
     {    
         operId_t const& operid     { slot.getOperator() };
-        TIME     exec_lapse        {};
-        TIME     prod_improd_lapse {}; // Productive + Improductive time.
+        TIME     oper_lapse        {};
+        TIME     effective_lapse   {}; // Productive + Improductive time.
         
         do {
-            exec_lapse        = jobMan.getExecutionTime(operid);            // Get avg time excecution of some distribution.
-            prod_improd_lapse = exec_lapse * jobMan.getDegradationFactor(); // Increase the time to degrade the system
+            oper_lapse        = jobMan.getOperatorTime(operid);            // Get avg operation time of some distribution.
+            effective_lapse   = oper_lapse * jobMan.getDegradationFactor(); // Increase the time to degrade the system
         } 
-        while (prod_improd_lapse < 0 || prod_improd_lapse >= std::numeric_limits<TIME>::max());
+        while (effective_lapse < 0 || effective_lapse >= std::numeric_limits<TIME>::max());
+
+        //std::cout<<"Effec_time: "<<effective_lapse<<" - ";
 
         // Accumulate operator busy time (to sec).
-        jobMan.accumBusyTime(operid, exec_lapse);
+        jobMan.accumBusyTime(operid, oper_lapse);
         // Accumulate input record to proccess.
         jobMan.accumInRecords(operid, 1);
         
@@ -96,7 +98,7 @@ namespace streamprcss {
         }
 
         // Add subtask to less loaded buffer.
-        less_loaded_buff->emplace({mssg_id, slot_id, prod_improd_lapse});
+        less_loaded_buff->emplace({mssg_id, slot_id, effective_lapse});
         slot.setUsing(true);
         ++this->pending_execs_; // Update!
 
@@ -107,7 +109,6 @@ namespace streamprcss {
             less_loaded_buff->activateSubtask(selected_core, this->active_subtasks_.size());    // Activate the subprocess with stored core id and position index.
             this->active_subtasks_.emplace_back(&less_loaded_buff->getActiveSubtask());         // Add active subtask to priorities.
         }
-
         //std::cout<<"active cores: "<<this->active_subtasks_.size() <<", pending execs: "<<this->pending_execs_<<'\n';
     }
 
@@ -120,7 +121,6 @@ namespace streamprcss {
         TIME lapse          {};
 
         // Detect subtask with less exec time.
-        //std::cout<<"\nless exec: ";
         for (auto const& active_subtask : this->active_subtasks_){
         //for (auto const& buffer : this->exec_buffers_){   
             //if ( !buffer.empty() )
@@ -133,7 +133,7 @@ namespace streamprcss {
         }//std::cout<<"\nless: "<< less_exec_time<<"\n";
 
         // CORE PARALLELISM: Subtract the least amount of time from priority executions and eliminate what remains at 0.
-        this->slots_used_.clear(); // Keep capacity.
+        this->slots_used_.clear(); // Note: Keep capacity.
         TIME const  t_zero       {0};
         slotId_t    slot_id_used {};
         std::size_t size         {this->active_subtasks_.size()};

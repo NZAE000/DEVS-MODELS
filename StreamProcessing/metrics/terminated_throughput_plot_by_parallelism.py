@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 
 plt.style.use("metrics/thesis.mplstyle")
 
-BASE_DIR = "metrics/nexmark/throughput"
-
 
 def load_data(filepath):
     """Load finish time and throughput values from file: finishtime throughput"""
@@ -45,24 +43,26 @@ def parse_params(filename):
 
 
 def main():
-    if len(sys.argv) < 7:
+    if len(sys.argv) < 8:
         print(
-            "Use: python throughput_plot_by_parallelism.py "
-            "<app> <nodes> <cores> <events> <rate> <real|sim>"
+            "Use: python throughput_plot_by_parallelism.py <app> <app_dir> <nodes> <cores> <events> <rate> <real|sim>"
         )
         sys.exit(1)
 
-    app = sys.argv[1]
-    nodes = int(sys.argv[2])
-    cores = int(sys.argv[3])
-    events = int(sys.argv[4])
-    arrival = int(sys.argv[5])
-    data_from = sys.argv[6].lower()
+    app       = sys.argv[1]
+    app_dir   = sys.argv[2]
+    nodes     = int(sys.argv[3])
+    cores     = int(sys.argv[4])
+    events    = int(sys.argv[5])
+    arrival   = int(sys.argv[6])
+    data_from = sys.argv[7].lower()
 
     # Validate data source
     if data_from not in ("real", "sim"):
         print("The last parameter must be 'real' or 'sim'.")
         sys.exit(1)
+        
+    BASE_DIR = "metrics/" + app_dir + "/throughput"
 
     # Select input directory
     input_dir = os.path.join(BASE_DIR, data_from, "terminated")

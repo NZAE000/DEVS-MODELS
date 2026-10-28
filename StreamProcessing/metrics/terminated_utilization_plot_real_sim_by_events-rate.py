@@ -5,11 +5,6 @@ import matplotlib.pyplot as plt
 
 plt.style.use("metrics/thesis.mplstyle")
 
-# Paths
-BASE_DIR = "metrics/nexmark/utilization"
-REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
-
 # -------------------- Load Utilization File --------------------
 def load_util_file(path):
     """
@@ -53,21 +48,27 @@ def parse_identifier(filename, app):
 
 # -------------------- Main --------------------
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         print("Use:")
-        print(" python utilization_by_events_rate.py <app> <nodes> <cores> <parallelism>")
+        print(" python utilization_by_events_rate.py <app> <app_dir> <nodes> <cores> <parallelism>")
         return
 
-    app   = sys.argv[1]
-    nodes = int(sys.argv[2])
-    cores = int(sys.argv[3])
-    par   = int(sys.argv[4])
+    app     = sys.argv[1]
+    app_dir = sys.argv[2]
+    nodes   = int(sys.argv[3])
+    cores   = int(sys.argv[4])
+    par     = int(sys.argv[5])
 
     # ---------------------------------------------------------
     # Search files for specific cfg
     # ---------------------------------------------------------
     real_files = []
     sim_files  = []
+    
+    # Paths
+    BASE_DIR = "metrics/" + app_dir + "/utilization"
+    REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+    SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
     for fname in os.listdir(REAL_DIR):
         if fname.startswith(f"terminated-utilization-real-{app}"):
@@ -270,9 +271,11 @@ def main():
     plt.subplots_adjust(bottom=0.3)
 
     # ----------------------------------------------------------
-    # Export plot to PNG file
+    # Export plot to pdf and png file
     # ----------------------------------------------------------
     out_dir  = os.path.join(BASE_DIR, "plot-real-sim/terminated")
+    os.makedirs(out_dir, exist_ok=True)
+    
     out_name = f"terminated-utilization-real-sim-{app}-{nodes}-{cores}-{par}"
     out_path = os.path.join(out_dir, out_name)
     

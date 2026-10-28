@@ -32,7 +32,7 @@ def read_file(filename):
     return rates, rate_data
 
 
-def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
+def plot_cpu_util(rates, rate_data, app, app_dir, nodes, cores, p):
 
     plt.figure()
     ax = plt.gca()
@@ -158,7 +158,7 @@ def plot_cpu_util(rates, rate_data, app, nodes, cores, p):
     plt.subplots_adjust(bottom=0.18)
 
     output_file = (
-        "metrics/nexmark/cpu_util/"
+        f"metrics/{app_dir}/cpu_util/"
         "plot-real/dynamic/"
         f"dynamic-cpu-real-"
         f"{app}-"
@@ -179,6 +179,7 @@ def main():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("app")
+    parser.add_argument("app_dir")
     parser.add_argument("nodes")
     parser.add_argument("cores")
     parser.add_argument("p")
@@ -186,7 +187,7 @@ def main():
     args = parser.parse_args()
 
     filename = (
-        f"metrics/nexmark/cpu_util/real/dynamic/dynamic-cpu-real-"
+        f"metrics/{args.app_dir}/cpu_util/real/dynamic/dynamic-cpu-real-"
         f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
     )
 
@@ -196,6 +197,7 @@ def main():
         rates,
         rate_data,
         args.app,
+        args.app_dir,
         args.nodes,
         args.cores,
         args.p

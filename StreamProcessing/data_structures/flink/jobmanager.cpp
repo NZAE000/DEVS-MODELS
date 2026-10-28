@@ -64,11 +64,11 @@ namespace streamprcss {
     }
 
     double 
-    JobManager_t::getExecutionTime(operId_t const oper_id) const noexcept
+    JobManager_t::getOperatorTime(operId_t const oper_id) const noexcept
     {   
         //auto const& oper_prop = cluster_cfg_.operProps_[oper_id];
         //return oper_prop.random_time_.second->generate();
-        return cluster_cfg_.getExecutionTime(oper_id);
+        return cluster_cfg_.getOperatorTime(oper_id);
     }
 
     double 

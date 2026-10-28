@@ -17,7 +17,7 @@
 #include "flink/typealiases.hpp"
 #include "../util/random.hpp"
 #include "../input_data/hardware.hpp"
-#include <iostream>
+//#include <iostream>
 
 using TIME = streamprcss::flink::TIME;
 
@@ -81,7 +81,7 @@ struct ClusterConfig_t {
     inline static uint32_t                   WLOAD_INDEX_        {0}; // Producer model will control the workload index.
     inline static double                     SOURCE_PERIOD_      {};
 
-    double getExecutionTime(operId_t const oper_id) const noexcept
+    double getOperatorTime(operId_t const oper_id) const noexcept
     {   
         auto const& oper_prop = this->operProps_[oper_id];
         //double fact = (oper_id == begin_op_)? SOURCE_PERIOD_ : 1.0;
@@ -94,6 +94,7 @@ struct ClusterConfig_t {
         auto& oper_prop = operProps_[operid];
         oper_prop.busy_time_accum_ += time * oper_prop.extra_occup_factor_ * 1e-12; // to second.
         //oper_prop.accumBusyTime(oper_prop.busy_time_accum_, time, oper_prop.extra_occup_factor_); // callback
+        //std::cout<<"Busytime: "<<time * oper_prop.extra_occup_factor_<<'\n';
     }
 
     void accumInRecords(operId_t const operid, uint32_t n_rec) noexcept
@@ -334,7 +335,7 @@ private:
         std::ifstream file(path.data());
         file >> cpuu_ >> interferency_ >> saturation_ >> p_inefficiency_ >> fdegrad_;
 
-        degradation_factor_ = interferency_ * saturation_ * p_inefficiency_;
+        degradation_factor_ = fdegrad_; //interferency_ * saturation_ * p_inefficiency_;
     }
 
     void initExtraOccupFactors(std::string_view path) noexcept 

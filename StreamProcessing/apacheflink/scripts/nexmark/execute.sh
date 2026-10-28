@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [ $# -ne 5 ]; then
+    echo "Use: bash execute.sh <app> <taskslots> <parallelism> <events> <tps>"
+    exit 1
+fi
 
 APP_NAME="$1"
 TASKSLOTS="$2"
@@ -6,13 +12,8 @@ PARALLELISM="$3"
 EVENTS="$4"
 TPS="$5"
 
-if [ $# -ne 5 ]; then
-    echo "Use: bash execute.sh <app> <taskslots> <parallelism> <events> <tps>"
-    exit 1
-fi
-
 ## Get absolute path and locate.
-DIR_BASE="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+DIR_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
 cd "$DIR_BASE" || exit 1
 
 CPU_LOG="/tmp/cpu_${APP_NAME}_${TASKSLOTS}_${PARALLELISM}_${EVENTS}_${TPS}.log"
@@ -20,10 +21,11 @@ CPU_LOG="/tmp/cpu_${APP_NAME}_${TASKSLOTS}_${PARALLELISM}_${EVENTS}_${TPS}.log"
 # ============================
 # Update flink and nexmark parameters
 # ============================
-bash "$DIR_BASE/../common/update_flink_cfg.sh" $TASKSLOTS $PARALLELISM && bash "$DIR_BASE/update_nexmark_cfg.sh" $EVENTS $TPS
+bash "$DIR_BASE/../common/update_flink_cfg.sh" $TASKSLOTS $PARALLELISM
+bash "$DIR_BASE/update_nexmark_cfg.sh" $EVENTS $TPS
 
 # ============================
-# Stop and init
+# Stop and initialize
 # ============================
 bash "$DIR_BASE/shutdown_and_stop.sh" && bash "$DIR_BASE/start_and_setup.sh"
 

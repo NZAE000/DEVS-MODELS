@@ -57,7 +57,7 @@ namespace streamprcss {
         slotId_t                            next_slot_id_       { 0 };
         std::size_t                         pending_execs_      { 0 };
         inline static constexpr std::size_t SUBTASKS_CAPACITY_  { 100000 };
-        inline static constexpr std::size_t TASKSLOTS_CAPACITY_ { 1000   };
+        inline static constexpr std::size_t TASKSLOTS_CAPACITY_ { 512    };
     };
 
     } // namespace flink

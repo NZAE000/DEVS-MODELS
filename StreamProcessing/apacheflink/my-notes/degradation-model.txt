@@ -53,3 +53,10 @@ crecimiento no explicado por CPU;
 forma de la curva respecto de P;
 
 son buenos candidatos.
+
+
+
+Notas:
+
+- Revisar modelo paralelo (para p=24, 32)
+- Colas finitas y backpressure.

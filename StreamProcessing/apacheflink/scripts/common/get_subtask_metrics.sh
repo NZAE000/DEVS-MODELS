@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-
 set -Eeuo pipefail
+
+if [ $# -ne 3 ]; then
+    echo "Usage: $0 <subtask_name> <subtask_index> <metrics>" >&2
+    exit 1
+fi
 
 subtask_name=$1
 subtask_index=$2

@@ -169,6 +169,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("app")
+    parser.add_argument("app_dir")
     parser.add_argument("nodes")
     parser.add_argument("cores")
     parser.add_argument("p")
@@ -176,21 +177,21 @@ def main():
     args = parser.parse_args()
 
     filename_real = (
-        f"metrics/nexmark/throughput/real/dynamic/"
+        f"metrics/{args.app_dir}/throughput/real/dynamic/"
         f"dynamic-throughput-real-"
         f"{args.app}-{args.nodes}-"
         f"{args.cores}-{args.p}.txt"
     )
 
     filename_sim = (
-        f"metrics/nexmark/throughput/sim/dynamic/"
+        f"metrics/{args.app_dir}/throughput/sim/dynamic/"
         f"dynamic-throughput-sim-"
         f"{args.app}-{args.nodes}-"
         f"{args.cores}-{args.p}.txt"
     )
 
     csv_output = (
-        f"metrics/nexmark/throughput/statistics-real-sim/dynamic/"
+        f"metrics/{args.app_dir}/throughput/statistics-real-sim/dynamic/"
         f"dynamic-throughput-real-sim-statics-"
         f"{args.app}-{args.nodes}-"
         f"{args.cores}-{args.p}.csv"

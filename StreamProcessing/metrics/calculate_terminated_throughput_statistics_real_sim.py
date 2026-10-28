@@ -5,11 +5,6 @@ import random
 import csv
 
 
-BASE_DIR = "metrics/nexmark/throughput"
-REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
-
-
 def load_data(filepath):
     ft, tp = [], []
     with open(filepath, "r") as f:
@@ -55,9 +50,9 @@ def compute_accuracy(real, sim):
     return max(0.0, min(acc, 1.0))  # clamp
 
 
-def parse_identifier(filename, appname):
+def parse_identifier(filename, app):
     base = filename.replace(".txt", "").replace("terminated-throughput-real-", "").replace("terminated-throughput-sim-", "")
-    return base[len(appname) + 1:]
+    return base[len(app) + 1:]
 
 
 def print_custom_table(results):
@@ -152,17 +147,22 @@ def scenario_key(identifier):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Use: python3 calculate_terminated_throughput_statistics_real_sim.py <app>")
+    if len(sys.argv) < 3:
+        print("Use: python3 calculate_terminated_throughput_statistics_real_sim.py <app> <app_dir>")
         return
 
-    appname = sys.argv[1]
+    app     = sys.argv[1]
+    app_dir = sys.argv[2]
+    
+    BASE_DIR = "metrics/" + app_dir + "/throughput"
+    REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+    SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
-    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-throughput-real-" + appname)]
-    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith("terminated-throughput-sim-" + appname)]
+    real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-throughput-real-" + app)]
+    sim_files  = [f for f in os.listdir(SIM_DIR) if f.startswith("terminated-throughput-sim-" + app)]
 
-    real_ids = {parse_identifier(f, appname): f for f in real_files}
-    sim_ids  = {parse_identifier(f, appname): f for f in sim_files}
+    real_ids = {parse_identifier(f, app): f for f in real_files}
+    sim_ids  = {parse_identifier(f, app): f for f in sim_files}
 
     common_ids = sorted(real_ids.keys() & sim_ids.keys(), key=scenario_key)
 
@@ -224,7 +224,7 @@ def main():
     # CSV
     # -------------------------    
     csv_dir  = os.path.join(BASE_DIR, "statistics-real-sim/terminated")
-    csv_name = f"terminated-throughput-real-sim-statics-{appname}.csv"
+    csv_name = f"terminated-throughput-real-sim-statics-{app}.csv"
     csv_path = os.path.join(csv_dir, csv_name)
 
     with open(csv_path, "w", newline="") as csvfile:

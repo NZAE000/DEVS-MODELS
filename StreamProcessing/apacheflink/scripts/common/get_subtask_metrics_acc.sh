@@ -2,11 +2,6 @@
 set -Eeuo pipefail
 
 subtask_name=${1:-}
-metrics=${2:-}
-aggregations=${3:-}
-
-DIR_BASE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-cd "$DIR_BASE" || exit 1
 
 if [[ -z "$subtask_name" ]]; then
     echo "Usage:"
@@ -15,6 +10,12 @@ if [[ -z "$subtask_name" ]]; then
     echo "  $0 <subtask_name> <metrics> <aggregations>"
     exit 1
 fi
+
+metrics=${2:-}
+aggregations=${3:-}
+
+DIR_BASE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+cd "$DIR_BASE" || exit 1
 
 JOB_ID="${JOB_ID_OVERRIDE:-$(bash "$DIR_BASE/get_job_id.sh")}"
 

@@ -46,7 +46,7 @@ main(int arg, char** argv)
 {
     ClusterConfig_t      cluster_cfg   { argv[1]     }; // argv[1] = app name.
     flink::JobManager_t  JobManager    { cluster_cfg };
-    MLogger_t<TIME>      metric_logger { cluster_cfg };
+    MLogger_t<TIME>      metric_logger { cluster_cfg, argv[2] }; // argv[2] = metrics directory.
 
     //std::cout<<"distr: " << cluster_cfg.operProps_["op1"].distribution()<<"\n";
 

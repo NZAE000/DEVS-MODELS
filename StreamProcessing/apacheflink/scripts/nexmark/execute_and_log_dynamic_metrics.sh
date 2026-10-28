@@ -172,29 +172,29 @@ do
     ####################################################
     # CPU Utilization
     ####################################################
-    #mpstat -P ALL > "$CPU_LOG"
-    #cpu_sum=0
-    #cpu_count=0
-#
-    #while read -r line
-    #do
-    #    cpu=$(echo "$line" | awk '{print $2}')
-    #    if [[ "$cpu" =~ ^[0-9]+$ ]]; then
-#
-    #        idle=$(echo "$line" | awk '{print $NF}')
-    #        util=$(echo "100 - $idle" | bc -l)
-    #        cpu_sum=$(echo "$cpu_sum + $util" | bc -l)
-    #        cpu_count=$((cpu_count + 1))
-    #    fi
-#
-    #done < "$CPU_LOG"
-#
-    #CPU_UTIL=$(echo "scale=6; $cpu_sum / $cpu_count" | bc -l)
-    #CPU_UTIL_LIST+=("${ACCUM_TIME},${CPU_UTIL}")
+    mpstat -P ALL > "$CPU_LOG"
+    cpu_sum=0
+    cpu_count=0
+
+    while read -r line
+    do
+        cpu=$(echo "$line" | awk '{print $2}')
+        if [[ "$cpu" =~ ^[0-9]+$ ]]; then
+
+            idle=$(echo "$line" | awk '{print $NF}')
+            util=$(echo "100 - $idle" | bc -l)
+            cpu_sum=$(echo "$cpu_sum + $util" | bc -l)
+            cpu_count=$((cpu_count + 1))
+        fi
+
+    done < "$CPU_LOG"
+
+    CPU_UTIL=$(echo "scale=6; $cpu_sum / $cpu_count" | bc -l)
+    CPU_UTIL_LIST+=("${ACCUM_TIME},${CPU_UTIL}")
     ####################################################
 done
 
-#rm "$CPU_LOG"
+rm "$CPU_LOG"
 
 ########################################################
 # Wait for the process to finish

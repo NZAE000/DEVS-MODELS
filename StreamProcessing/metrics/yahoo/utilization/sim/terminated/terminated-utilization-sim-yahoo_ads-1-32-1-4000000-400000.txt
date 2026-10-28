@@ -1,0 +1,10 @@
+sourcekafkasource:0.123342;deserialize:1;filterviews:0.0916892;projectevent:0.0344472;rediscampaignjoin:0.0290042;campaignprocessor:0.0322326;
+sourcekafkasource:0.12352;deserialize:1;filterviews:0.0917197;projectevent:0.0345089;rediscampaignjoin:0.0290197;campaignprocessor:0.0373829;
+sourcekafkasource:0.123437;deserialize:1;filterviews:0.0917292;projectevent:0.03457;rediscampaignjoin:0.0288779;campaignprocessor:0.0363443;
+sourcekafkasource:0.123492;deserialize:1;filterviews:0.0915185;projectevent:0.0345126;rediscampaignjoin:0.0289886;campaignprocessor:0.0351415;
+sourcekafkasource:0.123501;deserialize:1;filterviews:0.0915091;projectevent:0.0344788;rediscampaignjoin:0.0289391;campaignprocessor:0.036242;
+sourcekafkasource:0.12347;deserialize:0.999999;filterviews:0.0913777;projectevent:0.0343476;rediscampaignjoin:0.0289551;campaignprocessor:0.0364323;
+sourcekafkasource:0.123464;deserialize:1;filterviews:0.0918612;projectevent:0.0343593;rediscampaignjoin:0.028938;campaignprocessor:0.035122;
+sourcekafkasource:0.123535;deserialize:1;filterviews:0.0913484;projectevent:0.0345219;rediscampaignjoin:0.0289671;campaignprocessor:0.0356191;
+sourcekafkasource:0.12361;deserialize:1;filterviews:0.0912896;projectevent:0.0344974;rediscampaignjoin:0.0291084;campaignprocessor:0.0343644;
+sourcekafkasource:0.123459;deserialize:0.999999;filterviews:0.0915833;projectevent:0.0344822;rediscampaignjoin:0.0289733;campaignprocessor:0.0391112;

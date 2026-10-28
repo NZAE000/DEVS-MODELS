@@ -1,6 +1,7 @@
 #include "metriclogger.hpp"
 #include <iomanip>
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 
 namespace streamprcss {
@@ -8,9 +9,22 @@ namespace streamprcss {
 
     template<typename TIME>
     MetricLogger_t<TIME>::
-    MetricLogger_t(ClusterConfig_t const& ccfg) 
-    : cluster_cfg_{ccfg}
+    MetricLogger_t(ClusterConfig_t const& ccfg,  std::string_view m_dir) 
+    : cluster_cfg_{ccfg}, metric_dir_{m_dir},
+    #if LOG_MOD
+    THROUGHPUT_BASE_PATH_  {"metrics/" + metric_dir_ + "/throughput/sim/dynamic/dynamic-throughput-sim-"},
+    UTILIZATION_BASE_PATH_ {"metrics/" + metric_dir_ + "/utilization/sim/dynamic/dynamic-utilization-sim-"}
+    #else
+    THROUGHPUT_BASE_PATH_  {"metrics/" + metric_dir_ + "/throughput/sim/terminated/terminated-throughput-sim-"},
+    UTILIZATION_BASE_PATH_ {"metrics/" + metric_dir_ + "/utilization/sim/terminated/terminated-utilization-sim-"}
+    #endif
     {
+        namespace fs = std::filesystem;
+
+        // Create directories if they do not exist.
+        fs::create_directories(fs::path(THROUGHPUT_BASE_PATH_).parent_path());
+        fs::create_directories(fs::path(UTILIZATION_BASE_PATH_).parent_path());
+
         // Producer has 1 or more rates with time point to change theb next rate.
         #if PROD_MOD
         auto const& workloads  { this->cluster_cfg_.workloads_by_time_ };
@@ -43,23 +57,6 @@ namespace streamprcss {
             }
             this->captures_.emplace_back(rate, 0); // Set captures.
         }
-        
-        //#else // New to implement: The producer has 1 or more rates with their quantity of requirements to produce.
-        //// Reserve sytem metrics.
-        //double rate { this->cluster_cfg_.rate_};
-        //sysmetrics_t& sys_metrics = this->system_metrics_[rate];
-        //sys_metrics.reserve(MAX_NUM_METRICS_);
-        //
-        //// Reserve operator metrics.
-        //uint32_t n_oper { this->cluster_cfg_.N_OPERATORS_ };
-        //this->oper_metrics_.resize(n_oper);
-        //for (operId_t oper_id=0; oper_id < n_oper; ++oper_id)
-        //{  
-        //    opermetrics_t& oper_metrics = this->oper_metrics_[oper_id][rate];
-        //    oper_metrics.reserve(MAX_NUM_METRICS_);
-        //}
-        //this->captures_[rate] = 0; // Set captures.
-        //#endif
     }
 
     template<typename TIME>
@@ -186,9 +183,9 @@ namespace streamprcss {
         uint32_t           p_level   = this->cluster_cfg_.operProps_[this->cluster_cfg_.begin_op_].replication_; // Assume all operators have same replication level.
         
         // Paths.
-        std::string file_throughput  { DYNAMIC_THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+        std::string file_throughput  { THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                             + std::to_string(p_level) + ".txt" };
-        std::string file_utilization { DYNAMIC_UTILIZATION_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+        std::string file_utilization { UTILIZATION_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                         + std::to_string(p_level) + ".txt" };
         
         // Writters     .               
@@ -259,15 +256,15 @@ namespace streamprcss {
                 std::size_t total_reqs { sys_metrics[i].processed_req_ };
                 
                 // Paths.
-                file_throughput  = TERMINATED_THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+                file_throughput  = THROUGHPUT_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                                 + std::to_string(p_level) + "-" + std::to_string(total_reqs) + "-" + std::to_string(a_rate) + ".txt";
-                file_utilization = TERMINATED_UTILIZATION_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
+                file_utilization = UTILIZATION_BASE_PATH_ + app_name + "-" + std::to_string(n_nodes) + "-" + std::to_string(n_cores) + "-" 
                             + std::to_string(p_level) + "-" + std::to_string(total_reqs) + "-" + std::to_string(a_rate) + ".txt";
 
                 // Wrtters.
                 std::ofstream out_throughput_result(file_throughput, std::ios::app);
                 std::ofstream out_utilization_result(file_utilization, std::ios::app);
-
+                
                 // Log system metrics.
                 out_throughput_result << sys_metrics[i].elapsed_time_ <<' '<< sys_metrics[i].throughput_<<'\n';
 

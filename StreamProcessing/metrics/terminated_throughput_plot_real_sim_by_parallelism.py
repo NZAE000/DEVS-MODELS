@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 
 plt.style.use("metrics/thesis.mplstyle")
 
-BASE_DIR = "metrics/nexmark/throughput"
-REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
-
 
 def load_data(filepath):
     """File upload throughput: finishtime throughput"""
@@ -43,15 +39,21 @@ def parse_params(filename, app):
 
 
 def main():
-    if len(sys.argv) < 6:
-        print("Use: python throughput_plot_real_sim_by_parallelism.py <app> <nodes> <cores> <events> <rate>")
+    if len(sys.argv) < 7:
+        print("Use: python throughput_plot_real_sim_by_parallelism.py <app> <app_dir> <nodes> <cores> <events> <rate>")
         sys.exit(1)
 
     app     = sys.argv[1]
-    nodes   = int(sys.argv[2])
-    cores   = int(sys.argv[3])
-    events  = int(sys.argv[4])
-    arrival = int(sys.argv[5])
+    app_dir = sys.argv[2]
+    nodes   = int(sys.argv[3])
+    cores   = int(sys.argv[4])
+    events  = int(sys.argv[5])
+    arrival = int(sys.argv[6])
+    
+    
+    BASE_DIR = "metrics/" + app_dir + "/throughput"
+    REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+    SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
     # -----------------------------
     # Capturing REAL scenarios

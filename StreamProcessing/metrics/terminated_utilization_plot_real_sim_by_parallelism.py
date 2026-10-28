@@ -8,11 +8,6 @@ from collections import defaultdict, OrderedDict
 
 plt.style.use("metrics/thesis.mplstyle")
 
-# Paths
-BASE_DIR = "metrics/nexmark/utilization"
-REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
-SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
-
 def read_util_file(path):
     """
     Read a utilization file with lines of the type:
@@ -76,19 +71,21 @@ def scenario_key(identifier):
         return tuple(parts)
 
 def main():
-    if len(sys.argv) < 6:
-        print("Use: python utilization_plot_real_sim_by_parallelism.py <app> <nodes> <cores> <events> <arrival>")
-        print("f.g: python utilization_plot_real_simu_by_parallelism.py q3 1 32 100000 5000")
+    if len(sys.argv) < 7:
+        print("Use: python utilization_plot_real_sim_by_parallelism.py <app> <app_dir> <nodes> <cores> <events> <rate>")
         return
 
     app     = sys.argv[1]
-    nodes   = sys.argv[2]
-    cores   = sys.argv[3]
-    events  = sys.argv[4]
-    arrival = sys.argv[5]
+    app_dir = sys.argv[2]
+    nodes   = sys.argv[3]
+    cores   = sys.argv[4]
+    events  = sys.argv[5]
+    arrival = sys.argv[6]
 
-    #print(f"\nComparando utilization real vs sim para:")
-    #print(f" app={app}, nodes={nodes}, cores={cores}, events={events}, arrival={arrival}\n")
+    # Paths
+    BASE_DIR = "metrics/" + app_dir + "/utilization"
+    REAL_DIR = os.path.join(BASE_DIR, "real/terminated")
+    SIM_DIR  = os.path.join(BASE_DIR, "sim/terminated")
 
     # List files
     real_files = [f for f in os.listdir(REAL_DIR) if f.startswith("terminated-utilization-real-" + app)]

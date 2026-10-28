@@ -33,7 +33,7 @@ namespace streamprcss {
         [[nodiscard]] OperatorProperties_t&         getOperatorProperties(operId_t const)          noexcept;
         [[nodiscard]] operId_t                      getFirstOperator()                       const noexcept;
         [[nodiscard]] bool                          lastOperator(operId_t const)             const noexcept;
-        [[nodiscard]] double                        getExecutionTime(operId_t const)         const noexcept;
+        [[nodiscard]] double                        getOperatorTime(operId_t const)         const noexcept;
         [[nodiscard]] double                        getDegradationFactor()                   const noexcept;
                     void                            accumBusyTime(operId_t const, double)          noexcept;
                     void                            accumInRecords(operId_t const, uint32_t)       noexcept;

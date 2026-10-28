@@ -44,7 +44,7 @@ def read_file(filename):
     return rates_order, rate_data
 
 
-def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
+def plot_throughput(rates, rate_data, app, app_dir, nodes, cores, p, data_from):
     def format_rate(value, _position=None):
         value = float(value)
         abs_value = abs(value)
@@ -137,7 +137,7 @@ def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
     boundaries = [0.0] + interval_end_times
 
     for boundary in boundaries:
-        ax.axvline(x=boundary, linestyle=":", color="grey")
+        ax.axvline(x=boundary, linestyle=":", color="blue")
 
     # Draw every rate occurrence below its corresponding interval
     interval_start = 0.0
@@ -155,6 +155,7 @@ def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
             textcoords="offset points",
             ha="center",
             va="top",
+            fontsize=16,
             color="red"
         )
 
@@ -168,6 +169,7 @@ def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
         textcoords="offset points",
         ha="right",
         va="top",
+        fontsize=16,
         fontweight="bold",
         color="red",
         clip_on=False,
@@ -193,7 +195,7 @@ def plot_throughput(rates, rate_data, app, nodes, cores, p, data_from):
     fig.subplots_adjust(left=0.14, bottom=0.18)
 
     output_file = (
-        f"metrics/nexmark/throughput/"
+        f"metrics/{app_dir}/throughput/"
         f"plot-{data_from}/dynamic/"
         f"dynamic-throughput-{data_from}-"
         f"{app}-{nodes}-{cores}-{p}"
@@ -211,6 +213,7 @@ def main():
     )
 
     parser.add_argument("app")
+    parser.add_argument("app_dir")
     parser.add_argument("nodes")
     parser.add_argument("cores")
     parser.add_argument("p")
@@ -223,7 +226,7 @@ def main():
         sys.exit(1)
 
     filename = (
-        f"metrics/nexmark/throughput/{f"{args.data_from}"}/dynamic/dynamic-throughput-"
+        f"metrics/{f"{args.app_dir}"}/throughput/{f"{args.data_from}"}/dynamic/dynamic-throughput-"
         f"{args.data_from}-{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
     )
 
@@ -233,6 +236,7 @@ def main():
         rates,
         rate_data,
         args.app,
+        args.app_dir,
         args.nodes,
         args.cores,
         args.p,

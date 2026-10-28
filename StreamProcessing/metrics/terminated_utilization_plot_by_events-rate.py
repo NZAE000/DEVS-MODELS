@@ -6,10 +6,6 @@ import matplotlib.pyplot as plt
 
 plt.style.use("metrics/thesis.mplstyle")
 
-# Paths
-BASE_DIR = "metrics/nexmark/utilization"
-THROUGHPUT_BASE_DIR = "metrics/nexmark/throughput"
-
 
 # -------------------- Load Utilization File --------------------
 
@@ -105,27 +101,27 @@ def parse_identifier(filename, app, data_from, metric):
 # -------------------- Main --------------------
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         print(
-            "Use: python terminated_utilization_plot_by_events-rate.py "
-            "<app> <nodes> <cores> <parallelism> <real|sim>"
-        )
-        print(
-            "e.g: python terminated_utilization_plot_by_events-rate.py "
-            "q3 1 32 1 real"
+            "Use: python terminated_utilization_plot_by_events-rate.py <app> <app_dir> <nodes> <cores> <parallelism> <real|sim>"
         )
         return
 
     app = sys.argv[1]
-    nodes = int(sys.argv[2])
-    cores = int(sys.argv[3])
-    par = int(sys.argv[4])
-    data_from = sys.argv[5].lower()
+    app_dir = sys.argv[2]
+    nodes = int(sys.argv[3])
+    cores = int(sys.argv[4])
+    par = int(sys.argv[5])
+    data_from = sys.argv[6].lower()
 
     # Validate data source
     if data_from not in ("real", "sim"):
         print("The last parameter must be 'real' or 'sim'.")
         sys.exit(1)
+        
+    # Paths
+    BASE_DIR = "metrics/"+ app_dir +"/utilization"
+    THROUGHPUT_BASE_DIR = "metrics/"+ app_dir +"/throughput"
 
     # Select input directories
     input_dir = os.path.join(BASE_DIR, data_from, "terminated")

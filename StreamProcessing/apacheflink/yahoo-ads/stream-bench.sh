@@ -670,16 +670,8 @@ get_downstream_signature() {
                 "numRecordsOut"
         )"
 
-        busy_ms="$(
-            get_acc_metric_sum \
-                "$job_id" \
-                "$operator" \
-                "exactAccumulateBusyTimeMs"
-        )"
-
         if [[ "$records_in" == "NA" ||
-              "$records_out" == "NA" ||
-              "$busy_ms" == "NA" ]]; then
+              "$records_out" == "NA" ]]; then
 
             echo \
                 "[WARN] Incomplete downstream metrics for $operator" \
@@ -691,8 +683,7 @@ get_downstream_signature() {
         printf '%s|%s|%s|%s\n' \
             "$operator" \
             "$records_in" \
-            "$records_out" \
-            "$busy_ms"
+            "$records_out"
     done
 }
 

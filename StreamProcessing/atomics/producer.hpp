@@ -141,7 +141,7 @@ public:
                 this->arrival_time_ = min_advance_time;
                 this->current_mssg_ = 0; // Set to zero to notify the master node that these are not requirements.
 
-                #if LOG_MOD
+                #if LOG_MOD // Dynamic mod.
                     captureMetrics();
                 #endif
                 return;
@@ -162,11 +162,11 @@ public:
         this->current_time_ += this->arrival_time_;
         this->current_mssg_  = ++this->state;
 
-        #if LOG_MOD
+        #if LOG_MOD // Dynamic mod.
             captureMetrics();
         #endif
     }
-    #else // New to implement: The producer has 1 or more rates with their quantity of requirements to produce.
+    #else // The producer has 1 or more rates with their quantity of requirements to produce.
     void internal_transition()
     {   
         // Inspect next.
@@ -194,11 +194,13 @@ public:
                 this->current_time_ += min_advance_time;
                 this->arrival_time_ = min_advance_time;
                 this->current_mssg_ = 0; // Set to zero to notify the master node that these are not requirements.
+
+                #if LOG_MOD // Dynamic mod.
+                    captureMetrics();
+                #endif
                 return;
             }
-            #if LOG_MOD
-                captureMetrics();
-            #endif
+            
             current_workload_ = next_workload_; // Pass to next rate.
             next_reqs_to_complete_ += (*current_workload_).first; // Pass next requirements to complete.
             this->metricLogger_.getClusterCFG().nextWorkload(); // Update!

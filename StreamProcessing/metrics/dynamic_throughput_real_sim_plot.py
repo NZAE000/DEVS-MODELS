@@ -1,331 +1,207 @@
+#!/usr/bin/env python3
+
 import argparse
+import math
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 
 plt.style.use("metrics/thesis.mplstyle")
 
+
+def format_rate(value, _position=None):
+    value = float(value)
+    abs_value = abs(value)
+
+    if abs_value >= 1_000_000:
+        return f"{value / 1_000_000:g}M"
+    if abs_value >= 1_000:
+        return f"{value / 1_000:g}K"
+    return f"{value:g}"
+
+
 def read_file(filename):
+    """Read independent rate occurrences in chronological order."""
+    intervals = []
 
-    rate_data = {}
-    rates = []
-
-    with open(filename, "r") as f:
-
-        for line in f:
-
+    with open(filename, "r", encoding="utf-8") as file:
+        for line in file:
             line = line.strip()
-
             if not line:
                 continue
 
-            rate_str, data = line.split(":", 1)
-
-            rate = int(rate_str)
-
-            rates.append(rate)
-
+            rate_text, samples_text = line.split(":", 1)
+            rate = float(rate_text)
             samples = []
 
-            for point in data.split():
+            for sample_text in samples_text.split():
+                time_text, throughput_text = sample_text.split(",", 1)
+                samples.append((float(time_text), float(throughput_text)))
 
-                time_str, thr_str = point.split(",")
+            if samples:
+                samples.sort(key=lambda sample: sample[0])
+                intervals.append((rate, samples))
 
-                samples.append(
-                    (
-                        float(time_str),
-                        float(thr_str)
-                    )
-                )
+    if not intervals:
+        raise ValueError(f"No valid throughput samples found in {filename}")
 
-            rate_data[rate] = samples
-
+    intervals.sort(key=lambda interval: interval[1][0][0])
+    rates = [rate for rate, _ in intervals]
+    rate_data = [samples for _, samples in intervals]
     return rates, rate_data
 
 
-def plot_dynamic_comparison(rates, real_data, sim_data, app, nodes, cores, p):
+def curve_data(rate_data):
+    times = [time for samples in rate_data for time, _ in samples]
+    throughputs = [throughput for samples in rate_data for _, throughput in samples]
+    end_times = [samples[-1][0] for samples in rate_data]
+    return times, throughputs, end_times
 
-    plt.figure()
-    ax = plt.gca()
 
-    #
-    # Curvas observadas
-    #
-    real_x = []
-    real_y = []
-    sim_x  = []
-    sim_y  = []
-
-    real_end_times = []
-    sim_end_times  = []
-
-    for rate in rates:
-
-        real_samples = sorted(
-            real_data[rate],
-            key=lambda x: x[0]
-        )
-
-        sim_samples = sorted(
-            sim_data[rate],
-            key=lambda x: x[0]
-        )
-
-        for t, thr in real_samples:
-            real_x.append(t)
-            real_y.append(thr)
-
-        for t, thr in sim_samples:
-            sim_x.append(t)
-            sim_y.append(thr)
-
-        real_end_times.append(
-            real_samples[-1][0]
-        )
-
-        sim_end_times.append(
-            sim_samples[-1][0]
-        )
-
-    plt.plot(
-        real_x,
-        real_y,
-        marker="o",
-        label="Real"
-    )
-
-    plt.plot(
-        sim_x,
-        sim_y,
-        marker="o",
-        label="Simulation"
-    )
-
-    #
-    # Tiempos promedio para
-    # intervalos y curva ideal
-    #
-    avg_end_times = []
-
-    for tr, ts in zip(
-        real_end_times,
-        sim_end_times
-    ):
-        avg_end_times.append(
-            (tr + ts) / 2.0
-        )
-
-    #
-    # Curva ideal
-    #
-    ideal_x = [0.0]
-    ideal_y = [rates[0]]
-
-    for i in range(
-        len(rates) - 1
-    ):
-
-        ideal_x.append(
-            avg_end_times[i]
-        )
-
-        ideal_y.append(
-            rates[i + 1]
-        )
-
-    ideal_x.append(
-        avg_end_times[-1]
-    )
-
-    ideal_y.append(
-        rates[-1]
-    )
-
-    plt.step(
-        ideal_x,
-        ideal_y,
+def draw_ideal(ax, rates, end_times, label, linestyle):
+    ax.step(
+        [0.0] + end_times,
+        rates + [rates[-1]],
         where="post",
-        linestyle="--",
-        label="Ideal"
+        linestyle=linestyle,
+        color="green",
+        linewidth=1.7,
+        label=label,
     )
 
-    plt.xlabel(
-        "Time (s)",
-        labelpad=40
-    )
 
-    plt.ylabel(
-        "Throughput (req/s)"
-    )
+def annotate_rates(ax, rates, end_times, row, caption):
+    offset = -25 - 23 * row
+    start = 0.0
 
-    plt.title(
-        f"Dynamic Throughput: Real vs Simulated\n"
-        f"App={app}, "
-        f"Nodes={nodes}, "
-        f"Cores={cores}, "
-        f"P={p}"
-    )
-
-    plt.grid(True)
-    plt.legend()
-
-    #
-    # Separadores
-    #
-    plt.axvline(
-        x=0,
-        linestyle=":"
-    )
-
-    for end_time in avg_end_times:
-
-        plt.axvline(
-            x=end_time,
-            linestyle=":"
-        )
-
-    #
-    # Segunda fila:
-    # Arrival Rates
-    #
-    interval_start = 0.0
-
-    for rate, interval_end in zip(
-        rates,
-        avg_end_times
-    ):
-
-        center = (
-            interval_start
-            + interval_end
-        ) / 2.0
-
+    for rate, end in zip(rates, end_times):
+        center = (start + end) / 2.0
         ax.annotate(
-            f"{rate/1e6:.0f}M",
-            xy=(
-                center,
-                0
-            ),
-            xycoords=(
-                "data",
-                "axes fraction"
-            ),
-            xytext=(0, -25),
+            format_rate(rate),
+            xy=(center, 0),
+            xycoords=("data", "axes fraction"),
+            xytext=(0, offset),
             textcoords="offset points",
             ha="center",
             va="top",
-            fontsize=16,
-            fontweight="bold"
+            fontsize="16",
+            clip_on=False,
+            annotation_clip=False,
         )
-
-        interval_start = interval_end
+        start = end
 
     ax.annotate(
-        "Rate (req/s)",
+        caption,
         xy=(0, 0),
-        xycoords=(
-            "axes fraction",
-            "axes fraction"
-        ),
-        xytext=(0, -25),
+        xycoords="axes fraction",
+        xytext=(-5, offset),
         textcoords="offset points",
         ha="right",
         va="top",
-        fontsize=16,
-        fontweight="bold"
+        fontsize="16",
+        fontweight="bold",
+        clip_on=False,
+        annotation_clip=False,
     )
 
-    xticks = [0.0] + avg_end_times
 
-    ax.set_xticks(
-        xticks
+def plot_dynamic_comparison(rates, real_data, sim_data,
+                            app, app_dir, nodes, cores, p):
+    real_x, real_y, real_ends = curve_data(real_data)
+    sim_x, sim_y, sim_ends = curve_data(sim_data)
+    max_time = max(real_ends[-1], sim_ends[-1])
+
+    fig, ax = plt.subplots()
+    ax.plot(real_x, real_y, marker="o", label="Real")
+    ax.plot(sim_x, sim_y, marker="o", label="Simulation")
+
+    same_boundaries = all(
+        math.isclose(tr, ts, rel_tol=0, abs_tol=1e-3)
+        for tr, ts in zip(real_ends, sim_ends)
     )
 
-    ax.set_xticklabels(
-        [
-            f"{x:.2f}s"
-            for x in xticks
-        ]
-    )
+    if len(rates) == 1:
+        # One common ideal rate, extending to the last actual observation.
+        draw_ideal(ax, rates, [max_time], "Ideal", "--")
+        annotate_rates(ax, rates, [max_time], 0, "Rate (req/s)")
+        two_rows = False
+    elif same_boundaries:
+        draw_ideal(ax, rates, real_ends, "Ideal", "--")
+        annotate_rates(ax, rates, real_ends, 0, "Rate (req/s)")
+        two_rows = False
+    else:
+        # Different rate-change times cannot share one exact ideal staircase.
+        draw_ideal(ax, rates, real_ends, "Ideal (real timeline)", "--")
+        draw_ideal(ax, rates, sim_ends, "Ideal (sim timeline)", ":")
+        annotate_rates(ax, rates, real_ends, 0, "Real rate (req/s)")
+        annotate_rates(ax, rates, sim_ends, 1, "Sim rate (req/s)")
+        two_rows = True
 
-    formatter = FuncFormatter(
-        lambda x, pos:
-        f"{x/1e6:.0f}M"
-    )
+    for boundary in sorted(set([0.0] + real_ends + sim_ends)):
+        ax.axvline(boundary, linestyle=":", color="blue", alpha=0.6)
 
-    ax.set_yticks(
-        [0] + rates
+    ax.set_xlabel("Time (s)", labelpad=68 if two_rows else 40)
+    ax.set_ylabel("Throughput (req/s)")
+    ax.set_title(
+        "Dynamic Throughput: Real vs Simulated\n"
+        f"App={app}, Nodes={nodes}, Cores={cores}, P={p}"
     )
+    ax.grid(True)
+    ax.legend()
 
-    ax.yaxis.set_major_formatter(
-        formatter
-    )
+    # Keep intermediate interval boundaries,
+    # but show only the largest final time.
+    xticks = sorted(set(
+        [0.0] + real_ends[:-1] + sim_ends[:-1] + [max_time]
+    ))
+    if len(xticks) <= 6:
+        ax.set_xticks(xticks)
+        ax.set_xticklabels([f"{t:.2f}s" for t in xticks], rotation=0, ha="right")
+    else:
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=7))
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:g}s"))
 
-    plt.tight_layout()
+    ax.set_xlim(0.0, max_time)
+    ax.set_yticks(sorted(set([0.0] + rates)))
+    ax.yaxis.set_major_formatter(FuncFormatter(format_rate))
+    ax.set_ylim(0.0, 1.05 * max(max(rates), max(real_y), max(sim_y)))
 
-    plt.subplots_adjust(
-        bottom=0.18
-    )
+    fig.subplots_adjust(left=0.14, bottom=0.30 if two_rows else 0.19)
 
     output_file = (
-        "metrics/nexmark/"
-        "throughput/"
-        "plot-real-sim/"
-        "dynamic/"
-        f"dynamic-throughput-"
-        f"real-sim-"
-        f"{app}-"
-        f"{nodes}-"
-        f"{cores}-"
-        f"{p}"
+        Path("metrics") / app_dir / "throughput" / "plot-real-sim" / "dynamic"
+        / f"dynamic-throughput-real-sim-{app}-{nodes}-{cores}-{p}"
     )
-    
-    plt.savefig(f"{output_file}.pdf")
-    plt.savefig(f"{output_file}.png")
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_file.with_suffix(".pdf"), bbox_inches="tight")
+    fig.savefig(output_file.with_suffix(".png"), bbox_inches="tight")
     plt.show()
+    plt.close(fig)
 
-    #print(f"Graph saved in: " f"{output_file}")
-    
-    
+
 def main():
-    
-    parser = argparse.ArgumentParser(
-        description="Plot throughput vs Time"
-    )
-
+    parser = argparse.ArgumentParser(description="Plot real and simulated throughput vs time")
     parser.add_argument("app")
+    parser.add_argument("app_dir")
     parser.add_argument("nodes")
     parser.add_argument("cores")
     parser.add_argument("p")
-
     args = parser.parse_args()
-    
-    filename_real = (
-        f"metrics/nexmark/throughput/real/dynamic/dynamic-throughput-real-"
-        f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
-    )
 
-    filename_sim = (
-            f"metrics/nexmark/throughput/sim/dynamic/dynamic-throughput-sim-"
-            f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
-    )
-    
+    prefix = Path("metrics") / args.app_dir / "throughput"
+    suffix = f"{args.app}-{args.nodes}-{args.cores}-{args.p}.txt"
+    filename_real = prefix / "real" / "dynamic" / f"dynamic-throughput-real-{suffix}"
+    filename_sim = prefix / "sim" / "dynamic" / f"dynamic-throughput-sim-{suffix}"
+
     rates_real, real_data = read_file(filename_real)
     rates_sim, sim_data = read_file(filename_sim)
-
     if rates_real != rates_sim:
-        raise ValueError(
-            "Real and simulation files "
-            "contain different arrival rates."
-        )
+        raise ValueError("Real and simulation files contain different rate sequences.")
 
     plot_dynamic_comparison(
-        rates_real,
-        real_data,
-        sim_data,
-        args.app,
-        args.nodes,
-        args.cores,
-        args.p
+        rates_real, real_data, sim_data,
+        args.app, args.app_dir, args.nodes, args.cores, args.p,
     )
 
 
