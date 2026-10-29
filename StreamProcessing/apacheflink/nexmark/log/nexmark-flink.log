@@ -1,0 +1,65 @@
+2026-10-16 19:29:58,696 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.metric.reporter.host, localhost
+2026-10-16 19:29:58,699 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.metric.reporter.port, 9098
+2026-10-16 19:29:58,700 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.events.num, 50000000
+2026-10-16 19:29:58,700 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.tps, 5000000
+2026-10-16 19:29:58,701 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.queries, "q0,q1,q2,q3,q4,q5,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23"
+2026-10-16 19:29:58,701 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.queries.cep, "q0,q1,q2,q3"
+2026-10-16 19:29:58,701 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.warmup.duration, 0s
+2026-10-16 19:29:58,701 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.warmup.events.num, 0
+2026-10-16 19:29:58,702 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.100m.warmup.tps, 0
+2026-10-16 19:29:58,702 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.metric.monitor.delay, 0min
+2026-10-16 19:29:58,702 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.datagen.tps, 10000000
+2026-10-16 19:29:58,702 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.datagen.queries, "insert_kafka"
+2026-10-16 19:29:58,703 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: nexmark.workload.suite.datagen.queries.cep, "insert_kafka"
+2026-10-16 19:29:58,703 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: flink.rest.address, localhost
+2026-10-16 19:29:58,703 INFO  org.apache.flink.configuration.GlobalConfiguration           [] - Loading configuration property: flink.rest.port, 8081
+2026-10-16 19:29:58,914 INFO  com.github.nexmark.flink.QueryRunner                         [] - ==================================================================
+2026-10-16 19:29:58,914 INFO  com.github.nexmark.flink.QueryRunner                         [] - Start to run query q14 with workload [tps=5 M, eventsNum=50 M, percentage=bid:46,auction:3,person:1,kafkaServers:null]
+2026-10-16 19:29:58,922 INFO  com.github.nexmark.flink.QueryRunner                         [] - 
+================================================================================
+Query q14 is running.
+--------------------------------------------------------------------------------
+
+2026-10-16 19:30:04,036 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":-0.01}]
+2026-10-16 19:30:07,897 WARN  com.github.nexmark.flink.metric.MetricReporter               [] - Job metric is not ready yet.
+java.lang.RuntimeException: Can't find TPS metric name from the response:
+[]
+	at com.github.nexmark.flink.metric.FlinkRestClient.getTpsMetricName(FlinkRestClient.java:237) ~[nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.metric.MetricReporter.getJobInformation(MetricReporter.java:96) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.metric.MetricReporter.submitMonitorThread(MetricReporter.java:70) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.metric.MetricReporter.reportMetric(MetricReporter.java:177) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.QueryRunner.run(QueryRunner.java:89) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.Benchmark.executeQueries(Benchmark.java:226) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.Benchmark.runQueries(Benchmark.java:128) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at com.github.nexmark.flink.Benchmark.main(Benchmark.java:83) [nexmark-flink-0.3-SNAPSHOT.jar:?]
+2026-10-16 19:30:08,807 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":1.8887997436523438}]
+2026-10-16 19:30:08,971 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=1.89 (1 TMs)
+2026-10-16 19:30:13,804 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":2.5350140380859374}]
+2026-10-16 19:30:13,976 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=2.54 (1 TMs)
+2026-10-16 19:30:18,803 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":2.593999938964844}]
+2026-10-16 19:30:18,980 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=2.59 (1 TMs)
+2026-10-16 19:30:23,802 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":2.588517761230469}]
+2026-10-16 19:30:23,984 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=2.59 (1 TMs)
+2026-10-16 19:30:28,801 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":2.592518615722656}]
+2026-10-16 19:30:28,988 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=2.59 (1 TMs)
+2026-10-16 19:30:33,801 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":2.5839999389648436}]
+2026-10-16 19:30:33,991 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=2.58 (1 TMs)
+2026-10-16 19:30:38,802 INFO  com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Received CPU metric report: [{"host":"127.0.1.1","pid":3668661,"cpu":2.5834832763671876}]
+2026-10-16 19:30:38,994 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Current Cores=2.58 (1 TMs)
+2026-10-16 19:30:40,690 INFO  com.github.nexmark.flink.metric.MetricReporter               [] - Summary Average: EventsNum=50,000,000, Cores=2.48, Time=32.808 s, Initialize Time=0.091 s
+2026-10-16 19:30:40,691 INFO  com.github.nexmark.flink.QueryRunner                         [] - Stop job query q14
+2026-10-16 19:30:40,694 ERROR com.github.nexmark.flink.metric.cpu.CpuMetricReceiver        [] - Failed to start the socket server.
+java.net.SocketException: Socket closed
+	at java.base/sun.nio.ch.NioSocketImpl.endAccept(NioSocketImpl.java:682) ~[?:?]
+	at java.base/sun.nio.ch.NioSocketImpl.accept(NioSocketImpl.java:755) ~[?:?]
+	at java.base/java.net.ServerSocket.implAccept(ServerSocket.java:698) ~[?:?]
+	at java.base/java.net.ServerSocket.platformImplAccept(ServerSocket.java:663) ~[?:?]
+	at java.base/java.net.ServerSocket.implAccept(ServerSocket.java:639) ~[?:?]
+	at java.base/java.net.ServerSocket.implAccept(ServerSocket.java:585) ~[?:?]
+	at java.base/java.net.ServerSocket.accept(ServerSocket.java:543) ~[?:?]
+	at com.github.nexmark.flink.metric.cpu.CpuMetricReceiver.runServerBlocking(CpuMetricReceiver.java:75) ~[nexmark-flink-0.3-SNAPSHOT.jar:?]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[?:?]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[?:?]
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?]
